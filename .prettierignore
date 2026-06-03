@@ -1,0 +1,15 @@
+node_modules
+dist
+.output
+.nuxt
+coverage
+tsp-output
+**/generated/**
+pnpm-lock.yaml
+playwright-report
+test-results
+
+# ドキュメント・ルールテンプレは手書き構造を尊重し整形対象外にする
+*.md
+docs/**
+.claude/**
