@@ -94,7 +94,11 @@ describe('AuthService', () => {
       users.findByEmail.mockResolvedValue(await buildUser());
 
       await expect(
-        service.register({ email: 'taro@example.com', password: 'password123', displayName: 'taro' }),
+        service.register({
+          email: 'taro@example.com',
+          password: 'password123',
+          displayName: 'taro',
+        }),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(users.create).not.toHaveBeenCalled();
     });

@@ -1,11 +1,4 @@
-import {
-  IsIn,
-  IsISO8601,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsIn, IsISO8601, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import type { TaskCreate, TaskStatus } from '@app/api-client';
 
 export const TASK_STATUSES: readonly TaskStatus[] = ['todo', 'in_progress', 'done'];

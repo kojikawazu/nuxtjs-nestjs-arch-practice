@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type JwtSignOptions, JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -102,10 +98,10 @@ export class AuthService {
   }
 
   private async issueTokens(user: UserEntity): Promise<AuthTokens> {
-    const accessToken = await this.jwt.signAsync(
-      { sub: user.id, email: user.email },
-      { secret: this.accessSecret, expiresIn: this.accessExpiresIn } as JwtSignOptions,
-    );
+    const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email }, {
+      secret: this.accessSecret,
+      expiresIn: this.accessExpiresIn,
+    } as JwtSignOptions);
     const refreshToken = await this.jwt.signAsync(
       // jti を付与し、同一秒・同一 payload でもトークンが必ず一意になるようにする（ローテーションの前提）
       { sub: user.id, jti: randomUUID() },
