@@ -5,6 +5,8 @@ globs:
 
 # コマンド
 
+> ショートカットとして **`make <target>`** も利用可（`make help` で一覧）。下記は実体の pnpm/docker コマンド。
+
 ## セットアップ / 生成
 
 - `pnpm install` — 依存解決

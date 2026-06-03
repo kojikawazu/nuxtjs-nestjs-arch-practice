@@ -30,6 +30,8 @@ cp .env.example .env
 pnpm api:gen        # 契約から型を生成
 ```
 
+> `make help` でよく使う操作の一覧を表示できます（`make up` / `make test` / `make gen` など）。
+
 ## 使い方
 
 ```bash
