@@ -1,0 +1,29 @@
+{
+  "name": "nuxtjs-nestjs-test-practice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理アプリ）",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "test": "pnpm -r test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "api:gen": "pnpm --filter @app/api-spec build && pnpm --filter @app/api-client generate",
+    "db:up": "docker compose up -d mysql",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.21.0"
+  }
+}

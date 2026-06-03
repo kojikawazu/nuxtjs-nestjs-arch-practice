@@ -1,0 +1,12 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# pnpm 10 はデフォルトで依存の postinstall を実行しない。
+# ネイティブビルドが必要なものだけここで明示的に許可する。
+onlyBuiltDependencies:
+  - bcrypt
+  - better-sqlite3
+  - '@nestjs/core'
+  - esbuild
+  - '@parcel/watcher'

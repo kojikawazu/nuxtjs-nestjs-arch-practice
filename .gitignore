@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+.output/
+.nuxt/
+.nitro/
+coverage/
+*.tsbuildinfo
+
+# generated API artifacts
+packages/api-spec/tsp-output/
+packages/api-client/src/generated/
+
+# test artifacts
+playwright-report/
+test-results/
+.playwright/
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
