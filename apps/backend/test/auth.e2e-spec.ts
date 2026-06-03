@@ -67,7 +67,10 @@ describe('Auth (e2e)', () => {
       .expect(200);
     const oldRefresh = login.body.refreshToken as string;
 
-    const refreshed = await http.post('/auth/refresh').send({ refreshToken: oldRefresh }).expect(200);
+    const refreshed = await http
+      .post('/auth/refresh')
+      .send({ refreshToken: oldRefresh })
+      .expect(200);
     expect(refreshed.body.refreshToken).not.toBe(oldRefresh);
 
     // 回転済みの古いトークンはもう使えない
