@@ -32,8 +32,14 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 - 形式: `ApiError { statusCode, message, error? }`。
 - 主なコード: 400(バリデーション) / 401(認証) / 403(認可) / 404(不存在) / 409(重複登録)。
 
+## Swagger UI（対話的ドキュメント）
+
+- backend 起動中に **http://localhost:3001/docs** で参照できる（"Try it out" 可）。
+- 生スペックは **/docs-json**。
+- UI は TypeSpec 生成物（`openapi.yaml`）をそのまま配信する＝**契約と完全一致**（コードから別 OpenAPI を作らない）。
+
 ## 再生成コマンド
 
 ```bash
-pnpm api:gen   # TypeSpec → OpenAPI → 型/クライアント
+pnpm api:gen   # TypeSpec → OpenAPI → 型/クライアント（Swagger UI もこの生成物を配信）
 ```

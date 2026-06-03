@@ -40,6 +40,11 @@ pnpm --filter @app/backend dev
 docker compose up --build   # mysql + backend(:3001) + frontend(:3000)
 ```
 
+主なアクセス先:
+
+- アプリ UI: http://localhost:3000
+- Swagger UI（対話的 API ドキュメント）: http://localhost:3001/docs
+
 ## テスト
 
 ```bash
