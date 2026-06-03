@@ -5,7 +5,9 @@ const route = useRoute();
 const id = route.params.id as string;
 const { get, update } = useTasks();
 
-const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id));
+const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
+  getCachedData: () => undefined,
+});
 
 const step = ref<'form' | 'confirm'>('form');
 const draft = ref<TaskFormValue | null>(null);

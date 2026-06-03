@@ -8,6 +8,7 @@ import { TaskEntity } from './modules/tasks/task.entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -18,20 +19,34 @@ import { UsersModule } from './modules/users/users.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'mysql',
-        host: config.getOrThrow<string>('db.host'),
-        port: config.getOrThrow<number>('db.port'),
-        username: config.getOrThrow<string>('db.username'),
-        password: config.getOrThrow<string>('db.password'),
-        database: config.getOrThrow<string>('db.database'),
-        entities: [UserEntity, RefreshTokenEntity, TaskEntity],
-        synchronize: config.get<boolean>('db.synchronize') ?? false,
-      }),
+      useFactory: (config: ConfigService) => {
+        const entities = [UserEntity, RefreshTokenEntity, TaskEntity];
+        const synchronize = config.get<boolean>('db.synchronize') ?? false;
+        // ローカル/E2E で Docker 不要に動かすための SQLite 切替
+        if (config.getOrThrow<string>('db.type') === 'better-sqlite3') {
+          return {
+            type: 'better-sqlite3' as const,
+            database: config.getOrThrow<string>('db.database'),
+            entities,
+            synchronize: true,
+          };
+        }
+        return {
+          type: 'mysql' as const,
+          host: config.getOrThrow<string>('db.host'),
+          port: config.getOrThrow<number>('db.port'),
+          username: config.getOrThrow<string>('db.username'),
+          password: config.getOrThrow<string>('db.password'),
+          database: config.getOrThrow<string>('db.database'),
+          entities,
+          synchronize,
+        };
+      },
     }),
     UsersModule,
     AuthModule,
     TasksModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/.output
+**/.nuxt
+**/.nitro
+**/coverage
+**/playwright-report
+**/test-results
+**/tsp-output
+packages/api-client/src/generated
+.git
+.github
+.env
+.env.*
+!.env.example
+**/*.log

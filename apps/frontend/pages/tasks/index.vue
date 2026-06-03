@@ -1,6 +1,11 @@
 <script setup lang="ts">
 const { list } = useTasks();
-const { data: tasks, pending, error } = await useAsyncData('tasks', () => list());
+// SPA 内のページ再訪時も常に最新を取得する（キャッシュを使わない）
+const {
+  data: tasks,
+  pending,
+  error,
+} = await useAsyncData('tasks', () => list(), { getCachedData: () => undefined });
 </script>
 
 <template>

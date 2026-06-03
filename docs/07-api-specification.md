@@ -1,23 +1,39 @@
 # API 仕様書
 
-エンドポイント・リクエスト/レスポンス形式・認証・エラーハンドリングを定義するドキュメント。
+API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec/main.tsp`）。
+そこから OpenAPI 3.1（`packages/api-spec/tsp-output/openapi.yaml`）と型/クライアント（`packages/api-client`）を生成する。
 
 ## エンドポイント一覧
 
-<!-- メソッド・パス・概要を一覧化 -->
-
 | メソッド | パス | 概要 | 認証 |
 |----------|------|------|------|
-| GET | | | |
+| POST | /auth/register | 新規登録 → AuthTokens(201) | 不要 |
+| POST | /auth/login | ログイン → AuthTokens | 不要 |
+| POST | /auth/refresh | リフレッシュ → AuthTokens | リフレッシュトークン |
+| POST | /auth/logout | ログアウト(204) | アクセストークン |
+| GET | /tasks | 自分のタスク一覧 | アクセストークン |
+| POST | /tasks | 作成 → Task(201) | アクセストークン |
+| GET | /tasks/{id} | 詳細 | アクセストークン |
+| PATCH | /tasks/{id} | 更新 | アクセストークン |
+| DELETE | /tasks/{id} | 削除(204) | アクセストークン |
+| GET | /health | 死活監視 | 不要 |
 
 ## リクエスト / レスポンス形式
 
-<!-- 各エンドポイントのパラメータ・ボディ・レスポンス例を記載 -->
+- 型定義は契約由来（`@app/api-client` の `Task` / `AuthTokens` / `TaskCreate` 等）。
+- フロントの BFF（`/api/auth/*`）は上記 backend を呼び出し、リフレッシュトークンを Cookie 化する。
 
 ## 認証
 
-<!-- API 認証方式（トークン・ヘッダ等）を記載 -->
+- `Authorization: Bearer <accessToken>`。
 
 ## エラーハンドリング
 
-<!-- エラーレスポンスの形式・ステータスコード規約を記載 -->
+- 形式: `ApiError { statusCode, message, error? }`。
+- 主なコード: 400(バリデーション) / 401(認証) / 403(認可) / 404(不存在) / 409(重複登録)。
+
+## 再生成コマンド
+
+```bash
+pnpm api:gen   # TypeSpec → OpenAPI → 型/クライアント
+```

@@ -1,5 +1,5 @@
-# タスク管理アプリ用 compose。
-# Phase 0 では mysql / mysql-test のみ定義。backend / frontend は Phase 5 で追加する。
+# タスク管理アプリ用 compose（mysql + backend + frontend）。
+# mysql-test は backend の e2e 用使い捨て DB。
 services:
   mysql:
     image: mysql:8.4
@@ -39,6 +39,46 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_TYPE: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: ${MYSQL_USER:-taskuser}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-taskpassword}
+      DB_DATABASE: ${MYSQL_DATABASE:-taskdb}
+      # 学習用途: 起動時にスキーマ同期。本番ではマイグレーション運用にする。
+      DB_SYNCHRONIZE: 'true'
+      BACKEND_PORT: 3001
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-900s}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+    ports:
+      - '${BACKEND_PORT:-3001}:3001'
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PORT: 3000
+      # サーバ側(BFF)は service 名で backend に到達。クライアント(ブラウザ)はホスト公開ポート。
+      NUXT_API_BASE_URL: http://backend:3001
+      NUXT_PUBLIC_API_BASE_URL: http://localhost:${BACKEND_PORT:-3001}
+    ports:
+      - '${FRONTEND_PORT:-3000}:3000'
 
 volumes:
   mysql-data:
