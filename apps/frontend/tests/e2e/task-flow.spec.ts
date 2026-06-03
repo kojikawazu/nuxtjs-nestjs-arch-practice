@@ -1,0 +1,62 @@
+import { expect, test } from '@playwright/test';
+
+/**
+ * 登録 → 作成(confirm) → 一覧 → 詳細 → 編集(confirm) → 削除(確認) の通しシナリオ。
+ * 実スタック（Nuxt + NestJS + SQLite）に対して、ユーザー視点で検証する。
+ */
+test('タスク管理の一連フロー', async ({ page }) => {
+  // 再実行でメール衝突しないよう一意化
+  const email = `e2e+${Date.now()}@example.com`;
+
+  // --- 新規登録 → /tasks へ ---
+  await page.goto('/register');
+  await page.getByTestId('register-name').fill('E2E User');
+  await page.getByTestId('register-email').fill(email);
+  await page.getByTestId('register-password').fill('password123');
+  await page.getByTestId('register-submit').click();
+
+  await expect(page).toHaveURL(/\/tasks$/);
+  await expect(page.getByTestId('tasks-empty')).toBeVisible();
+
+  // --- 新規作成（フォーム → confirm → 確定）---
+  await page.getByTestId('new-task-link').click();
+  await page.getByTestId('task-title').fill('牛乳を買う');
+  await page.getByTestId('task-description').fill('2本');
+  await page.getByTestId('task-submit').click();
+
+  await expect(page.getByTestId('confirm-step')).toBeVisible();
+  await expect(page.getByTestId('confirm-title')).toHaveText('牛乳を買う');
+  await page.getByTestId('confirm-create').click();
+
+  // --- 詳細表示 ---
+  await expect(page.getByTestId('detail-title')).toHaveText('牛乳を買う');
+
+  // --- 一覧に表示される ---
+  await page.goto('/tasks');
+  await expect(page.getByTestId('task-list')).toContainText('牛乳を買う');
+
+  // --- 編集（status を done に, フォーム → confirm → 確定）---
+  await page.getByTestId('task-card').first().click();
+  await page.getByTestId('edit-link').click();
+  await page.getByTestId('task-status').selectOption('done');
+  await page.getByTestId('task-submit').click();
+  await expect(page.getByTestId('confirm-step')).toBeVisible();
+  await page.getByTestId('confirm-update').click();
+
+  await expect(page.getByTestId('detail-title')).toBeVisible();
+  await expect(page.getByTestId('status-badge')).toHaveText('完了');
+
+  // --- 削除（確認ダイアログ → 実行）---
+  await page.getByTestId('delete-button').click();
+  await expect(page.getByTestId('confirm-dialog')).toBeVisible();
+  await page.getByTestId('confirm-ok').click();
+
+  await expect(page).toHaveURL(/\/tasks$/);
+  await expect(page.getByTestId('tasks-empty')).toBeVisible();
+});
+
+test('未認証では /tasks から /login へリダイレクトされる', async ({ page }) => {
+  await page.goto('/tasks');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByTestId('login-form')).toBeVisible();
+});

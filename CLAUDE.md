@@ -14,3 +14,6 @@ Nuxt.js + NestJS のテスト practice プロジェクト
 | documentation.md | 全体 | ドキュメント更新ルール |
 | git.md | 全体 | GitHub Flow・ブランチ命名・push 禁止物 |
 | testing.md | 全体 | テスト分類・原則 |
+| stack-backend.md | apps/backend | NestJS/TypeORM レイヤード・DTO・DB・テスト方針 |
+| stack-frontend.md | apps/frontend | Nuxt3 Composable・認証・テスト方針 |
+| commands.md | 全体 | pnpm/テスト/Docker のよく使うコマンド |

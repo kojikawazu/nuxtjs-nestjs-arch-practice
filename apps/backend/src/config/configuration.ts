@@ -2,9 +2,12 @@
  * 環境変数を型付きの設定オブジェクトに変換する。
  * ConfigModule.forRoot({ load: [configuration] }) で読み込む。
  */
+export type DbType = 'mysql' | 'better-sqlite3';
+
 export interface AppConfig {
   port: number;
   db: {
+    type: DbType;
     host: string;
     port: number;
     username: string;
@@ -25,6 +28,8 @@ export function configuration(): AppConfig {
   return {
     port: Number(env.BACKEND_PORT ?? 3001),
     db: {
+      // mysql（本番/compose）/ better-sqlite3（ローカル・E2E で Docker 不要）を切替可能
+      type: (env.DB_TYPE as DbType) ?? 'mysql',
       host: env.DB_HOST ?? 'localhost',
       port: Number(env.DB_PORT ?? 3306),
       username: env.DB_USERNAME ?? 'taskuser',

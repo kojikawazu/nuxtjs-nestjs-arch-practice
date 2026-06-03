@@ -3,7 +3,9 @@ const route = useRoute();
 const id = route.params.id as string;
 const { get, remove } = useTasks();
 
-const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id));
+const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
+  getCachedData: () => undefined,
+});
 
 const showConfirm = ref(false);
 const deleting = ref(false);
