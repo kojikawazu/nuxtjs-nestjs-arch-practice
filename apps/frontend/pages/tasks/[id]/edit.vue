@@ -3,7 +3,7 @@ import type { TaskFormValue } from '~/components/TaskForm.vue';
 
 const route = useRoute();
 const id = route.params.id as string;
-const { get, update } = useTasks();
+const { get, update, validateUpdate } = useTasks();
 
 const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
   getCachedData: () => undefined,
@@ -14,15 +14,37 @@ const draft = ref<TaskFormValue | null>(null);
 const saveError = ref<string | null>(null);
 const loading = ref(false);
 
+// confirm 進入時のサーバ側 DryRun 検証状態
+const validating = ref(false);
+const validated = ref(false);
+const validationError = ref<string | null>(null);
+
 const STATUS_LABEL: Record<string, string> = {
   todo: '未着手',
   in_progress: '進行中',
   done: '完了',
 };
 
-function onFormSubmit(value: TaskFormValue) {
+async function onFormSubmit(value: TaskFormValue) {
   draft.value = value;
   step.value = 'confirm';
+  // confirm に進んだ時点でサーバ側の検証（保存はしない・所有権も確認）を実行する
+  validating.value = true;
+  validated.value = false;
+  validationError.value = null;
+  try {
+    await validateUpdate(id, {
+      title: value.title,
+      description: value.description,
+      status: value.status,
+      dueDate: value.dueDate,
+    });
+    validated.value = true;
+  } catch (e) {
+    validationError.value = getErrorMessage(e, '入力内容に問題があります');
+  } finally {
+    validating.value = false;
+  }
 }
 
 async function onConfirm() {
@@ -80,6 +102,15 @@ async function onConfirm() {
             <dd>{{ STATUS_LABEL[draft.status] }}</dd>
           </div>
         </dl>
+        <p v-if="validating" class="text-sm text-gray-500" data-testid="validating">
+          サーバ側で検証中…
+        </p>
+        <p v-else-if="validated" class="text-sm text-green-700" data-testid="validation-ok">
+          ✓ 検証に通りました。この内容で更新できます。
+        </p>
+        <p v-else-if="validationError" class="text-sm text-red-600" data-testid="validation-error">
+          {{ validationError }}
+        </p>
         <p v-if="saveError" class="text-sm text-red-600" data-testid="update-error">
           {{ saveError }}
         </p>
@@ -97,7 +128,7 @@ async function onConfirm() {
             type="button"
             data-testid="confirm-update"
             class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            :disabled="loading"
+            :disabled="loading || validating || !validated"
             @click="onConfirm"
           >
             更新する

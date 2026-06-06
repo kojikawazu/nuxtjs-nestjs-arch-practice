@@ -8,15 +8,27 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 | メソッド | パス | 概要 | 認証 |
 |----------|------|------|------|
 | POST | /auth/register | 新規登録 → AuthTokens(201) | 不要 |
+| POST | /auth/register/validate | 登録の事前検証（DryRun）→ DryRunResult(200) | 不要 |
 | POST | /auth/login | ログイン → AuthTokens | 不要 |
 | POST | /auth/refresh | リフレッシュ → AuthTokens | リフレッシュトークン |
 | POST | /auth/logout | ログアウト(204) | アクセストークン |
 | GET | /tasks | 自分のタスク一覧 | アクセストークン |
 | POST | /tasks | 作成 → Task(201) | アクセストークン |
+| POST | /tasks/validate | 作成の事前検証（DryRun）→ DryRunResult(200) | アクセストークン |
 | GET | /tasks/{id} | 詳細 | アクセストークン |
 | PATCH | /tasks/{id} | 更新 | アクセストークン |
+| POST | /tasks/{id}/validate | 更新の事前検証（DryRun）→ DryRunResult(200) | アクセストークン |
 | DELETE | /tasks/{id} | 削除(204) | アクセストークン |
 | GET | /health | 死活監視 | 不要 |
+
+### DryRun（検証のみ）エンドポイント
+
+`*/validate` は「保存する前に、入力がサーバ側の検証を通るか」を **DB に書き込まずに**確認する。
+
+- 成功時: `200 DryRunResult { valid: true }`。
+- 失敗時: 通常と同じ `ApiError`（400 バリデーション / 409 メール重複 / 403 非所有 / 404 不存在 / 401 未認証）。
+- 実行する検証: DTO 検証（`ValidationPipe`）に加え、`register/validate` はメール重複、`tasks/{id}/validate` は所有権（404/403）。`tasks/validate`（作成）は DTO 検証のみ。
+- ユーザー作成・トークン発行・タスク保存は一切行わない（後方互換: 既存エンドポイントは変更なし）。
 
 ## リクエスト / レスポンス形式
 

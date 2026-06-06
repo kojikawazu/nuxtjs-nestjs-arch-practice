@@ -12,11 +12,12 @@
 | 3 | フロントエンド | ✅ | Nuxt3 SPA / Composable / Nitro BFF / Vitest 13 |
 | 4 | 全体 E2E | ✅ | Playwright(chromium) 通しシナリオ 2 |
 | 5 | Docker統合・docs | ✅ | Dockerfile×2 / compose 結線 / 仕様書追記 / rules 同期 |
+| 6 | DryRun（検証のみ） | ✅ | `*/validate` 3本（register/tasks作成/tasks更新）/ 契約→FE/BE / confirm 自動検証・登録検証ボタン |
 
 ## テスト集計
 
-- backend: 単体 19 / e2e 11
-- frontend: 単体 13 / E2E 2
+- backend: 単体 25 / e2e 20
+- frontend: 単体 19 / E2E 2
 
 ## 今後の候補（未着手）
 

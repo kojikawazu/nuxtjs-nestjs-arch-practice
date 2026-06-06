@@ -80,4 +80,34 @@ describe('Auth (e2e)', () => {
   it('異常系: 認証なしで保護ルートにアクセスすると 401', async () => {
     await http.get('/tasks').expect(401);
   });
+
+  describe('POST /auth/register/validate（DryRun・保存しない）', () => {
+    it('正常系: 未登録メールは 200 { valid: true } を返し、実際には作成されない', async () => {
+      const email = 'dryrun@example.com';
+
+      const res = await http
+        .post('/auth/register/validate')
+        .send({ email, password: 'password123', displayName: 'Dry' })
+        .expect(200);
+      expect(res.body).toEqual({ valid: true });
+
+      // 検証では書き込まれていないので、同じメールで本登録が成功する（= 409 にならない）
+      await http
+        .post('/auth/register')
+        .send({ email, password: 'password123', displayName: 'Dry' })
+        .expect(201);
+    });
+
+    it('準正常系: 既に登録済みのメールは 409', async () => {
+      const res = await http.post('/auth/register/validate').send(credentials).expect(409);
+      expect(res.body.statusCode).toBe(409);
+    });
+
+    it('異常系: 短すぎるパスワードは 400（バリデーション）', async () => {
+      await http
+        .post('/auth/register/validate')
+        .send({ email: 'b@example.com', password: 'short', displayName: 'B' })
+        .expect(400);
+    });
+  });
 });

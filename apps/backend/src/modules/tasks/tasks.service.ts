@@ -37,6 +37,14 @@ export class TasksService {
     return TasksService.toContractTask(saved);
   }
 
+  /**
+   * タスク作成の DryRun（検証のみ）。DTO 検証は ValidationPipe が済ませている前提で、
+   * 新規作成には所有権などの追加業務ルールが無いため、保存せずに通過させる。
+   */
+  async validateCreate(_userId: string, _dto: CreateTaskDto): Promise<void> {
+    // DTO 検証以外の業務ルールは無し。DB への書き込みは行わない。
+  }
+
   async getById(userId: string, id: string): Promise<Task> {
     const entity = await this.findOwned(userId, id);
     return TasksService.toContractTask(entity);
@@ -50,6 +58,14 @@ export class TasksService {
     if (dto.dueDate !== undefined) entity.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
     const saved = await this.tasks.save(entity);
     return TasksService.toContractTask(saved);
+  }
+
+  /**
+   * タスク更新の DryRun（検証のみ）。所有権（存在=404 / 非所有=403）を確認するが、
+   * 値の反映・保存（save）は行わない。
+   */
+  async validateUpdate(userId: string, id: string, _dto: UpdateTaskDto): Promise<void> {
+    await this.findOwned(userId, id);
   }
 
   async remove(userId: string, id: string): Promise<void> {
