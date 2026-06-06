@@ -30,8 +30,11 @@ export class TaskEntity {
   @Column({ type: 'varchar', length: 20, default: 'todo' })
   status!: TaskStatus;
 
+  @Column({ type: 'datetime' })
+  startDate!: Date;
+
   @Column({ type: 'datetime', nullable: true })
-  dueDate!: Date | null;
+  endDate!: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;

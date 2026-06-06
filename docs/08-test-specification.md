@@ -25,6 +25,7 @@
 - タスク: CRUD/未認証(401)/他人のタスク(403)/不存在(404)/バリデーション(400)。
 - DryRun（検証のみ）: register/tasks の `*/validate` で 200/400/409/403/404/401 を検証。
   e2e では **検証後に本登録が成功（重複にならない）/ GET で内容不変**を確認し「書き込みが起きていない」ことを保証。単体では `users.create`/`tasks.save` が**呼ばれない**ことをアサート。
+- 日付範囲: `startDate` 必須（未指定→400）、`endDate` 任意、`startDate ≤ endDate`（逆転→400）。更新はマージ後の値で検証。FE は TaskForm のクライアント側検証（開始必須・開始≤終了）と flatpickr UI を Playwright で確認（flatpickr は単体では `vi.mock`）。
 
 ## テスト実行コマンド
 

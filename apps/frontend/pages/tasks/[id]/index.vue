@@ -48,7 +48,12 @@ async function onDelete() {
         {{ task.description || '（説明なし）' }}
       </p>
       <p class="mt-2 text-sm text-gray-500">状態: {{ STATUS_LABEL[task.status] }}</p>
-      <p v-if="task.dueDate" class="text-sm text-gray-500">期限: {{ task.dueDate.slice(0, 10) }}</p>
+      <p class="text-sm text-gray-500" data-testid="detail-start-date">
+        開始: {{ task.startDate.slice(0, 10) }}
+      </p>
+      <p v-if="task.endDate" class="text-sm text-gray-500" data-testid="detail-end-date">
+        終了: {{ task.endDate.slice(0, 10) }}
+      </p>
 
       <div class="mt-6 flex gap-2">
         <NuxtLink

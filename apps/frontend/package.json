@@ -15,7 +15,8 @@
     "test:e2e": "nuxt build && playwright test"
   },
   "dependencies": {
-    "@app/api-client": "workspace:*"
+    "@app/api-client": "workspace:*",
+    "flatpickr": "^4.6.13"
   },
   "devDependencies": {
     "@nuxt/test-utils": "^4.0.3",

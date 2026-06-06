@@ -31,7 +31,8 @@ async function onFormSubmit(value: TaskFormValue) {
       title: value.title,
       description: value.description,
       status: value.status,
-      dueDate: value.dueDate,
+      startDate: value.startDate,
+      endDate: value.endDate,
     });
     validated.value = true;
   } catch (e) {
@@ -50,7 +51,8 @@ async function onConfirm() {
       title: draft.value.title,
       description: draft.value.description,
       status: draft.value.status,
-      dueDate: draft.value.dueDate,
+      startDate: draft.value.startDate,
+      endDate: draft.value.endDate,
     });
     await navigateTo(`/tasks/${created.id}`);
   } catch (e) {
@@ -84,8 +86,12 @@ async function onConfirm() {
           <dd>{{ STATUS_LABEL[draft.status] }}</dd>
         </div>
         <div class="flex justify-between py-1">
-          <dt class="text-gray-500">期限</dt>
-          <dd>{{ draft.dueDate ? draft.dueDate.slice(0, 10) : '（なし）' }}</dd>
+          <dt class="text-gray-500">開始</dt>
+          <dd data-testid="confirm-start">{{ draft.startDate.slice(0, 10) }}</dd>
+        </div>
+        <div class="flex justify-between py-1">
+          <dt class="text-gray-500">終了</dt>
+          <dd>{{ draft.endDate ? draft.endDate.slice(0, 10) : '（なし）' }}</dd>
         </div>
       </dl>
       <p v-if="validating" class="text-sm text-gray-500" data-testid="validating">
