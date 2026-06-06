@@ -14,6 +14,7 @@ const sampleTask: Task = {
   title: '買い物',
   description: '牛乳を買う',
   status: 'todo',
+  startDate: '2026-06-10T00:00:00.000Z',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
@@ -42,7 +43,7 @@ describe('useTasks', () => {
     );
 
     const { create } = useTasks();
-    const created = await create({ title: '買い物' });
+    const created = await create({ title: '買い物', startDate: '2026-06-10T00:00:00.000Z' });
 
     expect(created.id).toBe('t1');
     expect(receivedAuth).toBe('Bearer token-abc');
@@ -82,7 +83,9 @@ describe('useTasks', () => {
       );
 
       const { validateCreate } = useTasks();
-      await expect(validateCreate({ title: '買い物' })).resolves.toBeUndefined();
+      await expect(
+        validateCreate({ title: '買い物', startDate: '2026-06-10T00:00:00.000Z' }),
+      ).resolves.toBeUndefined();
       expect(called).toBe(true);
     });
 
@@ -94,7 +97,9 @@ describe('useTasks', () => {
       );
 
       const { validateCreate } = useTasks();
-      await expect(validateCreate({ title: '' })).rejects.toMatchObject({ statusCode: 400 });
+      await expect(
+        validateCreate({ title: '', startDate: '2026-06-10T00:00:00.000Z' }),
+      ).rejects.toMatchObject({ statusCode: 400 });
     });
   });
 

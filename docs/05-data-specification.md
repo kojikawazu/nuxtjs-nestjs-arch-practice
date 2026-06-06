@@ -31,7 +31,8 @@ erDiagram
     string title
     string description "nullable"
     string status "todo|in_progress|done"
-    datetime dueDate "nullable"
+    datetime startDate
+    datetime endDate "nullable"
     datetime createdAt
     datetime updatedAt
   }
@@ -49,6 +50,7 @@ erDiagram
 - 本番: MySQL 8.4（`mysql2` ドライバ）。
 - ローカル/テスト: better-sqlite3（インメモリ）。`DB_TYPE` 環境変数で切替。
 - カラム型は MySQL / SQLite 双方で動くポータブルな型のみ（`varchar` / `text` / `datetime`）。`status` は enum カラムではなく `varchar` + 契約型 `TaskStatus` + DTO バリデーションで担保。
+- タスクの期間は `startDate`（必須・日付のみ午前0時 UTC）/ `endDate`（任意・nullable）で表す。両方ある場合は `startDate ≤ endDate` を Service で担保（違反は 400）。
 - 学習用途では `synchronize: true`。本番はマイグレーション運用に切替える想定。
 
 ## データフロー

@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { TaskEntity } from './task.entity';
 import { TasksService } from './tasks.service';
@@ -26,7 +26,8 @@ describe('TasksService', () => {
     title: '買い物',
     description: '牛乳を買う',
     status: 'todo',
-    dueDate: null,
+    startDate: new Date('2026-01-10T00:00:00.000Z'),
+    endDate: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     ...overrides,
@@ -59,7 +60,8 @@ describe('TasksService', () => {
           title: '買い物',
           description: '牛乳を買う',
           status: 'todo',
-          dueDate: undefined,
+          startDate: '2026-01-10T00:00:00.000Z',
+          endDate: undefined,
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-02T00:00:00.000Z',
         },
@@ -67,37 +69,54 @@ describe('TasksService', () => {
     });
   });
 
-  describe('create（正常系）', () => {
-    it('status 省略時は todo、description/dueDate 省略時は null で保存する', async () => {
+  describe('create', () => {
+    it('正常系: status 省略時は todo、description/endDate 省略時は null で保存する', async () => {
       repo.save.mockResolvedValue(
         buildEntity({ id: 'new', title: '新規', description: null, status: 'todo' }),
       );
 
-      const result = await service.create(USER, { title: '新規' });
+      const result = await service.create(USER, {
+        title: '新規',
+        startDate: '2026-01-10T00:00:00.000Z',
+      });
 
       expect(repo.create).toHaveBeenCalledWith({
         userId: USER,
         title: '新規',
         description: null,
         status: 'todo',
-        dueDate: null,
+        startDate: new Date('2026-01-10T00:00:00.000Z'),
+        endDate: null,
       });
       expect(result.status).toBe('todo');
       expect(result.title).toBe('新規');
     });
 
-    it('dueDate(ISO文字列) を Date に変換して保存する', async () => {
+    it('正常系: startDate/endDate(ISO文字列) を Date に変換して保存する', async () => {
       repo.save.mockImplementation(async (e: TaskEntity) => buildEntity(e));
 
       await service.create(USER, {
-        title: '締切あり',
+        title: '期間あり',
         status: 'in_progress',
-        dueDate: '2026-03-01T09:00:00.000Z',
+        startDate: '2026-03-01T00:00:00.000Z',
+        endDate: '2026-03-10T00:00:00.000Z',
       });
 
       const created = repo.create.mock.calls[0][0] as TaskEntity;
-      expect(created.dueDate).toEqual(new Date('2026-03-01T09:00:00.000Z'));
+      expect(created.startDate).toEqual(new Date('2026-03-01T00:00:00.000Z'));
+      expect(created.endDate).toEqual(new Date('2026-03-10T00:00:00.000Z'));
       expect(created.status).toBe('in_progress');
+    });
+
+    it('異常系: 終了が開始より前なら BadRequestException で save されない', async () => {
+      await expect(
+        service.create(USER, {
+          title: '逆転',
+          startDate: '2026-03-10T00:00:00.000Z',
+          endDate: '2026-03-01T00:00:00.000Z',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.save).not.toHaveBeenCalled();
     });
   });
 
@@ -145,14 +164,37 @@ describe('TasksService', () => {
       );
       expect(repo.save).not.toHaveBeenCalled();
     });
+
+    it('異常系: 既存 startDate より前の endDate 指定は BadRequestException で save されない', async () => {
+      // 既存 startDate = 2026-01-10。終了だけ 2026-01-05 に更新しようとすると逆転する
+      repo.findOne.mockResolvedValue(buildEntity());
+
+      await expect(
+        service.update(USER, 'task-1', { endDate: '2026-01-05T00:00:00.000Z' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.save).not.toHaveBeenCalled();
+    });
   });
 
   describe('validateCreate（DryRun・保存しない）', () => {
     it('正常系: 検証を通り、save を呼ばない', async () => {
-      await expect(service.validateCreate(USER, { title: '新規' })).resolves.toBeUndefined();
+      await expect(
+        service.validateCreate(USER, { title: '新規', startDate: '2026-01-10T00:00:00.000Z' }),
+      ).resolves.toBeUndefined();
 
       expect(repo.save).not.toHaveBeenCalled();
       expect(repo.create).not.toHaveBeenCalled();
+    });
+
+    it('異常系: 終了が開始より前なら BadRequestException（save しない）', async () => {
+      await expect(
+        service.validateCreate(USER, {
+          title: '逆転',
+          startDate: '2026-03-10T00:00:00.000Z',
+          endDate: '2026-03-01T00:00:00.000Z',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.save).not.toHaveBeenCalled();
     });
   });
 
@@ -183,6 +225,15 @@ describe('TasksService', () => {
       await expect(service.validateUpdate(USER, 'task-1', { title: 'x' })).rejects.toBeInstanceOf(
         ForbiddenException,
       );
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('異常系: マージ後に終了が開始より前なら BadRequestException', async () => {
+      repo.findOne.mockResolvedValue(buildEntity()); // 既存 startDate = 2026-01-10
+
+      await expect(
+        service.validateUpdate(USER, 'task-1', { endDate: '2026-01-05T00:00:00.000Z' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(repo.save).not.toHaveBeenCalled();
     });
   });

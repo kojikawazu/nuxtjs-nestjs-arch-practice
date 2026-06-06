@@ -18,7 +18,10 @@ export class CreateTaskDto implements TaskCreate {
   @IsIn(TASK_STATUSES)
   status?: TaskStatus;
 
+  @IsISO8601()
+  startDate!: string;
+
   @IsOptional()
   @IsISO8601()
-  dueDate?: string;
+  endDate?: string;
 }

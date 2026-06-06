@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { Task } from '@app/api-client';
@@ -26,12 +31,16 @@ export class TasksService {
   }
 
   async create(userId: string, dto: CreateTaskDto): Promise<Task> {
+    const startDate = new Date(dto.startDate);
+    const endDate = dto.endDate ? new Date(dto.endDate) : null;
+    TasksService.assertDateOrder(startDate, endDate);
     const entity = this.tasks.create({
       userId,
       title: dto.title,
       description: dto.description ?? null,
       status: dto.status ?? 'todo',
-      dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      startDate,
+      endDate,
     });
     const saved = await this.tasks.save(entity);
     return TasksService.toContractTask(saved);
@@ -41,8 +50,11 @@ export class TasksService {
    * タスク作成の DryRun（検証のみ）。DTO 検証は ValidationPipe が済ませている前提で、
    * 新規作成には所有権などの追加業務ルールが無いため、保存せずに通過させる。
    */
-  async validateCreate(_userId: string, _dto: CreateTaskDto): Promise<void> {
-    // DTO 検証以外の業務ルールは無し。DB への書き込みは行わない。
+  async validateCreate(_userId: string, dto: CreateTaskDto): Promise<void> {
+    // DTO 検証に加え、開始≤終了の業務ルールのみ確認する。DB への書き込みは行わない。
+    const startDate = new Date(dto.startDate);
+    const endDate = dto.endDate ? new Date(dto.endDate) : null;
+    TasksService.assertDateOrder(startDate, endDate);
   }
 
   async getById(userId: string, id: string): Promise<Task> {
@@ -55,7 +67,9 @@ export class TasksService {
     if (dto.title !== undefined) entity.title = dto.title;
     if (dto.description !== undefined) entity.description = dto.description ?? null;
     if (dto.status !== undefined) entity.status = dto.status;
-    if (dto.dueDate !== undefined) entity.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+    if (dto.startDate !== undefined) entity.startDate = new Date(dto.startDate);
+    if (dto.endDate !== undefined) entity.endDate = dto.endDate ? new Date(dto.endDate) : null;
+    TasksService.assertDateOrder(entity.startDate, entity.endDate);
     const saved = await this.tasks.save(entity);
     return TasksService.toContractTask(saved);
   }
@@ -64,8 +78,13 @@ export class TasksService {
    * タスク更新の DryRun（検証のみ）。所有権（存在=404 / 非所有=403）を確認するが、
    * 値の反映・保存（save）は行わない。
    */
-  async validateUpdate(userId: string, id: string, _dto: UpdateTaskDto): Promise<void> {
-    await this.findOwned(userId, id);
+  async validateUpdate(userId: string, id: string, dto: UpdateTaskDto): Promise<void> {
+    const entity = await this.findOwned(userId, id);
+    // 更新後に確定する値（指定があれば新値、なければ既存値）で開始≤終了を確認する。
+    const startDate = dto.startDate !== undefined ? new Date(dto.startDate) : entity.startDate;
+    const endDate =
+      dto.endDate !== undefined ? (dto.endDate ? new Date(dto.endDate) : null) : entity.endDate;
+    TasksService.assertDateOrder(startDate, endDate);
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -85,13 +104,21 @@ export class TasksService {
     return entity;
   }
 
+  /** 開始・終了が両方あるとき、終了が開始より前なら 400。 */
+  private static assertDateOrder(start: Date, end: Date | null): void {
+    if (end && end.getTime() < start.getTime()) {
+      throw new BadRequestException('endDate must be on or after startDate');
+    }
+  }
+
   private static toContractTask(entity: TaskEntity): Task {
     return {
       id: entity.id,
       title: entity.title,
       description: entity.description ?? undefined,
       status: entity.status,
-      dueDate: entity.dueDate ? entity.dueDate.toISOString() : undefined,
+      startDate: entity.startDate.toISOString(),
+      endDate: entity.endDate ? entity.endDate.toISOString() : undefined,
       createdAt: entity.createdAt.toISOString(),
       updatedAt: entity.updatedAt.toISOString(),
     };

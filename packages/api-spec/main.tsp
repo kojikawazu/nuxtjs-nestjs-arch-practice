@@ -40,7 +40,8 @@ model Task {
   title: string;
   description?: string;
   status: TaskStatus;
-  dueDate?: utcDateTime;
+  startDate: utcDateTime;
+  endDate?: utcDateTime;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
 }
@@ -66,7 +67,8 @@ model TaskCreate {
   description?: string;
 
   status?: TaskStatus;
-  dueDate?: utcDateTime;
+  startDate: utcDateTime;
+  endDate?: utcDateTime;
 }
 
 model TaskUpdate {
@@ -78,7 +80,8 @@ model TaskUpdate {
   description?: string;
 
   status?: TaskStatus;
-  dueDate?: utcDateTime;
+  startDate?: utcDateTime;
+  endDate?: utcDateTime;
 }
 
 model RegisterRequest {

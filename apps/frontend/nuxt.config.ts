@@ -5,6 +5,7 @@ export default defineNuxtConfig({
   ssr: false,
   devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss', '@nuxt/test-utils/module'],
+  css: ['flatpickr/dist/flatpickr.css'],
   runtimeConfig: {
     // サーバ側（Nitro BFF → backend）。NUXT_API_BASE_URL で上書き可。
     apiBaseUrl: 'http://localhost:3001',
