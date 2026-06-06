@@ -40,3 +40,4 @@ pnpm --filter @app/frontend test:e2e  # 全体 E2E(Playwright, ビルド→起�
 
 - backend e2e と Playwright は外部依存なしで動くよう SQLite を使用（本番は MySQL）。
 - Playwright は dev サーバ（Vite7 非互換）を避け、本番ビルド出力を起動して検証する。
+- compose の `mysql-test`（MySQL での e2e 用使い捨て DB）は `test` profile に隔離。無印 `docker compose up` では起動せず、必要時のみ `docker compose --profile test up mysql-test` で起動する。
