@@ -1,5 +1,6 @@
 # タスク管理アプリ用 compose（mysql + backend + frontend）。
-# mysql-test は backend の e2e 用使い捨て DB。
+# mysql-test は backend の e2e 用使い捨て DB。`test` profile に隔離してあり、
+# 無印 `docker compose up` では起動しない。使うときは `docker compose --profile test up mysql-test`。
 services:
   mysql:
     image: mysql:8.4
@@ -21,8 +22,10 @@ services:
       retries: 10
 
   # backend e2e テスト専用の使い捨て DB（本番 DB を汚さない）
+  # test profile 限定: 無印の `docker compose up` では起動しない。
   mysql-test:
     image: mysql:8.4
+    profiles: ['test']
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
