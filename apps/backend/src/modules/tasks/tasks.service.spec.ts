@@ -147,6 +147,46 @@ describe('TasksService', () => {
     });
   });
 
+  describe('validateCreate（DryRun・保存しない）', () => {
+    it('正常系: 検証を通り、save を呼ばない', async () => {
+      await expect(service.validateCreate(USER, { title: '新規' })).resolves.toBeUndefined();
+
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(repo.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('validateUpdate（DryRun・保存しない）', () => {
+    it('正常系: 自分のタスクなら検証を通り、save を呼ばない', async () => {
+      repo.findOne.mockResolvedValue(buildEntity());
+
+      await expect(
+        service.validateUpdate(USER, 'task-1', { status: 'done' }),
+      ).resolves.toBeUndefined();
+
+      expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 'task-1' } });
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('異常系: 存在しないタスクは NotFoundException で save されない', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.validateUpdate(USER, 'missing', { title: 'x' })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('準正常系: 他人のタスクは ForbiddenException で save されない', async () => {
+      repo.findOne.mockResolvedValue(buildEntity({ userId: OTHER }));
+
+      await expect(service.validateUpdate(USER, 'task-1', { title: 'x' })).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+  });
+
   describe('remove', () => {
     it('正常系: 所有者なら delete を呼ぶ', async () => {
       repo.findOne.mockResolvedValue(buildEntity());

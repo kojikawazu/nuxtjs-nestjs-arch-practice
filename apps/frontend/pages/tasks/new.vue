@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { TaskFormValue } from '~/components/TaskForm.vue';
 
-const { create } = useTasks();
+const { create, validateCreate } = useTasks();
 
 const step = ref<'form' | 'confirm'>('form');
 const draft = ref<TaskFormValue | null>(null);
 const error = ref<string | null>(null);
 const loading = ref(false);
+
+// confirm 進入時のサーバ側 DryRun 検証状態
+const validating = ref(false);
+const validated = ref(false);
+const validationError = ref<string | null>(null);
 
 const STATUS_LABEL: Record<string, string> = {
   todo: '未着手',
@@ -14,9 +19,26 @@ const STATUS_LABEL: Record<string, string> = {
   done: '完了',
 };
 
-function onFormSubmit(value: TaskFormValue) {
+async function onFormSubmit(value: TaskFormValue) {
   draft.value = value;
   step.value = 'confirm';
+  // confirm に進んだ時点でサーバ側の検証（保存はしない）を実行する
+  validating.value = true;
+  validated.value = false;
+  validationError.value = null;
+  try {
+    await validateCreate({
+      title: value.title,
+      description: value.description,
+      status: value.status,
+      dueDate: value.dueDate,
+    });
+    validated.value = true;
+  } catch (e) {
+    validationError.value = getErrorMessage(e, '入力内容に問題があります');
+  } finally {
+    validating.value = false;
+  }
 }
 
 async function onConfirm() {
@@ -66,6 +88,15 @@ async function onConfirm() {
           <dd>{{ draft.dueDate ? draft.dueDate.slice(0, 10) : '（なし）' }}</dd>
         </div>
       </dl>
+      <p v-if="validating" class="text-sm text-gray-500" data-testid="validating">
+        サーバ側で検証中…
+      </p>
+      <p v-else-if="validated" class="text-sm text-green-700" data-testid="validation-ok">
+        ✓ 検証に通りました。この内容で作成できます。
+      </p>
+      <p v-else-if="validationError" class="text-sm text-red-600" data-testid="validation-error">
+        {{ validationError }}
+      </p>
       <p v-if="error" class="text-sm text-red-600" data-testid="create-error">{{ error }}</p>
       <div class="flex gap-2">
         <button
@@ -81,7 +112,7 @@ async function onConfirm() {
           type="button"
           data-testid="confirm-create"
           class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          :disabled="loading"
+          :disabled="loading || validating || !validated"
           @click="onConfirm"
         >
           作成する

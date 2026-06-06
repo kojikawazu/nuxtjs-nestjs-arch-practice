@@ -36,6 +36,16 @@ export function useTasks() {
   const update = async (id: string, body: TaskUpdate): Promise<Task> =>
     unwrap(await client.PATCH('/tasks/{id}', { params: { path: { id } }, body }));
 
+  /** 作成の事前検証（DryRun・保存しない）。検証 NG は createError として投げる。 */
+  const validateCreate = async (body: TaskCreate): Promise<void> => {
+    unwrap(await client.POST('/tasks/validate', { body }));
+  };
+
+  /** 更新の事前検証（DryRun・保存しない）。検証 NG は createError として投げる。 */
+  const validateUpdate = async (id: string, body: TaskUpdate): Promise<void> => {
+    unwrap(await client.POST('/tasks/{id}/validate', { params: { path: { id } }, body }));
+  };
+
   const remove = async (id: string): Promise<void> => {
     const result = await client.DELETE('/tasks/{id}', { params: { path: { id } } });
     if (!result.response.ok) {
@@ -46,5 +56,5 @@ export function useTasks() {
     }
   };
 
-  return { list, get, create, update, remove };
+  return { list, get, create, update, remove, validateCreate, validateUpdate };
 }

@@ -14,3 +14,4 @@ export type RegisterRequest = components['schemas']['RegisterRequest'];
 export type LoginRequest = components['schemas']['LoginRequest'];
 export type RefreshRequest = components['schemas']['RefreshRequest'];
 export type ApiError = components['schemas']['ApiError'];
+export type DryRunResult = components['schemas']['DryRunResult'];

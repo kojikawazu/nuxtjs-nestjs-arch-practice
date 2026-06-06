@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
-import type { AuthTokens } from '@app/api-client';
+import type { AuthTokens, DryRunResult } from '@app/api-client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthService } from './auth.service';
 import type { AuthenticatedUser } from './auth.types';
@@ -16,6 +16,13 @@ export class AuthController {
   @HttpCode(201)
   register(@Body() dto: RegisterDto): Promise<AuthTokens> {
     return this.auth.register(dto);
+  }
+
+  @Post('register/validate')
+  @HttpCode(200)
+  async registerValidate(@Body() dto: RegisterDto): Promise<DryRunResult> {
+    await this.auth.validateRegister(dto);
+    return { valid: true };
   }
 
   @Post('login')

@@ -85,4 +85,77 @@ describe('Tasks (e2e)', () => {
   it('異常系: トークンなしの作成は 401', async () => {
     await http.post('/tasks').send({ title: 'x' }).expect(401);
   });
+
+  describe('POST /tasks/validate（作成 DryRun・保存しない）', () => {
+    it('正常系: 有効な入力は 200 { valid: true } を返し、一覧に追加されない', async () => {
+      const before = await http.get('/tasks').set(auth(token)).expect(200);
+
+      const res = await http
+        .post('/tasks/validate')
+        .set(auth(token))
+        .send({ title: '検証だけのタスク' })
+        .expect(200);
+      expect(res.body).toEqual({ valid: true });
+
+      // DryRun なので件数は増えない
+      const after = await http.get('/tasks').set(auth(token)).expect(200);
+      expect(after.body).toHaveLength(before.body.length);
+    });
+
+    it('異常系: タイトル空はバリデーションで 400', async () => {
+      await http.post('/tasks/validate').set(auth(token)).send({ title: '' }).expect(400);
+    });
+
+    it('異常系: トークンなしは 401', async () => {
+      await http.post('/tasks/validate').send({ title: 'x' }).expect(401);
+    });
+  });
+
+  describe('POST /tasks/:id/validate（更新 DryRun・保存しない）', () => {
+    it('正常系: 自分のタスクは 200 を返し、内容は変更されない', async () => {
+      const created = await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: '元のタイトル', status: 'todo' })
+        .expect(201);
+      const id = created.body.id as string;
+
+      const res = await http
+        .post(`/tasks/${id}/validate`)
+        .set(auth(token))
+        .send({ title: '変更案', status: 'done' })
+        .expect(200);
+      expect(res.body).toEqual({ valid: true });
+
+      // DryRun なので保存されていない（元のまま）
+      const detail = await http.get(`/tasks/${id}`).set(auth(token)).expect(200);
+      expect(detail.body.title).toBe('元のタイトル');
+      expect(detail.body.status).toBe('todo');
+    });
+
+    it('異常系: 存在しないタスクは 404', async () => {
+      await http
+        .post('/tasks/nonexistent-id/validate')
+        .set(auth(token))
+        .send({ title: 'x' })
+        .expect(404);
+    });
+
+    it('準正常系: 他人のタスクは 403', async () => {
+      const created = await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: 'owner のタスク' })
+        .expect(201);
+      const id = created.body.id as string;
+
+      const otherToken = await register('validate-other@example.com');
+
+      await http
+        .post(`/tasks/${id}/validate`)
+        .set(auth(otherToken))
+        .send({ title: 'のっとり' })
+        .expect(403);
+    });
+  });
 });

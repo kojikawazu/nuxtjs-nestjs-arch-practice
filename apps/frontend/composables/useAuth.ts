@@ -1,4 +1,4 @@
-import type { LoginRequest, RegisterRequest, User } from '@app/api-client';
+import type { DryRunResult, LoginRequest, RegisterRequest, User } from '@app/api-client';
 
 interface AuthResponse {
   accessToken: string;
@@ -22,6 +22,11 @@ export function useAuth() {
     applySession(await $fetch<AuthResponse>('/api/auth/register', { method: 'POST', body }));
   }
 
+  /** 登録の事前検証（DryRun・保存しない）。検証 NG は例外として伝播する。 */
+  async function validateRegister(body: RegisterRequest): Promise<void> {
+    await $fetch<DryRunResult>('/api/auth/register/validate', { method: 'POST', body });
+  }
+
   async function login(body: LoginRequest): Promise<void> {
     applySession(await $fetch<AuthResponse>('/api/auth/login', { method: 'POST', body }));
   }
@@ -39,5 +44,14 @@ export function useAuth() {
     user.value = null;
   }
 
-  return { accessToken, user, isAuthenticated, register, login, refresh, logout };
+  return {
+    accessToken,
+    user,
+    isAuthenticated,
+    register,
+    validateRegister,
+    login,
+    refresh,
+    logout,
+  };
 }

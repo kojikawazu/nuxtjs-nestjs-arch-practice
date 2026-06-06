@@ -54,6 +54,18 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /**
+   * 新規登録の DryRun（検証のみ）。DTO 検証は ValidationPipe が済ませている前提で、
+   * ここでは業務ルール（メール重複）だけを確認する。ユーザー作成・トークン発行は一切行わない。
+   * 検証 NG はそのまま例外（重複 → 409）として伝播する。
+   */
+  async validateRegister(dto: RegisterDto): Promise<void> {
+    const existing = await this.users.findByEmail(dto.email);
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+  }
+
   async login(dto: LoginDto): Promise<AuthTokens> {
     const user = await this.users.findByEmail(dto.email);
     if (!user) {

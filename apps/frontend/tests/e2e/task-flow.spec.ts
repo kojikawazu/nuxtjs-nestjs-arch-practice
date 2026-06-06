@@ -26,6 +26,8 @@ test('タスク管理の一連フロー', async ({ page }) => {
 
   await expect(page.getByTestId('confirm-step')).toBeVisible();
   await expect(page.getByTestId('confirm-title')).toHaveText('牛乳を買う');
+  // confirm 進入時にサーバ側 DryRun 検証が走り、通過すると作成できる
+  await expect(page.getByTestId('validation-ok')).toBeVisible();
   await page.getByTestId('confirm-create').click();
 
   // --- 詳細表示 ---
@@ -41,6 +43,7 @@ test('タスク管理の一連フロー', async ({ page }) => {
   await page.getByTestId('task-status').selectOption('done');
   await page.getByTestId('task-submit').click();
   await expect(page.getByTestId('confirm-step')).toBeVisible();
+  await expect(page.getByTestId('validation-ok')).toBeVisible();
   await page.getByTestId('confirm-update').click();
 
   await expect(page.getByTestId('detail-title')).toBeVisible();
