@@ -1,0 +1,20 @@
+name: Setup
+description: pnpm / Node セットアップ + 依存インストール + 契約から型生成（api:gen）
+
+runs:
+  using: composite
+  steps:
+    # packageManager (pnpm@x.y.z) を package.json から自動検出する
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+
+    # 生成物（@app/api-client の型）は .gitignore 対象のため、各ジョブで必ず生成する
+    - run: pnpm api:gen
+      shell: bash

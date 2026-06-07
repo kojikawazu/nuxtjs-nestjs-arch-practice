@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 同一参照の古い実行はキャンセルして無駄なランを省く
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint / Format / Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm -r typecheck
+
+  backend:
+    name: Backend (unit + e2e)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @app/backend test
+      # e2e は外部依存なしで動くよう in-memory SQLite を使う
+      - run: pnpm --filter @app/backend test:e2e
+
+  frontend:
+    name: Frontend (unit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @app/frontend test
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # chromium とその OS 依存をインストール
+      - run: pnpm --filter @app/frontend exec playwright install --with-deps chromium
+      # nuxt build → backend(SQLite)/frontend(本番出力) を自動起動して Playwright 実行
+      - run: pnpm --filter @app/frontend test:e2e
