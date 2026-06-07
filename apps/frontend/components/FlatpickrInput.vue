@@ -36,7 +36,10 @@ onUnmounted(() => {
 watch(
   () => props.modelValue,
   (value) => {
-    if (fp && value !== fp.input.value) fp.setDate(value || null, false);
+    if (!fp || value === fp.input.value) return;
+    // 空文字は clear() で明示的にクリアする（setDate の型は null を受け付けない）
+    if (value) fp.setDate(value, false);
+    else fp.clear();
   },
 );
 
