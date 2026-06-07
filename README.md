@@ -70,4 +70,35 @@ pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 
 ## ドキュメント
 
-仕様書は `docs/` 配下に管理。開発ルールは `.claude/rules/` を参照。
+仕様書は `docs/` 配下に番号付きで整理している。開発ルールは `.claude/rules/` を参照。
+
+### よくある探し物（クイックリンク）
+
+| 知りたいこと | 参照先 |
+|---|---|
+| **初めてコードを読む / 起動コマンド・curl 例** | [docs/12-code-reading-guide.md](docs/12-code-reading-guide.md) |
+| **アーキテクチャ・構成**（何が動く？ 静的配信・volume・技術スタック） | [docs/09-architecture-specification.md](docs/09-architecture-specification.md) |
+| **ポート番号・DB 切替・画像保存先**（3000 / 3001 / 3306 など） | [docs/10-miscellaneous-specification.md](docs/10-miscellaneous-specification.md) |
+| **DB**（ER 図・テーブルスキーマ・`imageUrl`） | [docs/05-data-specification.md](docs/05-data-specification.md) |
+| **セキュリティ**（認証・トークン保管・アップロード検証） | [docs/06-security-specification.md](docs/06-security-specification.md) |
+| **API エンドポイント一覧 / Swagger** | [docs/07-api-specification.md](docs/07-api-specification.md) |
+| **機能・画面遷移・確認画面（2段階）** | [docs/03-functional-specification.md](docs/03-functional-specification.md) |
+| **テスト方針・各層のモック対象** | [docs/08-test-specification.md](docs/08-test-specification.md) |
+| **進捗・CI** | [docs/11-tasks.md](docs/11-tasks.md) |
+
+### ドキュメント一覧
+
+| # | ファイル | 内容 |
+|---|---|---|
+| 01 | [business-requirements](docs/01-business-requirements.md) | 要求仕様（背景・目標・スコープ・制約） |
+| 02 | [requirements-specification](docs/02-requirements-specification.md) | 要件仕様（機能要件一覧・受け入れ条件・優先度） |
+| 03 | [functional-specification](docs/03-functional-specification.md) | 機能仕様（機能詳細・ユーザーフロー・UI/UX・業務ロジック） |
+| 04 | [non-functional-specification](docs/04-non-functional-specification.md) | 非機能仕様（性能・可用性・信頼性・保守性） |
+| 05 | [data-specification](docs/05-data-specification.md) | データ仕様（ER 図・スキーマ・ポータブル型） |
+| 06 | [security-specification](docs/06-security-specification.md) | セキュリティ仕様（JWT・トークン保管・アップロード検証） |
+| 07 | [api-specification](docs/07-api-specification.md) | API 仕様（エンドポイント・契約・Swagger UI） |
+| 08 | [test-specification](docs/08-test-specification.md) | テスト仕様（各層の戦略・モック方針・カバレッジ） |
+| 09 | [architecture-specification](docs/09-architecture-specification.md) | アーキテクチャ仕様（システム構成・静的配信/volume・技術スタック） |
+| 10 | [miscellaneous-specification](docs/10-miscellaneous-specification.md) | その他（用語集・参照資料・付録: ポート/DB 切替/画像保存先） |
+| 11 | [tasks](docs/11-tasks.md) | タスク・進捗・CI |
+| 12 | [code-reading-guide](docs/12-code-reading-guide.md) | コードリーディングガイド（契約 → BE → FE → テストの読む順番） |
