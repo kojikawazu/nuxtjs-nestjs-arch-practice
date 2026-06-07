@@ -11,8 +11,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # コード関連の変更があるかを判定する軽量ジョブ。
+  # doc のみの変更では後続ジョブを skip するが、skip は required check 上は緑扱いになる
+  # （ワークフロー単位の paths-ignore と違いマージがブロックされない）。
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'apps/**'
+              - 'packages/**'
+              - '.github/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig*.json'
+              - 'eslint.config.mjs'
+              - '.prettierrc.json'
+              - '.prettierignore'
+              - 'docker-compose.yml'
+
   quality:
     name: Lint / Format / Typecheck
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +52,8 @@ jobs:
 
   backend:
     name: Backend (unit + e2e)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +64,8 @@ jobs:
 
   frontend:
     name: Frontend (unit)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +74,8 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

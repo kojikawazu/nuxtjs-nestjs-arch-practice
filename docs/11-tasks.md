@@ -27,6 +27,7 @@
 - `.github/workflows/ci.yml`：`pull_request` と `main` への `push` で起動。
 - ジョブ: quality（lint / format:check / `-r typecheck`）/ backend（単体 + e2e）/ frontend（単体）/ e2e（Playwright）。
 - 共通セットアップは `.github/actions/setup`（pnpm/Node + `install` + `api:gen`）。生成物は `.gitignore` 対象のため各ジョブで `api:gen` を実行する。
+- `changes` ジョブ（`dorny/paths-filter`）でコード変更の有無を判定し、doc のみの変更では quality/backend/frontend/e2e を skip する（skip は required check 上は緑扱いのためマージは止まらない）。
 
 ## 今後の候補（未着手）
 
