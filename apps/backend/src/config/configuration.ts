@@ -21,6 +21,14 @@ export interface AppConfig {
     refreshSecret: string;
     refreshExpiresIn: string;
   };
+  upload: {
+    /** 画像の保存先ディレクトリ（本番は volume マウント、テストは tmpdir 等を指定） */
+    dir: string;
+    /** 1ファイルあたりの最大バイト数 */
+    maxBytes: number;
+    /** 許可する MIME タイプ */
+    allowedMimeTypes: string[];
+  };
 }
 
 export function configuration(): AppConfig {
@@ -43,6 +51,12 @@ export function configuration(): AppConfig {
       accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN ?? '900s',
       refreshSecret: env.JWT_REFRESH_SECRET ?? 'dev-refresh-secret',
       refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN ?? '7d',
+    },
+    upload: {
+      // 既定はリポジトリ相対の uploads。compose では volume をこのパスへマウントする。
+      dir: env.UPLOAD_DIR ?? 'uploads',
+      maxBytes: Number(env.MAX_UPLOAD_BYTES ?? 2 * 1024 * 1024), // 既定 2MB
+      allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
     },
   };
 }

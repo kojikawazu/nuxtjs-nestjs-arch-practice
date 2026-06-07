@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute();
 const id = route.params.id as string;
-const { get, remove } = useTasks();
+const { get, remove, imageSrc } = useTasks();
 
 const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
   getCachedData: () => undefined,
@@ -44,6 +44,13 @@ async function onDelete() {
         <h1 class="text-2xl font-bold" data-testid="detail-title">{{ task.title }}</h1>
         <TaskStatusBadge :status="task.status" />
       </div>
+      <img
+        v-if="task.imageUrl"
+        :src="imageSrc(task.imageUrl)"
+        alt="タスクの添付画像"
+        data-testid="detail-image"
+        class="mt-4 max-h-72 rounded border border-gray-200"
+      />
       <p class="mt-4 whitespace-pre-wrap text-gray-700" data-testid="detail-description">
         {{ task.description || '（説明なし）' }}
       </p>

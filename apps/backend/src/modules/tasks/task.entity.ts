@@ -36,6 +36,10 @@ export class TaskEntity {
   @Column({ type: 'datetime', nullable: true })
   endDate!: Date | null;
 
+  // 添付画像の公開パス（例: "/uploads/<file>"）。varchar でポータブル（MySQL/SQLite 双方可）。
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  imageUrl!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

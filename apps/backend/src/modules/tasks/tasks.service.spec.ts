@@ -1,15 +1,25 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { Repository } from 'typeorm';
 import { TaskEntity } from './task.entity';
 import { TasksService } from './tasks.service';
 
+// fs（外部 I/O）はモックする。ビジネスロジックはモックしない方針。
+jest.mock('node:fs/promises');
+const mkdirMock = mkdir as jest.MockedFunction<typeof mkdir>;
+const writeFileMock = writeFile as jest.MockedFunction<typeof writeFile>;
+const unlinkMock = unlink as jest.MockedFunction<typeof unlink>;
+
 /**
  * TasksService の単体テスト。
- * 外部 I/O である TypeORM Repository のみモックし、ユースケース/認可ロジックは本物で検証する。
+ * 外部 I/O である TypeORM Repository とファイルシステムのみモックし、
+ * ユースケース/認可ロジックは本物で検証する。
  */
 describe('TasksService', () => {
   const USER = 'user-1';
   const OTHER = 'user-2';
+  const UPLOAD_DIR = '/tmp/test-uploads';
 
   let repo: {
     find: jest.Mock;
@@ -28,12 +38,20 @@ describe('TasksService', () => {
     status: 'todo',
     startDate: new Date('2026-01-10T00:00:00.000Z'),
     endDate: null,
+    imageUrl: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     ...overrides,
   });
 
+  const pngFile = (): Express.Multer.File =>
+    ({ mimetype: 'image/png', buffer: Buffer.from('fake-png') }) as Express.Multer.File;
+
   beforeEach(() => {
+    jest.clearAllMocks();
+    mkdirMock.mockResolvedValue(undefined);
+    writeFileMock.mockResolvedValue(undefined);
+    unlinkMock.mockResolvedValue(undefined);
     repo = {
       find: jest.fn(),
       findOne: jest.fn(),
@@ -41,7 +59,10 @@ describe('TasksService', () => {
       save: jest.fn(async (input: TaskEntity) => input),
       delete: jest.fn(),
     };
-    service = new TasksService(repo as unknown as Repository<TaskEntity>);
+    const config = {
+      getOrThrow: jest.fn(() => UPLOAD_DIR),
+    } as unknown as ConfigService;
+    service = new TasksService(repo as unknown as Repository<TaskEntity>, config);
   });
 
   describe('list（正常系）', () => {
@@ -252,6 +273,90 @@ describe('TasksService', () => {
 
       await expect(service.remove(USER, 'missing')).rejects.toBeInstanceOf(NotFoundException);
       expect(repo.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setImage（画像添付）', () => {
+    it('正常系: サーバ生成ファイル名で保存し imageUrl を設定する', async () => {
+      repo.findOne.mockResolvedValue(buildEntity());
+      repo.save.mockImplementation(async (e: TaskEntity) => e);
+
+      const result = await service.setImage(USER, 'task-1', pngFile());
+
+      // ディレクトリ作成 → 書き込みの順で外部 I/O が呼ばれる
+      expect(mkdirMock).toHaveBeenCalledWith(UPLOAD_DIR, { recursive: true });
+      expect(writeFileMock).toHaveBeenCalledTimes(1);
+      // クライアント由来でなくサーバ生成の uuid 名（task-id + uuid + 拡張子）
+      expect(result.imageUrl).toMatch(/^\/uploads\/task-1-[0-9a-f-]{36}\.png$/);
+      const [writtenPath] = writeFileMock.mock.calls[0];
+      expect(writtenPath).toMatch(/^\/tmp\/test-uploads\/task-1-[0-9a-f-]{36}\.png$/);
+    });
+
+    it('正常系: 既存画像があれば保存後に旧ファイルを削除する', async () => {
+      repo.findOne.mockResolvedValue(buildEntity({ imageUrl: '/uploads/old-file.png' }));
+      repo.save.mockImplementation(async (e: TaskEntity) => e);
+
+      await service.setImage(USER, 'task-1', pngFile());
+
+      expect(unlinkMock).toHaveBeenCalledWith('/tmp/test-uploads/old-file.png');
+    });
+
+    it('異常系: 未対応 MIME は BadRequestException で書き込み・保存しない', async () => {
+      repo.findOne.mockResolvedValue(buildEntity());
+      const gif = { mimetype: 'image/gif', buffer: Buffer.from('x') } as Express.Multer.File;
+
+      await expect(service.setImage(USER, 'task-1', gif)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(writeFileMock).not.toHaveBeenCalled();
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('異常系: 存在しないタスクは NotFoundException で書き込みしない', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.setImage(USER, 'missing', pngFile())).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(writeFileMock).not.toHaveBeenCalled();
+    });
+
+    it('準正常系: 他人のタスクは ForbiddenException で書き込みしない', async () => {
+      repo.findOne.mockResolvedValue(buildEntity({ userId: OTHER }));
+
+      await expect(service.setImage(USER, 'task-1', pngFile())).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(writeFileMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeImage（画像削除）', () => {
+    it('正常系: imageUrl をクリアして実ファイルを削除する', async () => {
+      repo.findOne.mockResolvedValue(buildEntity({ imageUrl: '/uploads/keep.png' }));
+      repo.save.mockImplementation(async (e: TaskEntity) => e);
+
+      const result = await service.removeImage(USER, 'task-1');
+
+      expect(result.imageUrl).toBeUndefined();
+      expect(unlinkMock).toHaveBeenCalledWith('/tmp/test-uploads/keep.png');
+    });
+
+    it('正常系: 画像が無い場合は unlink を呼ばない', async () => {
+      repo.findOne.mockResolvedValue(buildEntity({ imageUrl: null }));
+      repo.save.mockImplementation(async (e: TaskEntity) => e);
+
+      await service.removeImage(USER, 'task-1');
+
+      expect(unlinkMock).not.toHaveBeenCalled();
+    });
+
+    it('準正常系: 他人のタスクは ForbiddenException で save されない', async () => {
+      repo.findOne.mockResolvedValue(buildEntity({ userId: OTHER, imageUrl: '/uploads/x.png' }));
+
+      await expect(service.removeImage(USER, 'task-1')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(unlinkMock).not.toHaveBeenCalled();
     });
   });
 });

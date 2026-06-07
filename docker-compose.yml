@@ -65,8 +65,14 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-900s}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      # 添付画像の保存先。下の volume をこのパスにマウントして永続化する。
+      UPLOAD_DIR: /repo/apps/backend/uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-2097152}
     ports:
       - '${BACKEND_PORT:-3001}:3001'
+    volumes:
+      # コンテナ再作成で画像が消えないよう named volume で永続化する
+      - uploads-data:/repo/apps/backend/uploads
 
   frontend:
     build:
@@ -85,3 +91,4 @@ services:
 
 volumes:
   mysql-data:
+  uploads-data:

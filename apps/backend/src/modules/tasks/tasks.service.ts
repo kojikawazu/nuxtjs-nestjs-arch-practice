@@ -1,15 +1,26 @@
+import { randomUUID } from 'node:crypto';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
 import {
   BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { Task } from '@app/api-client';
 import { TaskEntity } from './task.entity';
 import type { CreateTaskDto } from './dto/create-task.dto';
 import type { UpdateTaskDto } from './dto/update-task.dto';
+
+/** MIME → 拡張子。許可外は 400。 */
+const EXT_BY_MIME: Readonly<Record<string, string>> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+};
 
 /**
  * タスクのユースケース（application 層）。
@@ -20,6 +31,7 @@ export class TasksService {
   constructor(
     @InjectRepository(TaskEntity)
     private readonly tasks: Repository<TaskEntity>,
+    private readonly config: ConfigService,
   ) {}
 
   async list(userId: string): Promise<Task[]> {
@@ -92,6 +104,41 @@ export class TasksService {
     await this.tasks.delete({ id: entity.id });
   }
 
+  /**
+   * タスクに画像を添付（1枚・差し替え）。所有権（404/403）を確認し、
+   * サーバ生成のファイル名（uuid）で保存する＝クライアント由来の名前は使わない（パストラバーサル防止）。
+   * 保存成功後に旧ファイルを削除する。MIME/サイズの検証は Controller の ParseFilePipe で実施済み。
+   */
+  async setImage(userId: string, id: string, file: Express.Multer.File): Promise<Task> {
+    const entity = await this.findOwned(userId, id);
+    const ext = EXT_BY_MIME[file.mimetype];
+    if (!ext) {
+      throw new BadRequestException('Unsupported image type');
+    }
+    const dir = this.config.getOrThrow<string>('upload.dir');
+    await mkdir(dir, { recursive: true });
+    const filename = `${entity.id}-${randomUUID()}.${ext}`;
+    await writeFile(join(dir, filename), file.buffer);
+
+    const previous = entity.imageUrl;
+    entity.imageUrl = `/uploads/${filename}`;
+    const saved = await this.tasks.save(entity);
+    // 保存が確定してから旧ファイルを掃除する（失敗しても本処理は成功扱い）
+    await TasksService.removeStoredFile(dir, previous);
+    return TasksService.toContractTask(saved);
+  }
+
+  /** タスクの添付画像を削除する。実ファイルも削除する（無ければ無視）。 */
+  async removeImage(userId: string, id: string): Promise<Task> {
+    const entity = await this.findOwned(userId, id);
+    const previous = entity.imageUrl;
+    entity.imageUrl = null;
+    const saved = await this.tasks.save(entity);
+    const dir = this.config.getOrThrow<string>('upload.dir');
+    await TasksService.removeStoredFile(dir, previous);
+    return TasksService.toContractTask(saved);
+  }
+
   /** 存在しなければ 404、他人のタスクなら 403。 */
   private async findOwned(userId: string, id: string): Promise<TaskEntity> {
     const entity = await this.tasks.findOne({ where: { id } });
@@ -111,6 +158,19 @@ export class TasksService {
     }
   }
 
+  /**
+   * 公開パス（"/uploads/<file>"）に対応する実ファイルを削除する。
+   * basename のみを使うため、保存ディレクトリ外への参照は起こり得ない。存在しなくても無視する。
+   */
+  private static async removeStoredFile(dir: string, publicPath: string | null): Promise<void> {
+    if (!publicPath) return;
+    try {
+      await unlink(join(dir, basename(publicPath)));
+    } catch {
+      // 既に無い等は無視（掃除の失敗で本処理を巻き戻さない）
+    }
+  }
+
   private static toContractTask(entity: TaskEntity): Task {
     return {
       id: entity.id,
@@ -119,6 +179,7 @@ export class TasksService {
       status: entity.status,
       startDate: entity.startDate.toISOString(),
       endDate: entity.endDate ? entity.endDate.toISOString() : undefined,
+      imageUrl: entity.imageUrl ?? undefined,
       createdAt: entity.createdAt.toISOString(),
       updatedAt: entity.updatedAt.toISOString(),
     };

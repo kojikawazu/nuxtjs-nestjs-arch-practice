@@ -24,6 +24,49 @@ function unwrap<T>(result: FetchResult<T>): T {
  */
 export function useTasks() {
   const client = useApiClient();
+  const config = useRuntimeConfig();
+  const { accessToken } = useAuthState();
+
+  /** 添付画像の公開パス（"/uploads/..."）を表示可能な絶対 URL に変換する。 */
+  const imageSrc = (imageUrl: string): string => `${config.public.apiBaseUrl}${imageUrl}`;
+
+  /**
+   * 画像アップロード（multipart）。openapi-fetch は multipart に不向きなため、
+   * ここだけ素の fetch を使い、アクセストークンを Bearer で付与する（MSW で横取り可能）。
+   */
+  const authHeaders = (): Record<string, string> =>
+    accessToken.value ? { Authorization: `Bearer ${accessToken.value}` } : {};
+
+  const uploadImage = async (id: string, file: File): Promise<Task> => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${config.public.apiBaseUrl}/tasks/${id}/image`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: form,
+    });
+    if (!res.ok) {
+      throw createError({
+        statusCode: res.status,
+        statusMessage: `画像のアップロードに失敗しました (${res.status})`,
+      });
+    }
+    return (await res.json()) as Task;
+  };
+
+  const removeImage = async (id: string): Promise<Task> => {
+    const res = await fetch(`${config.public.apiBaseUrl}/tasks/${id}/image`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      throw createError({
+        statusCode: res.status,
+        statusMessage: `画像の削除に失敗しました (${res.status})`,
+      });
+    }
+    return (await res.json()) as Task;
+  };
 
   const list = async (): Promise<Task[]> => unwrap(await client.GET('/tasks'));
 
@@ -56,5 +99,16 @@ export function useTasks() {
     }
   };
 
-  return { list, get, create, update, remove, validateCreate, validateUpdate };
+  return {
+    list,
+    get,
+    create,
+    update,
+    remove,
+    validateCreate,
+    validateUpdate,
+    uploadImage,
+    removeImage,
+    imageSrc,
+  };
 }
