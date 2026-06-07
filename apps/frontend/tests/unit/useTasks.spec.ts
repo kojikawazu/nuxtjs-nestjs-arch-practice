@@ -103,6 +103,63 @@ describe('useTasks', () => {
     });
   });
 
+  describe('uploadImage / removeImage（画像）', () => {
+    it('正常系: uploadImage は Bearer 付きで POST し、更新後 Task を返す', async () => {
+      const { accessToken } = useAuthState();
+      accessToken.value = 'token-img';
+
+      let receivedAuth: string | null = null;
+      const withImage: Task = { ...sampleTask, imageUrl: '/uploads/t1-abc.png' };
+      server.use(
+        http.post(`${BASE}/tasks/t1/image`, ({ request }) => {
+          receivedAuth = request.headers.get('authorization');
+          return HttpResponse.json(withImage, { status: 201 });
+        }),
+      );
+
+      const { uploadImage } = useTasks();
+      const file = new File(['fake'], 'pic.png', { type: 'image/png' });
+      const result = await uploadImage('t1', file);
+
+      expect(receivedAuth).toBe('Bearer token-img');
+      expect(result.imageUrl).toBe('/uploads/t1-abc.png');
+      accessToken.value = null;
+    });
+
+    it('異常系: uploadImage が 400 のとき statusCode 付きエラーを投げる', async () => {
+      server.use(
+        http.post(`${BASE}/tasks/t1/image`, () =>
+          HttpResponse.json({ statusCode: 400, message: 'invalid' }, { status: 400 }),
+        ),
+      );
+
+      const { uploadImage } = useTasks();
+      const file = new File(['x'], 'a.png', { type: 'image/png' });
+      await expect(uploadImage('t1', file)).rejects.toMatchObject({ statusCode: 400 });
+    });
+
+    it('準正常系: removeImage が 403 のときエラーを投げる', async () => {
+      server.use(
+        http.delete(`${BASE}/tasks/foreign/image`, () =>
+          HttpResponse.json({ statusCode: 403, message: 'forbidden' }, { status: 403 }),
+        ),
+      );
+
+      const { removeImage } = useTasks();
+      await expect(removeImage('foreign')).rejects.toMatchObject({ statusCode: 403 });
+    });
+
+    it('正常系: removeImage は DELETE し imageUrl の消えた Task を返す', async () => {
+      server.use(
+        http.delete(`${BASE}/tasks/t1/image`, () => HttpResponse.json(sampleTask, { status: 200 })),
+      );
+
+      const { removeImage } = useTasks();
+      const result = await removeImage('t1');
+      expect(result.imageUrl).toBeUndefined();
+    });
+  });
+
   describe('validateUpdate（DryRun・保存しない）', () => {
     it('正常系: 200 が返れば解決する（POST /tasks/{id}/validate）', async () => {
       server.use(

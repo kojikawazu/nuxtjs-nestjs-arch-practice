@@ -26,6 +26,11 @@
 - DryRun（検証のみ）: register/tasks の `*/validate` で 200/400/409/403/404/401 を検証。
   e2e では **検証後に本登録が成功（重複にならない）/ GET で内容不変**を確認し「書き込みが起きていない」ことを保証。単体では `users.create`/`tasks.save` が**呼ばれない**ことをアサート。
 - 日付範囲: `startDate` 必須（未指定→400）、`endDate` 任意、`startDate ≤ endDate`（逆転→400）。更新はマージ後の値で検証。FE は TaskForm のクライアント側検証（開始必須・開始≤終了）と flatpickr UI を Playwright で確認（flatpickr は単体では `vi.mock`）。
+- 画像アップロード（1枚・任意）:
+  - BE 単体: `setImage`/`removeImage` で **fs（外部I/O）のみモック**。サーバ生成ファイル名・旧ファイル削除・未対応MIME(400)・404/403 を検証（`writeFile`/`save` が呼ばれないこともアサート）。
+  - BE e2e: `POST /tasks/{id}/image` を supertest `.attach` で検証。正常(添付→`GET /uploads/<file>` 200→削除で 404)、不正MIME/超過/ファイル無し(400)、404/403/401。`UPLOAD_DIR` は OS 一時ディレクトリに隔離（外部依存なし）。
+  - FE 単体: `useTasks.uploadImage/removeImage`（MSW で multipart を横取り、Bearer 付与を確認）、TaskForm のファイル選択（imageFile emit・非対応MIMEのクライアント検証）。
+  - E2E: 画像添付で作成→詳細で表示・実ロード（`naturalWidth>0`）まで確認。
 
 ## テスト実行コマンド
 

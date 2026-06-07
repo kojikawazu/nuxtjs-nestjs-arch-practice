@@ -42,6 +42,10 @@ model Task {
   status: TaskStatus;
   startDate: utcDateTime;
   endDate?: utcDateTime;
+
+  /** 添付画像の公開パス（例: "/uploads/<file>"）。未添付なら省略。サーバが設定する読み取り専用値。 */
+  imageUrl?: string;
+
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
 }
@@ -205,4 +209,23 @@ namespace Tasks {
   op remove(@path id: string): {
     @statusCode statusCode: 204;
   } | ApiError;
+
+  /**
+   * タスクへの画像添付（1枚・任意）。multipart/form-data でフィールド名 `file` を送る。
+   * MIME は png/jpeg/webp、サイズ上限あり（超過・不正 MIME は 400）。更新後の Task を返す。
+   */
+  @route("/{id}/image")
+  @post
+  op uploadImage(
+    @path id: string,
+    @header contentType: "multipart/form-data",
+    @multipartBody body: {
+      file: HttpPart<File>;
+    },
+  ): Task | ApiError;
+
+  /** タスクの添付画像を削除する。更新後の Task を返す。 */
+  @route("/{id}/image")
+  @delete
+  op removeImage(@path id: string): Task | ApiError;
 }

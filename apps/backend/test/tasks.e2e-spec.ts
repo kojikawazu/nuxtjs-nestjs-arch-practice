@@ -1,6 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp } from './test-app.factory';
+import { cleanupTestUploadDir, createTestApp } from './test-app.factory';
 
 /**
  * タスク CRUD + 所有者認可 + 日付範囲の e2e テスト（実スタック / HTTP 経由）。
@@ -32,6 +32,7 @@ describe('Tasks (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+    cleanupTestUploadDir();
   });
 
   it('正常系: 作成→一覧→詳細→更新→削除の一連が成立する', async () => {
@@ -211,6 +212,94 @@ describe('Tasks (e2e)', () => {
         .set(auth(otherToken))
         .send({ title: 'のっとり' })
         .expect(403);
+    });
+  });
+
+  describe('画像アップロード（POST/DELETE /tasks/:id/image）', () => {
+    const PNG = Buffer.from('89504e470d0a1a0a', 'hex'); // PNG シグネチャ（中身はダミー）
+
+    const createTask = async (): Promise<string> => {
+      const res = await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: '画像つきタスク', startDate: START })
+        .expect(201);
+      return res.body.id as string;
+    };
+
+    it('正常系: 画像を添付→公開URLで取得でき、削除すると 404 になる', async () => {
+      const id = await createTask();
+
+      // upload
+      const uploaded = await http
+        .post(`/tasks/${id}/image`)
+        .set(auth(token))
+        .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
+        .expect(201);
+      const imageUrl = uploaded.body.imageUrl as string;
+      expect(imageUrl).toMatch(/^\/uploads\/.+\.png$/);
+
+      // 静的配信で実体が取得できる
+      await http.get(imageUrl).expect(200);
+
+      // 詳細にも imageUrl が反映されている
+      const detail = await http.get(`/tasks/${id}`).set(auth(token)).expect(200);
+      expect(detail.body.imageUrl).toBe(imageUrl);
+
+      // delete → imageUrl が消え、実体も 404 になる
+      const removed = await http.delete(`/tasks/${id}/image`).set(auth(token)).expect(200);
+      expect(removed.body.imageUrl).toBeUndefined();
+      await http.get(imageUrl).expect(404);
+    });
+
+    it('異常系: 画像でない MIME は 400', async () => {
+      const id = await createTask();
+      await http
+        .post(`/tasks/${id}/image`)
+        .set(auth(token))
+        .attach('file', Buffer.from('plain text'), { filename: 'a.txt', contentType: 'text/plain' })
+        .expect(400);
+    });
+
+    it('異常系: サイズ上限（2MB）超過は 400', async () => {
+      const id = await createTask();
+      const tooBig = Buffer.alloc(2 * 1024 * 1024 + 1, 1);
+      await http
+        .post(`/tasks/${id}/image`)
+        .set(auth(token))
+        .attach('file', tooBig, { filename: 'big.png', contentType: 'image/png' })
+        .expect(400);
+    });
+
+    it('異常系: ファイル無しは 400', async () => {
+      const id = await createTask();
+      await http.post(`/tasks/${id}/image`).set(auth(token)).expect(400);
+    });
+
+    it('異常系: 存在しないタスクへの添付は 404', async () => {
+      await http
+        .post('/tasks/nonexistent-id/image')
+        .set(auth(token))
+        .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
+        .expect(404);
+    });
+
+    it('準正常系: 他人のタスクへの添付は 403', async () => {
+      const id = await createTask();
+      const otherToken = await register('image-other@example.com');
+      await http
+        .post(`/tasks/${id}/image`)
+        .set(auth(otherToken))
+        .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
+        .expect(403);
+    });
+
+    it('異常系: トークンなしの添付は 401', async () => {
+      const id = await createTask();
+      await http
+        .post(`/tasks/${id}/image`)
+        .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
+        .expect(401);
     });
   });
 });

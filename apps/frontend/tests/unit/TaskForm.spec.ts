@@ -26,13 +26,17 @@ describe('TaskForm', () => {
 
     const emitted = wrapper.emitted('submit');
     expect(emitted).toHaveLength(1);
-    expect(emitted?.[0]?.[0]).toMatchObject({
+    const payload = emitted?.[0]?.[0] as { value: unknown; imageFile?: File; removeImage: boolean };
+    expect(payload.value).toMatchObject({
       title: '買い物',
       description: '牛乳を買う',
       status: 'in_progress',
       startDate: '2026-06-10T00:00:00.000Z',
       endDate: '2026-06-15T00:00:00.000Z',
     });
+    // 画像未選択なので imageFile は無く、削除要求もない
+    expect(payload.imageFile).toBeUndefined();
+    expect(payload.removeImage).toBe(false);
   });
 
   it('正常系: 終了は省略でき、startDate のみで submit できる', async () => {
@@ -44,7 +48,7 @@ describe('TaskForm', () => {
 
     const emitted = wrapper.emitted('submit');
     expect(emitted).toHaveLength(1);
-    expect(emitted?.[0]?.[0]).toMatchObject({
+    expect((emitted?.[0]?.[0] as { value: unknown }).value).toMatchObject({
       startDate: '2026-06-10T00:00:00.000Z',
       endDate: undefined,
     });
@@ -90,6 +94,41 @@ describe('TaskForm', () => {
     await wrapper.find('[data-testid="task-form"]').trigger('submit');
 
     expect(wrapper.find('[data-testid="error-end-date"]').text()).toContain('開始日以降');
+    expect(wrapper.emitted('submit')).toBeUndefined();
+  });
+
+  it('正常系: 画像を選択すると submit ペイロードに imageFile が含まれる', async () => {
+    const wrapper = await mountSuspended(TaskForm);
+
+    await wrapper.find('[data-testid="task-title"]').setValue('画像つき');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+
+    const png = new File(['fake'], 'pic.png', { type: 'image/png' });
+    const input = wrapper.find('[data-testid="task-image-input"]');
+    Object.defineProperty(input.element, 'files', { value: [png], configurable: true });
+    await input.trigger('change');
+
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    const payload = wrapper.emitted('submit')?.[0]?.[0] as { imageFile?: File };
+    expect(payload.imageFile).toBeInstanceOf(File);
+    expect(payload.imageFile?.name).toBe('pic.png');
+  });
+
+  it('準正常系: 非対応MIMEはエラー表示し submit しない', async () => {
+    const wrapper = await mountSuspended(TaskForm);
+
+    await wrapper.find('[data-testid="task-title"]').setValue('不正画像');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+
+    const txt = new File(['x'], 'a.txt', { type: 'text/plain' });
+    const input = wrapper.find('[data-testid="task-image-input"]');
+    Object.defineProperty(input.element, 'files', { value: [txt], configurable: true });
+    await input.trigger('change');
+
+    expect(wrapper.find('[data-testid="error-image"]').text()).toContain('PNG');
+
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
     expect(wrapper.emitted('submit')).toBeUndefined();
   });
 

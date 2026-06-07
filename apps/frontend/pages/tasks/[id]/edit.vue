@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { TaskFormValue } from '~/components/TaskForm.vue';
+import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
 const route = useRoute();
 const id = route.params.id as string;
-const { get, update, validateUpdate } = useTasks();
+const { get, update, validateUpdate, uploadImage, removeImage, imageSrc } = useTasks();
 
 const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
   getCachedData: () => undefined,
@@ -11,8 +11,15 @@ const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
 
 const step = ref<'form' | 'confirm'>('form');
 const draft = ref<TaskFormValue | null>(null);
+const imageFile = ref<File | null>(null);
+const imagePreview = ref<string | null>(null);
+const removeImageFlag = ref(false);
 const saveError = ref<string | null>(null);
 const loading = ref(false);
+
+onUnmounted(() => {
+  if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+});
 
 // confirm 進入時のサーバ側 DryRun 検証状態
 const validating = ref(false);
@@ -25,8 +32,17 @@ const STATUS_LABEL: Record<string, string> = {
   done: '完了',
 };
 
-async function onFormSubmit(value: TaskFormValue) {
+async function onFormSubmit(payload: TaskFormSubmit) {
+  const value = payload.value;
   draft.value = value;
+  imageFile.value = payload.imageFile ?? null;
+  removeImageFlag.value = payload.removeImage;
+  // 確認画面用に新規ファイルのプレビュー URL を用意する（前回分があれば解放）
+  if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+  imagePreview.value =
+    payload.imageFile && typeof URL.createObjectURL === 'function'
+      ? URL.createObjectURL(payload.imageFile)
+      : null;
   step.value = 'confirm';
   // confirm に進んだ時点でサーバ側の検証（保存はしない・所有権も確認）を実行する
   validating.value = true;
@@ -60,6 +76,12 @@ async function onConfirm() {
       startDate: draft.value.startDate,
       endDate: draft.value.endDate,
     });
+    // 画像の差し替え or 削除（タスク本体とは別経路）
+    if (imageFile.value) {
+      await uploadImage(id, imageFile.value);
+    } else if (removeImageFlag.value) {
+      await removeImage(id);
+    }
     await navigateTo(`/tasks/${id}`);
   } catch (e) {
     saveError.value = getErrorMessage(e, '更新に失敗しました');
@@ -84,6 +106,7 @@ async function onConfirm() {
             startDate: task.startDate,
             endDate: task.endDate,
           }"
+          :initial-image-src="task.imageUrl ? imageSrc(task.imageUrl) : undefined"
           submit-label="確認へ"
           @submit="onFormSubmit"
         />
@@ -111,6 +134,27 @@ async function onConfirm() {
           <div class="flex justify-between py-1">
             <dt class="text-gray-500">終了</dt>
             <dd>{{ draft.endDate ? draft.endDate.slice(0, 10) : '（なし）' }}</dd>
+          </div>
+          <div class="flex items-start justify-between py-1">
+            <dt class="text-gray-500">画像</dt>
+            <dd>
+              <img
+                v-if="imagePreview"
+                :src="imagePreview"
+                alt="差し替える画像のプレビュー"
+                data-testid="confirm-image"
+                class="max-h-32 rounded border border-gray-200"
+              />
+              <span v-else-if="removeImageFlag" class="text-red-600">削除予定</span>
+              <img
+                v-else-if="task.imageUrl"
+                :src="imageSrc(task.imageUrl)"
+                alt="現在の画像"
+                data-testid="confirm-image"
+                class="max-h-32 rounded border border-gray-200"
+              />
+              <span v-else>（なし）</span>
+            </dd>
           </div>
         </dl>
         <p v-if="validating" class="text-sm text-gray-500" data-testid="validating">

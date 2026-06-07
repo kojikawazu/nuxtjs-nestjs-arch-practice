@@ -62,6 +62,45 @@ test('タスク管理の一連フロー', async ({ page }) => {
   await expect(page.getByTestId('tasks-empty')).toBeVisible();
 });
 
+test('画像を添付して作成すると、詳細で画像が表示・ロードされる', async ({ page }) => {
+  const email = `e2e-img+${Date.now()}@example.com`;
+
+  await page.goto('/register');
+  await page.getByTestId('register-name').fill('Image User');
+  await page.getByTestId('register-email').fill(email);
+  await page.getByTestId('register-password').fill('password123');
+  await page.getByTestId('register-submit').click();
+  await expect(page).toHaveURL(/\/tasks$/);
+
+  await page.getByTestId('new-task-link').click();
+  await page.getByTestId('task-title').fill('画像つきタスク');
+  await page.getByTestId('task-start-date').fill('2026-06-10');
+
+  // 1x1 透過 PNG をアップロード
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  await page
+    .getByTestId('task-image-input')
+    .setInputFiles({ name: 'pic.png', mimeType: 'image/png', buffer: png });
+  // 選択直後にプレビューが出る
+  await expect(page.getByTestId('task-image-preview')).toBeVisible();
+
+  await page.getByTestId('task-submit').click();
+  // 確認画面でも選択画像のプレビューが表示される
+  await expect(page.getByTestId('confirm-image')).toBeVisible();
+  await expect(page.getByTestId('validation-ok')).toBeVisible();
+  await page.getByTestId('confirm-create').click();
+
+  // 詳細で画像が表示され、実際にロードできる（静的配信まで通っている）
+  const img = page.getByTestId('detail-image');
+  await expect(img).toBeVisible();
+  await expect
+    .poll(async () => img.evaluate((el) => (el as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+});
+
 test('未認証では /tasks から /login へリダイレクトされる', async ({ page }) => {
   await page.goto('/tasks');
   await expect(page).toHaveURL(/\/login$/);

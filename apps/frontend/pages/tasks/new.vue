@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import type { TaskFormValue } from '~/components/TaskForm.vue';
+import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
-const { create, validateCreate } = useTasks();
+const { create, validateCreate, uploadImage } = useTasks();
 
 const step = ref<'form' | 'confirm'>('form');
 const draft = ref<TaskFormValue | null>(null);
+const imageFile = ref<File | null>(null);
+const imagePreview = ref<string | null>(null);
 const error = ref<string | null>(null);
 const loading = ref(false);
+
+onUnmounted(() => {
+  if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+});
 
 // confirm 進入時のサーバ側 DryRun 検証状態
 const validating = ref(false);
@@ -19,8 +25,16 @@ const STATUS_LABEL: Record<string, string> = {
   done: '完了',
 };
 
-async function onFormSubmit(value: TaskFormValue) {
+async function onFormSubmit(payload: TaskFormSubmit) {
+  const value = payload.value;
   draft.value = value;
+  imageFile.value = payload.imageFile ?? null;
+  // 確認画面用にプレビュー URL を用意する（前回分があれば解放）
+  if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+  imagePreview.value =
+    payload.imageFile && typeof URL.createObjectURL === 'function'
+      ? URL.createObjectURL(payload.imageFile)
+      : null;
   step.value = 'confirm';
   // confirm に進んだ時点でサーバ側の検証（保存はしない）を実行する
   validating.value = true;
@@ -54,6 +68,10 @@ async function onConfirm() {
       startDate: draft.value.startDate,
       endDate: draft.value.endDate,
     });
+    // 画像は作成後に別経路でアップロードする（任意・1枚）
+    if (imageFile.value) {
+      await uploadImage(created.id, imageFile.value);
+    }
     await navigateTo(`/tasks/${created.id}`);
   } catch (e) {
     error.value = getErrorMessage(e, 'タスクの作成に失敗しました');
@@ -92,6 +110,19 @@ async function onConfirm() {
         <div class="flex justify-between py-1">
           <dt class="text-gray-500">終了</dt>
           <dd>{{ draft.endDate ? draft.endDate.slice(0, 10) : '（なし）' }}</dd>
+        </div>
+        <div class="flex items-start justify-between py-1">
+          <dt class="text-gray-500">画像</dt>
+          <dd>
+            <img
+              v-if="imagePreview"
+              :src="imagePreview"
+              alt="添付画像のプレビュー"
+              data-testid="confirm-image"
+              class="max-h-32 rounded border border-gray-200"
+            />
+            <span v-else>（なし）</span>
+          </dd>
         </div>
       </dl>
       <p v-if="validating" class="text-sm text-gray-500" data-testid="validating">

@@ -9,15 +9,29 @@ export interface TaskFormValue {
   endDate?: string;
 }
 
+/** TaskForm が送出する確定内容。画像はタスク本体とは別経路でアップロードする。 */
+export interface TaskFormSubmit {
+  value: TaskFormValue;
+  /** 新たに添付する画像（未選択なら undefined） */
+  imageFile?: File;
+  /** 既存画像の削除を要求するか */
+  removeImage: boolean;
+}
+
+const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
 const props = withDefaults(
   defineProps<{
     initial?: Partial<TaskFormValue>;
+    /** 既存の添付画像の表示用 URL（編集時のプレビュー） */
+    initialImageSrc?: string;
     submitLabel?: string;
   }>(),
   { submitLabel: '確認へ' },
 );
 
-const emit = defineEmits<{ submit: [value: TaskFormValue] }>();
+const emit = defineEmits<{ submit: [payload: TaskFormSubmit] }>();
 
 const title = ref(props.initial?.title ?? '');
 const description = ref(props.initial?.description ?? '');
@@ -25,12 +39,55 @@ const status = ref<TaskStatus>(props.initial?.status ?? 'todo');
 const startDate = ref(props.initial?.startDate ? props.initial.startDate.slice(0, 10) : '');
 const endDate = ref(props.initial?.endDate ? props.initial.endDate.slice(0, 10) : '');
 
+// 画像状態: 新規選択ファイル / プレビュー URL / 既存削除フラグ
+const imageFile = ref<File | null>(null);
+const objectUrl = ref<string | null>(null);
+const removeExisting = ref(false);
+
+const previewSrc = computed<string | null>(() => {
+  if (objectUrl.value) return objectUrl.value;
+  if (!removeExisting.value && props.initialImageSrc) return props.initialImageSrc;
+  return null;
+});
+
 const errors = reactive<{
   title?: string;
   description?: string;
   startDate?: string;
   endDate?: string;
+  image?: string;
 }>({});
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  errors.image = undefined;
+  if (file) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      errors.image = 'PNG / JPEG / WebP のみ添付できます';
+      imageFile.value = null;
+      objectUrl.value = null;
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      errors.image = '画像は2MB以内にしてください';
+      imageFile.value = null;
+      objectUrl.value = null;
+      return;
+    }
+    removeExisting.value = false;
+  }
+  imageFile.value = file;
+  objectUrl.value =
+    file && typeof URL.createObjectURL === 'function' ? URL.createObjectURL(file) : null;
+}
+
+function onRemoveImage() {
+  removeExisting.value = true;
+  imageFile.value = null;
+  objectUrl.value = null;
+  errors.image = undefined;
+}
 
 function validate(): boolean {
   errors.title = undefined;
@@ -51,17 +108,23 @@ function validate(): boolean {
   } else if (endDate.value !== '' && endDate.value < startDate.value) {
     errors.endDate = '終了日は開始日以降にしてください';
   }
-  return !errors.title && !errors.description && !errors.startDate && !errors.endDate;
+  return (
+    !errors.title && !errors.description && !errors.startDate && !errors.endDate && !errors.image
+  );
 }
 
 function onSubmit() {
   if (!validate()) return;
   emit('submit', {
-    title: title.value.trim(),
-    description: description.value.trim() === '' ? undefined : description.value.trim(),
-    status: status.value,
-    startDate: new Date(startDate.value).toISOString(),
-    endDate: endDate.value === '' ? undefined : new Date(endDate.value).toISOString(),
+    value: {
+      title: title.value.trim(),
+      description: description.value.trim() === '' ? undefined : description.value.trim(),
+      status: status.value,
+      startDate: new Date(startDate.value).toISOString(),
+      endDate: endDate.value === '' ? undefined : new Date(endDate.value).toISOString(),
+    },
+    imageFile: imageFile.value ?? undefined,
+    removeImage: removeExisting.value,
   });
 }
 </script>
@@ -125,6 +188,38 @@ function onSubmit() {
         <p v-if="errors.endDate" class="mt-1 text-sm text-red-600" data-testid="error-end-date">
           {{ errors.endDate }}
         </p>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700"
+        >画像（任意・PNG/JPEG/WebP・2MBまで）</label
+      >
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        data-testid="task-image-input"
+        class="mt-1 block w-full text-sm"
+        @change="onFileChange"
+      />
+      <p v-if="errors.image" class="mt-1 text-sm text-red-600" data-testid="error-image">
+        {{ errors.image }}
+      </p>
+      <div v-if="previewSrc" class="mt-2">
+        <img
+          :src="previewSrc"
+          alt="添付画像のプレビュー"
+          data-testid="task-image-preview"
+          class="max-h-40 rounded border border-gray-200"
+        />
+        <button
+          type="button"
+          data-testid="task-image-remove"
+          class="mt-1 block text-sm text-red-600 hover:underline"
+          @click="onRemoveImage"
+        >
+          画像を削除
+        </button>
       </div>
     </div>
 

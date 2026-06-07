@@ -14,11 +14,12 @@
 | 5 | Docker統合・docs | ✅ | Dockerfile×2 / compose 結線 / 仕様書追記 / rules 同期 |
 | 6 | DryRun（検証のみ） | ✅ | `*/validate` 3本（register/tasks作成/tasks更新）/ 契約→FE/BE / confirm 自動検証・登録検証ボタン |
 | 7 | 期間（開始/終了）+ flatpickr | ✅ | dueDate→startDate(必須)/endDate(任意) / 開始≤終了の検証 / flatpickr 2入力 |
+| 8 | 画像アップロード（1枚・任意） | ✅ | 契約 `imageUrl`+`*/image` 2本 / multer+useStaticAssets(/uploads) / FS+volume / FE 2ステップ・プレビュー |
 
 ## テスト集計
 
-- backend: 単体 29 / e2e 25
-- frontend: 単体 22 / E2E 2
+- backend: 単体 37 / e2e 32
+- frontend: 単体 28 / E2E 3
 
 ## 今後の候補（未着手）
 
