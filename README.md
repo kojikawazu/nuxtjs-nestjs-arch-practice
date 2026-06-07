@@ -1,5 +1,7 @@
 # nuxtjs-nestjs-test-practice
 
+[![CI](https://github.com/kojikawazu/nuxtjs-nestjs-test-practice/actions/workflows/ci.yml/badge.svg)](https://github.com/kojikawazu/nuxtjs-nestjs-test-practice/actions/workflows/ci.yml)
+
 Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理アプリ）
 
 ## 概要
@@ -63,6 +65,8 @@ pnpm --filter @app/backend test:e2e   # e2e(supertest / SQLite)
 pnpm --filter @app/frontend test      # 単体(Vitest + MSW)
 pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 ```
+
+上記は GitHub Actions（`.github/workflows/ci.yml`）で PR・`main` push 時に自動実行される（lint / format / typecheck も含む）。
 
 ## ドキュメント
 
