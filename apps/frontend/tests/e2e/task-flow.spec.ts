@@ -22,6 +22,7 @@ test('タスク管理の一連フロー', async ({ page }) => {
   await page.getByTestId('new-task-link').click();
   await page.getByTestId('task-title').fill('牛乳を買う');
   await page.getByTestId('task-description').fill('2本');
+  await page.getByTestId('task-url').fill('https://example.com/recipe');
   // flatpickr（allowInput）に開始日を入力。開始は必須。
   await page.getByTestId('task-start-date').fill('2026-06-10');
   await page.getByTestId('task-submit').click();
@@ -29,6 +30,11 @@ test('タスク管理の一連フロー', async ({ page }) => {
   await expect(page.getByTestId('confirm-step')).toBeVisible();
   await expect(page.getByTestId('confirm-title')).toHaveText('牛乳を買う');
   await expect(page.getByTestId('confirm-start')).toHaveText('2026-06-10');
+  // 確認画面に URL プレビュー（安全なリンク）が表示される
+  await expect(page.getByTestId('url-preview-link')).toHaveAttribute(
+    'href',
+    'https://example.com/recipe',
+  );
   // confirm 進入時にサーバ側 DryRun 検証が走り、通過すると作成できる
   await expect(page.getByTestId('validation-ok')).toBeVisible();
   await page.getByTestId('confirm-create').click();
@@ -36,6 +42,10 @@ test('タスク管理の一連フロー', async ({ page }) => {
   // --- 詳細表示 ---
   await expect(page.getByTestId('detail-title')).toHaveText('牛乳を買う');
   await expect(page.getByTestId('detail-start-date')).toContainText('2026-06-10');
+  // 詳細でも URL が安全なリンク（target=_blank / rel=noopener）として表示される
+  const urlLink = page.getByTestId('detail-url').getByTestId('url-preview-link');
+  await expect(urlLink).toHaveAttribute('href', 'https://example.com/recipe');
+  await expect(urlLink).toHaveAttribute('rel', 'noopener noreferrer');
 
   // --- 一覧に表示される ---
   await page.goto('/tasks');

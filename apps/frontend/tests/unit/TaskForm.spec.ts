@@ -132,6 +132,30 @@ describe('TaskForm', () => {
     expect(wrapper.emitted('submit')).toBeUndefined();
   });
 
+  it('正常系: http/https の URL は submit ペイロードに含まれる', async () => {
+    const wrapper = await mountSuspended(TaskForm);
+
+    await wrapper.find('[data-testid="task-title"]').setValue('リンク付き');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+    await wrapper.find('[data-testid="task-url"]').setValue('https://example.com/docs');
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    const payload = wrapper.emitted('submit')?.[0]?.[0] as { value: { url?: string } };
+    expect(payload.value.url).toBe('https://example.com/docs');
+  });
+
+  it('異常系: javascript: スキームはエラー表示し submit しない', async () => {
+    const wrapper = await mountSuspended(TaskForm);
+
+    await wrapper.find('[data-testid="task-title"]').setValue('XSS試行');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+    await wrapper.find('[data-testid="task-url"]').setValue('javascript:alert(1)');
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    expect(wrapper.find('[data-testid="error-url"]').text()).toContain('http');
+    expect(wrapper.emitted('submit')).toBeUndefined();
+  });
+
   it('正常系: initial で初期値が反映される', async () => {
     const wrapper = await mountSuspended(TaskForm, {
       props: {

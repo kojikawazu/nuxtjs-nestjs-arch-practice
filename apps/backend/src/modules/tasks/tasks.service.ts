@@ -53,6 +53,7 @@ export class TasksService {
       status: dto.status ?? 'todo',
       startDate,
       endDate,
+      url: dto.url ?? null,
     });
     const saved = await this.tasks.save(entity);
     return TasksService.toContractTask(saved);
@@ -81,6 +82,7 @@ export class TasksService {
     if (dto.status !== undefined) entity.status = dto.status;
     if (dto.startDate !== undefined) entity.startDate = new Date(dto.startDate);
     if (dto.endDate !== undefined) entity.endDate = dto.endDate ? new Date(dto.endDate) : null;
+    if (dto.url !== undefined) entity.url = dto.url ?? null;
     TasksService.assertDateOrder(entity.startDate, entity.endDate);
     const saved = await this.tasks.save(entity);
     return TasksService.toContractTask(saved);
@@ -179,6 +181,7 @@ export class TasksService {
       status: entity.status,
       startDate: entity.startDate.toISOString(),
       endDate: entity.endDate ? entity.endDate.toISOString() : undefined,
+      url: entity.url ?? undefined,
       imageUrl: entity.imageUrl ?? undefined,
       createdAt: entity.createdAt.toISOString(),
       updatedAt: entity.updatedAt.toISOString(),

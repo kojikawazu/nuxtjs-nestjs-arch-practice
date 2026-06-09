@@ -215,6 +215,38 @@ describe('Tasks (e2e)', () => {
     });
   });
 
+  describe('url フィールド（http/https のみ許可）', () => {
+    it('正常系: https URL を付けて作成→詳細に反映される', async () => {
+      const created = await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: 'リンク付き', startDate: START, url: 'https://example.com/docs' })
+        .expect(201);
+      expect(created.body.url).toBe('https://example.com/docs');
+
+      const id = created.body.id as string;
+      const detail = await http.get(`/tasks/${id}`).set(auth(token)).expect(200);
+      expect(detail.body.url).toBe('https://example.com/docs');
+    });
+
+    it('異常系: javascript: スキームはバリデーションで 400', async () => {
+      await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: 'XSS試行', startDate: START, url: 'javascript:alert(1)' })
+        .expect(400);
+    });
+
+    it('異常系: 2048 文字を超える URL は 400', async () => {
+      const tooLong = `https://example.com/${'a'.repeat(2048)}`;
+      await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: '長すぎURL', startDate: START, url: tooLong })
+        .expect(400);
+    });
+  });
+
   describe('画像アップロード（POST/DELETE /tasks/:id/image）', () => {
     const PNG = Buffer.from('89504e470d0a1a0a', 'hex'); // PNG シグネチャ（中身はダミー）
 

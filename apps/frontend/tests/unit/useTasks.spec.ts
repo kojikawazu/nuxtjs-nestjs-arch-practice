@@ -50,6 +50,27 @@ describe('useTasks', () => {
     accessToken.value = null;
   });
 
+  it('正常系: create は url を含むボディをそのまま POST する', async () => {
+    let receivedBody: { url?: string } | null = null;
+    const withUrl: Task = { ...sampleTask, url: 'https://example.com/docs' };
+    server.use(
+      http.post(`${BASE}/tasks`, async ({ request }) => {
+        receivedBody = (await request.json()) as { url?: string };
+        return HttpResponse.json(withUrl, { status: 201 });
+      }),
+    );
+
+    const { create } = useTasks();
+    const created = await create({
+      title: '買い物',
+      startDate: '2026-06-10T00:00:00.000Z',
+      url: 'https://example.com/docs',
+    });
+
+    expect(receivedBody!.url).toBe('https://example.com/docs');
+    expect(created.url).toBe('https://example.com/docs');
+  });
+
   it('異常系: 404 のとき statusCode 付きエラーを投げる', async () => {
     server.use(
       http.get(`${BASE}/tasks/missing`, () =>

@@ -43,6 +43,9 @@ model Task {
   startDate: utcDateTime;
   endDate?: utcDateTime;
 
+  /** 関連 URL（任意）。http/https のみ。確認画面・詳細で安全なリンクとして表示する。 */
+  url?: string;
+
   /** 添付画像の公開パス（例: "/uploads/<file>"）。未添付なら省略。サーバが設定する読み取り専用値。 */
   imageUrl?: string;
 
@@ -73,6 +76,9 @@ model TaskCreate {
   status?: TaskStatus;
   startDate: utcDateTime;
   endDate?: utcDateTime;
+
+  @maxLength(2048)
+  url?: string;
 }
 
 model TaskUpdate {
@@ -86,6 +92,9 @@ model TaskUpdate {
   status?: TaskStatus;
   startDate?: utcDateTime;
   endDate?: utcDateTime;
+
+  @maxLength(2048)
+  url?: string;
 }
 
 model RegisterRequest {

@@ -7,6 +7,7 @@ export interface TaskFormValue {
   status: TaskStatus;
   startDate: string;
   endDate?: string;
+  url?: string;
 }
 
 /** TaskForm が送出する確定内容。画像はタスク本体とは別経路でアップロードする。 */
@@ -38,6 +39,7 @@ const description = ref(props.initial?.description ?? '');
 const status = ref<TaskStatus>(props.initial?.status ?? 'todo');
 const startDate = ref(props.initial?.startDate ? props.initial.startDate.slice(0, 10) : '');
 const endDate = ref(props.initial?.endDate ? props.initial.endDate.slice(0, 10) : '');
+const url = ref(props.initial?.url ?? '');
 
 // 画像状態: 新規選択ファイル / プレビュー URL / 既存削除フラグ
 const imageFile = ref<File | null>(null);
@@ -55,6 +57,7 @@ const errors = reactive<{
   description?: string;
   startDate?: string;
   endDate?: string;
+  url?: string;
   image?: string;
 }>({});
 
@@ -94,6 +97,7 @@ function validate(): boolean {
   errors.description = undefined;
   errors.startDate = undefined;
   errors.endDate = undefined;
+  errors.url = undefined;
   const trimmed = title.value.trim();
   if (trimmed.length === 0) {
     errors.title = 'タイトルは必須です';
@@ -108,8 +112,21 @@ function validate(): boolean {
   } else if (endDate.value !== '' && endDate.value < startDate.value) {
     errors.endDate = '終了日は開始日以降にしてください';
   }
+  const trimmedUrl = url.value.trim();
+  if (trimmedUrl !== '') {
+    if (trimmedUrl.length > 2048) {
+      errors.url = 'URL は2048文字以内で入力してください';
+    } else if (!isSafeHttpUrl(trimmedUrl)) {
+      errors.url = 'http:// または https:// で始まる URL を入力してください';
+    }
+  }
   return (
-    !errors.title && !errors.description && !errors.startDate && !errors.endDate && !errors.image
+    !errors.title &&
+    !errors.description &&
+    !errors.startDate &&
+    !errors.endDate &&
+    !errors.url &&
+    !errors.image
   );
 }
 
@@ -122,6 +139,7 @@ function onSubmit() {
       status: status.value,
       startDate: new Date(startDate.value).toISOString(),
       endDate: endDate.value === '' ? undefined : new Date(endDate.value).toISOString(),
+      url: url.value.trim() === '' ? undefined : url.value.trim(),
     },
     imageFile: imageFile.value ?? undefined,
     removeImage: removeExisting.value,
@@ -158,6 +176,21 @@ function onSubmit() {
         data-testid="error-description"
       >
         {{ errors.description }}
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">関連 URL（任意・http/https）</label>
+      <input
+        v-model="url"
+        type="url"
+        inputmode="url"
+        placeholder="https://example.com"
+        data-testid="task-url"
+        class="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+      />
+      <p v-if="errors.url" class="mt-1 text-sm text-red-600" data-testid="error-url">
+        {{ errors.url }}
       </p>
     </div>
 
