@@ -27,7 +27,7 @@ globs:
 | 認証・認可・セキュリティ方針 | docs/06-security-specification.md |
 | 非機能要件（性能・可用性・運用） | docs/04-non-functional-specification.md |
 | アーキテクチャ・構成（レイヤー構成・依存・ディレクトリ） | docs/09-architecture-specification.md |
-| テスト方針・テストケース | docs/08-test-specification.md（詳細は docs/test-design/） |
+| テスト方針・テストケース | docs/08-test-specification.md |
 | 環境変数・依存パッケージ・ビルド/起動手順・Docker | README.md / CLAUDE.md（必要に応じ docs/10-miscellaneous-specification.md） |
 | ルール（.claude/rules/）の追加・変更 | CLAUDE.md の Rules テーブル |
 | タスク・進捗 | docs/11-tasks.md |
@@ -36,5 +36,5 @@ globs:
 
 ## 補足
 
-- **設計書の管理**: タスクごとに設計書を新規作成しない。既存の仕様書ドキュメント（docs/01〜11-*.md, docs/test-design/）に追記・更新する。
+- **設計書の管理**: タスクごとに設計書を新規作成しない。既存の仕様書ドキュメント（docs/01〜12。12 は `docs/12-code-reading-guide/` フォルダ）に追記・更新する。
 - **README.md 同期**: 環境変数・依存・起動手順・スクリプトに変更があった場合は README.md を更新する。

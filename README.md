@@ -23,6 +23,12 @@ Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理ア�
 
 詳細な仕様は `docs/` を参照。
 
+## スクリーンショット
+
+| タスク一覧 | 作成時の確認画面（2 段階フロー） |
+| --- | --- |
+| ![タスク一覧](docs/images/tasks-list.png) | ![確認画面](docs/images/task-confirm.png) |
+
 ## 構成
 
 ```
@@ -32,30 +38,49 @@ packages/api-spec    TypeSpec 契約 → OpenAPI
 packages/api-client  生成した型 + openapi-fetch クライアント
 ```
 
+## 前提環境
+
+| 必要なもの | バージョン / 備考 |
+| --- | --- |
+| Node.js | 22 以上 |
+| pnpm | 10.33（`package.json` の `packageManager` で固定） |
+| Docker / Docker Compose | フルスタックで動かす場合に必要（backend 単体なら SQLite で代替でき不要） |
+
 ## セットアップ
 
 ```bash
 pnpm install
 cp .env.example .env
-pnpm api:gen        # 契約から型を生成
+pnpm api:gen        # ← 必須: 契約から型/クライアントを生成
 ```
 
+> ⚠️ **`pnpm api:gen` は必須**。実行しないと `@app/api-client` の型が未生成のままになり、FE/BE のビルド・型チェック・テストが失敗します（生成物は `.gitignore` 対象で、clone 直後には存在しません）。
+>
 > `make help` でよく使う操作の一覧を表示できます（`make up` / `make test` / `make gen` など）。
 
-## 使い方
+## まず動かす（クイックスタート）
+
+一番簡単なのは Docker で全部まとめて起動する方法です。
 
 ```bash
-# DB だけ起動して個別に開発
-pnpm db:up
-pnpm --filter @app/backend dev
-# 全部まとめて
 docker compose up --build   # mysql + backend(:3001) + frontend(:3000)
 ```
 
-主なアクセス先:
-
 - アプリ UI: http://localhost:3000
 - Swagger UI（対話的 API ドキュメント）: http://localhost:3001/docs
+
+## 個別に起動して開発する
+
+```bash
+# backend だけを Docker なしで（SQLite インメモリ・データは再起動で消える）
+DB_TYPE=better-sqlite3 DB_DATABASE=:memory: pnpm --filter @app/backend dev
+
+# MySQL を使う場合は先に DB を起動してから backend を起動
+pnpm db:up
+pnpm --filter @app/backend dev
+```
+
+> ℹ️ frontend の dev サーバ（`nuxt dev`）は現状 Vite 7 と非互換で起動しません。ローカルで画面を確認するときは `docker compose up --build`、または本番ビルド出力（`pnpm --filter @app/frontend build` → `node apps/frontend/.output/server/index.mjs`）を使ってください。
 
 ## テスト
 
@@ -68,6 +93,12 @@ pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 
 上記は GitHub Actions（`.github/workflows/ci.yml`）で PR・`main` push 時に自動実行される（lint / format / typecheck も含む）。
 
+## 開発・貢献
+
+- 作業は必ず**ブランチを切ってから**着手する（`main` への直接コミットは禁止）。
+- 実装にはテストを必ず添え、`pnpm lint` / `pnpm format:check` / 各種テストを通す。
+- PR の承認・マージは人間が行う（自動マージ禁止）。詳細な開発ルールは `.claude/rules/`（workflow / testing / git / quality-gate など）を参照。
+
 ## ドキュメント
 
 仕様書は `docs/` 配下に番号付きで整理している。開発ルールは `.claude/rules/` を参照。
@@ -76,7 +107,7 @@ pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 
 | 知りたいこと | 参照先 |
 |---|---|
-| **初めてコードを読む / 起動コマンド・curl 例** | [docs/12-code-reading-guide.md](docs/12-code-reading-guide.md) |
+| **初めてコードを読む / 起動コマンド・curl 例** | [docs/12-code-reading-guide/](docs/12-code-reading-guide/README.md) |
 | **アーキテクチャ・構成**（何が動く？ 静的配信・volume・技術スタック） | [docs/09-architecture-specification.md](docs/09-architecture-specification.md) |
 | **ポート番号・DB 切替・画像保存先**（3000 / 3001 / 3306 など） | [docs/10-miscellaneous-specification.md](docs/10-miscellaneous-specification.md) |
 | **DB**（ER 図・テーブルスキーマ・`imageUrl`） | [docs/05-data-specification.md](docs/05-data-specification.md) |
@@ -101,4 +132,4 @@ pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 | 09 | [architecture-specification](docs/09-architecture-specification.md) | アーキテクチャ仕様（システム構成・静的配信/volume・技術スタック） |
 | 10 | [miscellaneous-specification](docs/10-miscellaneous-specification.md) | その他（用語集・参照資料・付録: ポート/DB 切替/画像保存先） |
 | 11 | [tasks](docs/11-tasks.md) | タスク・進捗・CI |
-| 12 | [code-reading-guide](docs/12-code-reading-guide.md) | コードリーディングガイド（契約 → BE → FE → テストの読む順番） |
+| 12 | [code-reading-guide](docs/12-code-reading-guide/README.md) | コードリーディングガイド（契約 → BE → FE → テストの読む順番。Step 別に分割） |
