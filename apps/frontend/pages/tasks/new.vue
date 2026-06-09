@@ -47,6 +47,7 @@ async function onFormSubmit(payload: TaskFormSubmit) {
       status: value.status,
       startDate: value.startDate,
       endDate: value.endDate,
+      url: value.url,
     });
     validated.value = true;
   } catch (e) {
@@ -67,6 +68,7 @@ async function onConfirm() {
       status: draft.value.status,
       startDate: draft.value.startDate,
       endDate: draft.value.endDate,
+      url: draft.value.url,
     });
     // 画像は作成後に別経路でアップロードする（任意・1枚）
     if (imageFile.value) {
@@ -110,6 +112,12 @@ async function onConfirm() {
         <div class="flex justify-between py-1">
           <dt class="text-gray-500">終了</dt>
           <dd>{{ draft.endDate ? draft.endDate.slice(0, 10) : '（なし）' }}</dd>
+        </div>
+        <div class="flex items-start justify-between py-1">
+          <dt class="text-gray-500">関連 URL</dt>
+          <dd class="ml-4 min-w-0 max-w-[60%]">
+            <UrlPreview :url="draft.url" />
+          </dd>
         </div>
         <div class="flex items-start justify-between py-1">
           <dt class="text-gray-500">画像</dt>

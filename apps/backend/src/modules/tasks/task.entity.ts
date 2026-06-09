@@ -36,6 +36,10 @@ export class TaskEntity {
   @Column({ type: 'datetime', nullable: true })
   endDate!: Date | null;
 
+  // 関連 URL（任意・http/https）。スキーム検証は DTO で担保する。varchar でポータブル。
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  url!: string | null;
+
   // 添付画像の公開パス（例: "/uploads/<file>"）。varchar でポータブル（MySQL/SQLite 双方可）。
   @Column({ type: 'varchar', length: 512, nullable: true })
   imageUrl!: string | null;

@@ -9,7 +9,7 @@
 | 登録 | email / password / displayName | 重複確認 → bcrypt ハッシュ → ユーザー作成 → トークン発行 | AuthTokens(201) |
 | ログイン | email / password | ユーザー照合 → パスワード検証 → トークン発行 | AuthTokens |
 | リフレッシュ | refreshToken（Cookie 経由） | ハッシュ照合 → 旧トークン失効 → 再発行 | AuthTokens |
-| タスク作成 | title / description? / status? / startDate / endDate? | DTO 検証 → 開始≤終了確認 → 保存 | Task(201) |
+| タスク作成 | title / description? / status? / startDate / endDate? / url? | DTO 検証（url は http/https のみ）→ 開始≤終了確認 → 保存 | Task(201) |
 | タスク更新 | 上記の部分集合 | 所有確認 → マージ → 開始≤終了確認 → 保存 | Task |
 | DryRun | 各作成/更新と同じ body | 検証のみ（保存しない） | DryRunResult |
 | 画像添付 | multipart `file` | 所有確認 → MIME/サイズ検証 → uuid 名で保存 → 旧ファイル削除 | Task |
@@ -27,6 +27,7 @@
 - 画面: ログイン / 登録 / タスク一覧 / タスク詳細 / 新規作成 / 編集。
 - 一覧カードはタイトル・状態・説明のみ表示（画像は出さない）。画像は詳細・確認画面・編集フォームでプレビュー。
 - 作成/更新は 2 段階（フォーム → 確認）。確認画面でサーバ側の事前検証結果（✓/エラー）を表示し、検証通過まで確定ボタンを無効化。
+- 関連 URL（任意）はフォームで入力し、確認画面・詳細で**安全なリンクカード**としてプレビュー表示する。`http`/`https` のみ許可（`javascript:`/`data:` 等は入力検証でエラー、描画時も `<a>` を出さない）。クリックは別タブ（`target="_blank" rel="noopener noreferrer"`）で開く。
 - 日付は flatpickr の 2 入力（開始・終了）。クライアント側でも開始必須・開始≤終了を検証。
 
 ## ビジネスロジック

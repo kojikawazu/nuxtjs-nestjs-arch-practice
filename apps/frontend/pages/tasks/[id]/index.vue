@@ -54,6 +54,9 @@ async function onDelete() {
       <p class="mt-4 whitespace-pre-wrap text-gray-700" data-testid="detail-description">
         {{ task.description || '（説明なし）' }}
       </p>
+      <div v-if="task.url" class="mt-4" data-testid="detail-url">
+        <UrlPreview :url="task.url" />
+      </div>
       <p class="mt-2 text-sm text-gray-500">状態: {{ STATUS_LABEL[task.status] }}</p>
       <p class="text-sm text-gray-500" data-testid="detail-start-date">
         開始: {{ task.startDate.slice(0, 10) }}

@@ -38,6 +38,7 @@ describe('TasksService', () => {
     status: 'todo',
     startDate: new Date('2026-01-10T00:00:00.000Z'),
     endDate: null,
+    url: null,
     imageUrl: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -108,6 +109,7 @@ describe('TasksService', () => {
         status: 'todo',
         startDate: new Date('2026-01-10T00:00:00.000Z'),
         endDate: null,
+        url: null,
       });
       expect(result.status).toBe('todo');
       expect(result.title).toBe('新規');
@@ -138,6 +140,33 @@ describe('TasksService', () => {
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('正常系: url 指定時はそのまま保存し、契約 Task で返す', async () => {
+      repo.save.mockImplementation(async (e: TaskEntity) => buildEntity(e));
+
+      const result = await service.create(USER, {
+        title: 'リンクあり',
+        startDate: '2026-01-10T00:00:00.000Z',
+        url: 'https://example.com/docs',
+      });
+
+      const created = repo.create.mock.calls[0][0] as TaskEntity;
+      expect(created.url).toBe('https://example.com/docs');
+      expect(result.url).toBe('https://example.com/docs');
+    });
+
+    it('準正常系: url 省略時は null で保存し、契約 Task では url を持たない', async () => {
+      repo.save.mockImplementation(async (e: TaskEntity) => buildEntity({ ...e, url: null }));
+
+      const result = await service.create(USER, {
+        title: 'リンクなし',
+        startDate: '2026-01-10T00:00:00.000Z',
+      });
+
+      const created = repo.create.mock.calls[0][0] as TaskEntity;
+      expect(created.url).toBeNull();
+      expect(result.url).toBeUndefined();
     });
   });
 
@@ -175,6 +204,17 @@ describe('TasksService', () => {
       expect(saved.status).toBe('done');
       expect(saved.title).toBe('買い物'); // 未指定は元のまま
       expect(result.status).toBe('done');
+    });
+
+    it('正常系: url を指定すると更新され、契約 Task に反映される', async () => {
+      repo.findOne.mockResolvedValue(buildEntity());
+      repo.save.mockImplementation(async (e: TaskEntity) => e);
+
+      const result = await service.update(USER, 'task-1', { url: 'https://example.org/a' });
+
+      const saved = repo.save.mock.calls[0][0] as TaskEntity;
+      expect(saved.url).toBe('https://example.org/a');
+      expect(result.url).toBe('https://example.org/a');
     });
 
     it('準正常系: 他人のタスク更新は ForbiddenException で save されない', async () => {
