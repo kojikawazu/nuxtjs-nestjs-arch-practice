@@ -3,6 +3,16 @@
 API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec/main.tsp`）。
 そこから OpenAPI 3.1（`packages/api-spec/tsp-output/openapi.yaml`）と型/クライアント（`packages/api-client`）を生成する。
 
+## 目次
+
+- [エンドポイント一覧](#エンドポイント一覧)
+- [リクエスト / レスポンス形式](#リクエスト--レスポンス形式)
+- [認証](#認証)
+- [エラーハンドリング](#エラーハンドリング)
+- [Swagger UI（対話的ドキュメント）](#swagger-ui対話的ドキュメント)
+- [再生成コマンド](#再生成コマンド)
+
+
 ## エンドポイント一覧
 
 | メソッド | パス | 概要 | 認証 |
