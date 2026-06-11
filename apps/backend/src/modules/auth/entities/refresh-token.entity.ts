@@ -2,7 +2,7 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 
 
 /**
  * リフレッシュトークン（ハッシュ化して保存）。
- * 平文は保存せず、検証時に bcrypt.compare する。ローテーション時は行を置き換える。
+ * 平文は保存せず、検証時に SHA-256 ハッシュを timingSafeEqual で定数時間比較する。ローテーション時は行を置き換える。
  */
 @Entity('refresh_tokens')
 export class RefreshTokenEntity {

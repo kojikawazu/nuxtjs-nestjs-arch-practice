@@ -6,9 +6,12 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 ## 目次
 
 - [エンドポイント一覧](#エンドポイント一覧)
+  - [DryRun（検証のみ）エンドポイント](#dryrun検証のみエンドポイント)
+  - [画像アップロード（タスク添付）](#画像アップロードタスク添付)
 - [リクエスト / レスポンス形式](#リクエスト--レスポンス形式)
 - [認証](#認証)
 - [エラーハンドリング](#エラーハンドリング)
+- [実行例（curl）](#実行例curl)
 - [Swagger UI（対話的ドキュメント）](#swagger-ui対話的ドキュメント)
 - [再生成コマンド](#再生成コマンド)
 
@@ -64,6 +67,29 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 
 - 形式: `ApiError { statusCode, message, error? }`。
 - 主なコード: 400(バリデーション) / 401(認証) / 403(認可) / 404(不存在) / 409(重複登録)。
+
+## 実行例（curl）
+
+登録 → タスク作成までの最短例（backend が `:3001` で起動している前提。`jq` があるとトークン抽出が楽）。
+
+```bash
+# 1. 登録してアクセストークンを取得
+ACCESS=$(curl -s -X POST http://localhost:3001/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"demo@example.com","password":"password123","displayName":"demo"}' \
+  | jq -r .accessToken)
+
+# 2. タスク作成（Bearer を付与。startDate は必須・日付のみ）
+curl -s -X POST http://localhost:3001/tasks \
+  -H "Authorization: Bearer $ACCESS" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"はじめてのタスク","status":"todo","startDate":"2026-01-01"}' | jq
+
+# 3. 自分のタスク一覧を取得
+curl -s http://localhost:3001/tasks -H "Authorization: Bearer $ACCESS" | jq
+```
+
+> リフレッシュはブラウザの httpOnly Cookie 運用が前提のため、フロント経由での確認を推奨。Swagger UI（`/docs`）の "Try it out" でも一通り試せる。
 
 ## Swagger UI（対話的ドキュメント）
 

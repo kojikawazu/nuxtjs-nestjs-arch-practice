@@ -25,6 +25,31 @@
 - フロント: **アクセストークンはメモリ（`useState`）のみ**。localStorage には置かない。
 - **リフレッシュトークンは httpOnly Cookie**（Nitro BFF が管理）。JS から読めずリロード後はサイレント更新で復元。
 
+**ログイン〜リフレッシュのシーケンス**（access はメモリ、refresh は BFF の httpOnly Cookie に隔離される）:
+
+```mermaid
+sequenceDiagram
+  participant B as ブラウザ (Nuxt SPA)
+  participant F as Nitro BFF (/api/auth/*)
+  participant A as Backend (NestJS)
+
+  B->>F: POST /api/auth/login (email, password)
+  F->>A: POST /auth/login
+  A-->>F: AuthTokens { accessToken, refreshToken }
+  F-->>B: accessToken のみ返却 + refreshToken を httpOnly Cookie に Set-Cookie
+  Note over B: accessToken は useState(メモリ)に保持
+
+  B->>A: GET /tasks (Authorization: Bearer accessToken)
+  A-->>B: 200 タスク一覧
+
+  Note over B,A: accessToken 失効後（またはリロード時）
+  B->>F: POST /api/auth/refresh (Cookie の refreshToken を自動送信)
+  F->>A: POST /auth/refresh (refreshToken)
+  A->>A: ハッシュ照合 → 旧トークン失効 → 新規発行（ローテーション）
+  A-->>F: 新しい AuthTokens
+  F-->>B: 新 accessToken + Cookie の refreshToken を更新
+```
+
 ## 認可
 
 - タスクは所有者のみ操作可。`TasksService.findOwned` で存在=404 / 非所有=403 を区別。
