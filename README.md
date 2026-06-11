@@ -4,6 +4,10 @@
 
 Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理アプリ）
 
+> **English (TL;DR):** A learning monorepo focused on *how and why to write tests at each layer* of a Nuxt 3 + NestJS task-management app — contract-first (TypeSpec → OpenAPI), layered backend, and tests across BE unit / BE e2e / FE unit / full E2E. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at http://localhost:3000, Swagger at http://localhost:3001/docs.
+
+> ⚠️ **開発時の注意（先に読む）**: frontend の dev サーバ（`nuxt dev`）は現状 **Vite 7 と非互換で起動しません**。画面確認は `docker compose up --build` か本番ビルド出力を使ってください（詳細は [個別に起動して開発する](#個別に起動して開発する)）。これは既知の制約で、解消は今後の課題（[docs/11-tasks.md](docs/11-tasks.md)）。
+
 ## 概要
 
 テストコードの知見を深めることを主目的とした学習用モノレポ。題材としてタスク管理アプリを、各層で「どんなテストを・なぜ書くか」を学べる構成で実装している。
@@ -19,6 +23,7 @@ Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理ア�
 - タスク CRUD: 所有者のみ操作可。状態（todo/in_progress/done）、期間（開始必須・終了任意、開始≤終了）
 - 事前検証（DryRun）: 保存せず入力を検証する `*/validate` エンドポイント
 - 画像添付: タスクに 1 枚（任意・png/jpeg/webp・2MB まで）。`/uploads` で静的配信、保存先は volume で永続化
+- 関連 URL: タスクに `http`/`https` のみのリンクを添付。確認画面・詳細で**安全なリンクカード**として表示（`javascript:` 等は入力検証＋描画時ガードで遮断、`rel="noopener noreferrer"`）
 - 契約から生成した Swagger UI（`/docs`）
 
 詳細な仕様は `docs/` を参照。
@@ -69,6 +74,14 @@ docker compose up --build   # mysql + backend(:3001) + frontend(:3000)
 - アプリ UI: http://localhost:3000
 - Swagger UI（対話的 API ドキュメント）: http://localhost:3001/docs
 
+> `make up` でも起動できます（こちらは `-d` 付きの**バックグラウンド起動**。ログは `make logs`、停止は `make down`、データごと削除は `make reset`）。
+
+**最初のひとめぐり（ハッピーパス）:**
+
+1. http://localhost:3000 を開き「登録」から任意のメール / パスワード（8〜72文字）/ 表示名でアカウント作成
+2. ログイン状態のまま一覧へ。「新規作成」でタイトルと開始日を入力 →「確認へ」でサーバ検証 ✓ を確認 →「作成する」で確定
+3. 一覧・詳細でタスクを確認（画像添付・関連 URL も試せる）
+
 ## 個別に起動して開発する
 
 ```bash
@@ -101,7 +114,7 @@ pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 
 ## ドキュメント
 
-仕様書は `docs/` 配下に番号付きで整理している。開発ルールは `.claude/rules/` を参照。
+仕様書は [`docs/`](docs/README.md) 配下に番号付きで整理している。索引は [docs/README.md](docs/README.md)、開発ルールは [`.claude/rules/`](.claude/rules/) を参照。
 
 ### よくある探し物（クイックリンク）
 
@@ -117,7 +130,8 @@ pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 | **テスト方針・各層のモック対象** | [docs/08-test-specification.md](docs/08-test-specification.md) |
 | **進捗・CI** | [docs/11-tasks.md](docs/11-tasks.md) |
 
-### ドキュメント一覧
+<details>
+<summary><b>ドキュメント一覧（01〜12）を開く</b></summary>
 
 | # | ファイル | 内容 |
 |---|---|---|
@@ -133,3 +147,11 @@ pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
 | 10 | [miscellaneous-specification](docs/10-miscellaneous-specification.md) | その他（用語集・参照資料・付録: ポート/DB 切替/画像保存先） |
 | 11 | [tasks](docs/11-tasks.md) | タスク・進捗・CI |
 | 12 | [code-reading-guide](docs/12-code-reading-guide/README.md) | コードリーディングガイド（契約 → BE → FE → テストの読む順番。Step 別に分割） |
+
+</details>
+
+## ライセンス
+
+[MIT License](LICENSE) © kojikawazu
+
+> 学習用プロジェクトです。無保証（as-is）で提供します。
