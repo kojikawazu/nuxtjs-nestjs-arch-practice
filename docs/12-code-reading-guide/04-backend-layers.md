@@ -2,27 +2,43 @@
 
 > [← コードリーディングガイド 索引](./README.md)
 
-リクエストの流れ: **Controller(presentation) → Service(application) → Repository/Entity(infrastructure)**。
+tasks はクリーンアーキテクチャ（Onion / Ports）で実装されている。リクエストの流れ:
+**Controller(presentation) → UseCase(application) → Port(interface) ← Repository/Storage(infrastructure)**、
+業務ルールは **Domain** に集約。
 
 ```
-apps/backend/src/modules/tasks/tasks.controller.ts   # HTTP 入口・DTO 受け・@CurrentUser
-apps/backend/src/modules/tasks/dto/*.dto.ts          # class-validator で入力検証（契約型を implements）
-apps/backend/src/modules/tasks/tasks.service.ts      # 認可・業務ルール・トークン回転などの本体
-apps/backend/src/main.ts                             # ValidationPipe / 例外フィルタ / 静的配信の起動設定
-apps/backend/src/common/filters/http-exception.filter.ts  # 例外を契約 ApiError 形に統一
-apps/backend/src/config/static-assets.ts             # /uploads 静的配信（画像）
+apps/backend/src/modules/tasks/
+├ presentation/
+│  ├ tasks.controller.ts            # HTTP 入口・DTO 受け・@CurrentUser・UseCase に委譲
+│  ├ dto/*.dto.ts                   # class-validator で入力検証（契約型を implements）
+│  ├ task-request.mapper.ts         # DTO(ISO文字列) → ドメイン入力(Date) へ変換
+│  ├ task-response.mapper.ts        # ドメイン Task → 契約 Task(@app/api-client) へ変換
+│  └ domain-exception.filter.ts     # DomainError → ApiError（HTTP 化）。コントローラスコープ
+├ application/
+│  ├ usecases/*.usecase.ts          # 1 ルート = 1 ユースケース。ポート経由で domain を操作
+│  └ ports/*.port.ts                # TaskRepositoryPort / ImageStoragePort（DI トークン付き）
+├ domain/
+│  ├ task.ts                        # Task / TaskDraft（既定値・開始≤終了・所有者認可・更新）
+│  └ task-errors.ts                 # DomainError（NotFound/AccessDenied/InvalidDateRange/UnsupportedImageType）
+└ infrastructure/
+   ├ entities/task.entity.ts        # TypeORM スキーマ（テーブル形）
+   ├ repositories/typeorm-task.repository.ts  # TaskRepositoryPort 実装
+   ├ storage/local-image-storage.ts # ImageStoragePort 実装（mkdir/writeFile/unlink・MIME 判定）
+   └ mappers/task.mapper.ts         # Entity ⇄ ドメイン
 ```
 
 読むポイント:
 
-- **ビジネスロジックは Service に集約**。Controller は受けて Service に渡すだけ。
-- 認可: `tasks.service.ts` の `findOwned` が「存在しない=404 / 非所有=403」を区別。
-- 日付: `startDate` 必須・`endDate` 任意・`startDate ≤ endDate`（`assertDateOrder`）。
-- DryRun: `validateCreate` / `validateUpdate` は検証だけして **`save` を呼ばない**（保存しないことがテストで保証される）。
-- 画像: `setImage` がサーバ生成 uuid 名で保存し旧ファイルを掃除。MIME/サイズ検証は Controller の `ParseFilePipe`。
-- DTO は `implements TaskCreate`（`@app/api-client`）で契約とのズレを型で検出する。
+- **依存は内向き**。`presentation → application → domain`、`infrastructure → application(ports)`。domain は何にも依存しない。
+- **依存性逆転**: UseCase は `@Inject(TASK_REPOSITORY)` でポート（interface）に依存し、実体（TypeORM 実装）は `tasks.module.ts` の DI で差し込む。
+- 認可: `domain/task.ts` の `assertOwnedBy` が非所有を `TaskAccessDeniedError`（→403）に。不存在は UseCase が `TaskNotFoundError`（→404）。
+- 日付: `startDate` 必須・`endDate` 任意・`startDate ≤ endDate`。`TaskDraft.create` / `Task.applyUpdate` が `InvalidDateRangeError`（→400）。
+- DryRun: `validate-create` / `validate-update` ユースケースは検証だけして **永続化（repo.create/update）を呼ばない**。
+- 画像: `set-task-image` ユースケースが `ImageStoragePort.save`（サーバ生成 uuid 名・MIME 判定）→ ドメイン更新 → 永続化 → 旧ファイル掃除の順。MIME/サイズの一次検証は Controller の `ParseFilePipe`。
+- 3 表現の変換: domain ↔ Entity は `task.mapper.ts`、domain ↔ 契約は presentation の `task-response.mapper.ts`。
 
-> **差分ポイント**: 例外は投げっぱなしにせず `AllExceptionsFilter` が `ApiError { statusCode, message }` に統一する。内部情報を漏らさない。
+> **差分ポイント1**: domain は HTTP を知らず `DomainError` を投げる。`DomainExceptionFilter` が `ApiError { statusCode, message, error }` に翻訳（グローバルの `AllExceptionsFilter` と同形）。
+> **差分ポイント2**: auth / users は従来レイヤード（Controller/Service/Entity を役割で区別）のまま。tasks のみ Onion へ先行移行した参考実装。
 
 ---
 

@@ -48,9 +48,36 @@ graph TD
 
 ## レイヤード構成（backend）
 
+モジュールごとに 2 つの構成が混在する（学習目的の段階的移行）。
+
+### auth / users（従来レイヤード）
+
 - presentation: Controller / DTO
 - application: Service（ユースケース・認可・トークン回転）
 - infrastructure: Entity / TypeORM Repository
+
+層はファイルの役割（`*.controller.ts` / `*.service.ts` / `*.entity.ts`）で区別する。
+
+### tasks（クリーンアーキテクチャ / Onion・参考実装）
+
+依存を内向き（presentation → application → domain、infrastructure → application）に固定し、
+フォルダで層を分離する。Repository とファイル保存は **ポート（interface）** にして依存性を逆転する。
+
+```
+modules/tasks/
+├ presentation/        Controller / DTO / DTO⇄ドメイン変換 / ドメインエラー→ApiError フィルタ
+├ application/
+│  ├ usecases/         1 ルート = 1 ユースケース（list/create/get/update/delete/validate*/image*）
+│  └ ports/            TaskRepositoryPort・ImageStoragePort（DI トークン付き interface）
+├ domain/              Task / TaskDraft（業務ルール）・DomainError（HTTP 非依存）
+└ infrastructure/      TypeORM Entity / Repository 実装 / ローカル FS 保存 / mapper
+```
+
+- 同じデータが domain / ORM Entity / contract(`@app/api-client`) の 3 表現を持ち、変換は mapper に集約する。
+- ドメインは NestJS/TypeORM を知らず、`DomainError` を投げる。HTTP への翻訳は presentation の `DomainExceptionFilter`。
+- DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeormTaskRepository }` のように束ねる。
+
+> auth/users も同じパターンへ横展開可能。tasks を先行移行した参考実装と位置づける。
 
 ## 添付画像の保存・配信
 

@@ -9,8 +9,12 @@ import {
 import type { TaskStatus } from '@app/api-client';
 
 /**
- * タスク（infrastructure 層）。status は enum カラムではなく varchar で持ち、
- * 値の正しさは契約由来の TaskStatus 型 + DTO バリデーションで担保する（SQLite 互換のため）。
+ * タスクの永続化スキーマ（infrastructure 層）。
+ * status は enum カラムではなく varchar で持ち、値の正しさは契約由来の TaskStatus 型 +
+ * DTO バリデーション + ドメインで担保する（SQLite 互換のため）。
+ *
+ * このクラスは「DB のテーブル形」であり、業務ルールは持たない。ドメイン（domain/task.ts）
+ * との相互変換は TaskMapper が担う。
  */
 @Entity('tasks')
 export class TaskEntity {
