@@ -10,12 +10,11 @@ import {
   Patch,
   Post,
   UploadedFile,
-  UseFilters,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { DryRunResult, Task as ContractTask } from '@app/api-client';
+import type { DryRunResult, Task } from '@app/api-client';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/auth.types';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -28,20 +27,15 @@ import { SetTaskImageUseCase } from '../application/usecases/set-task-image.usec
 import { UpdateTaskUseCase } from '../application/usecases/update-task.usecase';
 import { ValidateCreateTaskUseCase } from '../application/usecases/validate-create-task.usecase';
 import { ValidateUpdateTaskUseCase } from '../application/usecases/validate-update-task.usecase';
-import { DomainExceptionFilter } from './domain-exception.filter';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { TaskRequestMapper } from './task-request.mapper';
-import { toContractTask } from './task-response.mapper';
 
 /**
  * タスクの HTTP 入口（presentation 層）。
- * 認証・入力検証（DTO/Pipe）・DTO⇄ドメイン変換・ドメインエラーの HTTP 化に専念し、
- * 業務処理は各 UseCase に委譲する。
+ * 認証・入力検証（DTO/Pipe）に専念し、処理は各 UseCase（application 層）へ委譲する。
  */
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
-@UseFilters(DomainExceptionFilter)
 export class TasksController {
   constructor(
     private readonly listTasks: ListTasksUseCase,
@@ -56,19 +50,14 @@ export class TasksController {
   ) {}
 
   @Get()
-  async list(@CurrentUser() user: AuthenticatedUser): Promise<ContractTask[]> {
-    const tasks = await this.listTasks.execute(user.userId);
-    return tasks.map(toContractTask);
+  list(@CurrentUser() user: AuthenticatedUser): Promise<Task[]> {
+    return this.listTasks.execute(user.userId);
   }
 
   @Post()
   @HttpCode(201)
-  async create(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateTaskDto,
-  ): Promise<ContractTask> {
-    const task = await this.createTask.execute(TaskRequestMapper.toNewTaskInput(user.userId, dto));
-    return toContractTask(task);
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTaskDto): Promise<Task> {
+    return this.createTask.execute(user.userId, dto);
   }
 
   @Post('validate')
@@ -77,31 +66,22 @@ export class TasksController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateTaskDto,
   ): Promise<DryRunResult> {
-    this.validateCreateTask.execute(TaskRequestMapper.toNewTaskInput(user.userId, dto));
+    this.validateCreateTask.execute(user.userId, dto);
     return { valid: true };
   }
 
   @Get(':id')
-  async get(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ): Promise<ContractTask> {
-    const task = await this.getTask.execute(user.userId, id);
-    return toContractTask(task);
+  get(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Task> {
+    return this.getTask.execute(user.userId, id);
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateTaskDto,
-  ): Promise<ContractTask> {
-    const task = await this.updateTask.execute(
-      user.userId,
-      id,
-      TaskRequestMapper.toTaskUpdateInput(dto),
-    );
-    return toContractTask(task);
+  ): Promise<Task> {
+    return this.updateTask.execute(user.userId, id, dto);
   }
 
   @Post(':id/validate')
@@ -111,11 +91,7 @@ export class TasksController {
     @Param('id') id: string,
     @Body() dto: UpdateTaskDto,
   ): Promise<DryRunResult> {
-    await this.validateUpdateTask.execute(
-      user.userId,
-      id,
-      TaskRequestMapper.toTaskUpdateInput(dto),
-    );
+    await this.validateUpdateTask.execute(user.userId, id, dto);
     return { valid: true };
   }
 
@@ -131,12 +107,12 @@ export class TasksController {
    */
   @Post(':id/image')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadImage(
+  uploadImage(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        // 申告 MIME で判定する（マジックナンバー検査は無効化）。拡張子の確定は Storage 側でも担保。
+        // 申告 MIME で判定する（マジックナンバー検査は無効化）。拡張子の確定は UseCase 側でも担保。
         .addFileTypeValidator({
           fileType: /^image\/(png|jpe?g|webp)$/,
           skipMagicNumbersValidation: true,
@@ -145,18 +121,13 @@ export class TasksController {
         .build({ errorHttpStatusCode: HttpStatus.BAD_REQUEST, fileIsRequired: true }),
     )
     file: Express.Multer.File,
-  ): Promise<ContractTask> {
-    const task = await this.setTaskImage.execute(user.userId, id, file);
-    return toContractTask(task);
+  ): Promise<Task> {
+    return this.setTaskImage.execute(user.userId, id, file);
   }
 
   /** 添付画像の削除（更新後の Task を返す）。 */
   @Delete(':id/image')
-  async removeImage(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ): Promise<ContractTask> {
-    const task = await this.removeTaskImage.execute(user.userId, id);
-    return toContractTask(task);
+  removeImage(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Task> {
+    return this.removeTaskImage.execute(user.userId, id);
   }
 }

@@ -58,26 +58,28 @@ graph TD
 
 層はファイルの役割（`*.controller.ts` / `*.service.ts` / `*.entity.ts`）で区別する。
 
-### tasks（クリーンアーキテクチャ / Onion・参考実装）
+### tasks（レイヤード + UseCase・フォルダ分離）
 
-依存を内向き（presentation → application → domain、infrastructure → application）に固定し、
-フォルダで層を分離する。Repository とファイル保存は **ポート（interface）** にして依存性を逆転する。
+presentation → application → infrastructure の素直な依存。太い Service を「1 操作 = 1 UseCase」に分解し、
+フォルダで層を分離する。依存性逆転（ポート）はしない＝ UseCase が TypeORM Repository を直接利用する。
 
 ```
 modules/tasks/
-├ presentation/        Controller / DTO / DTO⇄ドメイン変換 / ドメインエラー→ApiError フィルタ
+├ presentation/
+│  ├ tasks.controller.ts   # HTTP 入口・DTO 受け・UseCase へ委譲
+│  └ dto/                  # class-validator の DTO（契約型を implements）
 ├ application/
-│  ├ usecases/         1 ルート = 1 ユースケース（list/create/get/update/delete/validate*/image*）
-│  └ ports/            TaskRepositoryPort・ImageStoragePort（DI トークン付き interface）
-├ domain/              Task / TaskDraft（業務ルール）・DomainError（HTTP 非依存）
-└ infrastructure/      TypeORM Entity / Repository 実装 / ローカル FS 保存 / mapper
+│  ├ usecases/             # 1 ルート = 1 ユースケース（list/create/get/update/delete/validate*/image*）
+│  └ task.util.ts          # 認可(findOwnedTask)・日付検証・契約変換・画像 I/O の共有ヘルパー
+└ infrastructure/
+   └ task.entity.ts        # TypeORM Entity
 ```
 
-- 同じデータが domain / ORM Entity / contract(`@app/api-client`) の 3 表現を持ち、変換は mapper に集約する。
-- ドメインは NestJS/TypeORM を知らず、`DomainError` を投げる。HTTP への翻訳は presentation の `DomainExceptionFilter`。
-- DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeormTaskRepository }` のように束ねる。
+- UseCase は `@InjectRepository(TaskEntity)` で Repository を直接注入し、`NotFoundException` / `ForbiddenException` / `BadRequestException` を直接投げる（グローバルの `AllExceptionsFilter` が `ApiError` 化）。
+- 認可（存在=404 / 非所有=403）・開始≤終了・Entity→契約変換は `task.util.ts` に集約して各 UseCase から再利用する。
+- DI は `tasks.module.ts` で UseCase 群を providers に列挙するのみ（ポート束ねは不要）。
 
-> auth/users も同じパターンへ横展開可能。tasks を先行移行した参考実装と位置づける。
+> auth / users は従来レイヤード（Service 集約）のまま。tasks は同じレイヤードに UseCase を足してフォルダ分離した形。
 
 ## 添付画像の保存・配信
 

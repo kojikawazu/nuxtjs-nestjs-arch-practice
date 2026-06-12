@@ -1,30 +1,27 @@
-import { Inject, Injectable } from '@nestjs/common';
-import type { Task } from '../../domain/task';
-import { TaskNotFoundError } from '../../domain/task-errors';
-import { IMAGE_STORAGE, type ImageStoragePort } from '../ports/image-storage.port';
-import { TASK_REPOSITORY, type TaskRepositoryPort } from '../ports/task-repository.port';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import type { Task } from '@app/api-client';
+import { TaskEntity } from '../../infrastructure/task.entity';
+import { findOwnedTask, removeStoredFile, toContractTask } from '../task.util';
 
 /** タスクの添付画像を削除する（実ファイルも削除。無ければ無視）。 */
 @Injectable()
 export class RemoveTaskImageUseCase {
   constructor(
-    @Inject(TASK_REPOSITORY)
-    private readonly tasks: TaskRepositoryPort,
-    @Inject(IMAGE_STORAGE)
-    private readonly images: ImageStoragePort,
+    @InjectRepository(TaskEntity)
+    private readonly tasks: Repository<TaskEntity>,
+    private readonly config: ConfigService,
   ) {}
 
   async execute(userId: string, id: string): Promise<Task> {
-    const task = await this.tasks.findById(id);
-    if (!task) {
-      throw new TaskNotFoundError();
-    }
-    task.assertOwnedBy(userId);
-
-    const previous = task.imageUrl;
-    task.detachImage();
-    const saved = await this.tasks.update(task);
-    await this.images.remove(previous);
-    return saved;
+    const entity = await findOwnedTask(this.tasks, userId, id);
+    const previous = entity.imageUrl;
+    entity.imageUrl = null;
+    const saved = await this.tasks.save(entity);
+    const dir = this.config.getOrThrow<string>('upload.dir');
+    await removeStoredFile(dir, previous);
+    return toContractTask(saved);
   }
 }

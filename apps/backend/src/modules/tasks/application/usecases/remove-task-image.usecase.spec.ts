@@ -1,46 +1,58 @@
-import { TaskAccessDeniedError } from '../../domain/task-errors';
+import { unlink } from 'node:fs/promises';
+import { ForbiddenException } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
+import type { TaskEntity } from '../../infrastructure/task.entity';
 import {
-  buildTask,
-  createFakeImageStorage,
-  createFakeTaskRepository,
+  OTHER,
+  USER,
+  buildEntity,
+  createRepoMock,
+  asRepo,
+  type RepoMock,
 } from '../../../../../test/fakes/task-fakes';
 import { RemoveTaskImageUseCase } from './remove-task-image.usecase';
 
+// fs（外部 I/O）はモックする。認可・状態遷移ロジックは本物で検証する。
+jest.mock('node:fs/promises');
+const unlinkMock = unlink as jest.MockedFunction<typeof unlink>;
+
 describe('RemoveTaskImageUseCase', () => {
-  it('正常系: imageUrl をクリアし、旧ファイルの削除を依頼する', async () => {
-    const repo = createFakeTaskRepository([
-      buildTask({ id: 'task-1', userId: 'user-1', imageUrl: '/uploads/keep.png' }),
-    ]);
-    const storage = createFakeImageStorage();
-    const usecase = new RemoveTaskImageUseCase(repo, storage);
+  const UPLOAD_DIR = '/tmp/test-uploads';
+  let repo: RepoMock;
+  let usecase: RemoveTaskImageUseCase;
 
-    const result = await usecase.execute('user-1', 'task-1');
-
-    expect(result.imageUrl).toBeNull();
-    expect(storage.remove).toHaveBeenCalledWith('/uploads/keep.png');
+  beforeEach(() => {
+    jest.clearAllMocks();
+    unlinkMock.mockResolvedValue(undefined);
+    repo = createRepoMock();
+    const config = { getOrThrow: jest.fn(() => UPLOAD_DIR) } as unknown as ConfigService;
+    usecase = new RemoveTaskImageUseCase(asRepo(repo), config);
   });
 
-  it('正常系: 画像が無い場合は remove に null を渡す（実体削除なし）', async () => {
-    const repo = createFakeTaskRepository([
-      buildTask({ id: 'task-1', userId: 'user-1', imageUrl: null }),
-    ]);
-    const storage = createFakeImageStorage();
-    const usecase = new RemoveTaskImageUseCase(repo, storage);
+  it('正常系: imageUrl をクリアして実ファイルを削除する', async () => {
+    repo.findOne.mockResolvedValue(buildEntity({ imageUrl: '/uploads/keep.png' }));
+    repo.save.mockImplementation(async (e: TaskEntity) => e);
 
-    await usecase.execute('user-1', 'task-1');
+    const result = await usecase.execute(USER, 'task-1');
 
-    expect(storage.remove).toHaveBeenCalledWith(null);
+    expect(result.imageUrl).toBeUndefined();
+    expect(unlinkMock).toHaveBeenCalledWith('/tmp/test-uploads/keep.png');
   });
 
-  it('準正常系: 他人のタスクは TaskAccessDeniedError で update も remove も呼ばない', async () => {
-    const repo = createFakeTaskRepository([
-      buildTask({ id: 'task-1', userId: 'user-2', imageUrl: '/uploads/x.png' }),
-    ]);
-    const storage = createFakeImageStorage();
-    const usecase = new RemoveTaskImageUseCase(repo, storage);
+  it('正常系: 画像が無い場合は unlink を呼ばない', async () => {
+    repo.findOne.mockResolvedValue(buildEntity({ imageUrl: null }));
+    repo.save.mockImplementation(async (e: TaskEntity) => e);
 
-    await expect(usecase.execute('user-1', 'task-1')).rejects.toBeInstanceOf(TaskAccessDeniedError);
-    expect(repo.update).not.toHaveBeenCalled();
-    expect(storage.remove).not.toHaveBeenCalled();
+    await usecase.execute(USER, 'task-1');
+
+    expect(unlinkMock).not.toHaveBeenCalled();
+  });
+
+  it('準正常系: 他人のタスクは ForbiddenException で save も unlink もしない', async () => {
+    repo.findOne.mockResolvedValue(buildEntity({ userId: OTHER, imageUrl: '/uploads/x.png' }));
+
+    await expect(usecase.execute(USER, 'task-1')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repo.save).not.toHaveBeenCalled();
+    expect(unlinkMock).not.toHaveBeenCalled();
   });
 });

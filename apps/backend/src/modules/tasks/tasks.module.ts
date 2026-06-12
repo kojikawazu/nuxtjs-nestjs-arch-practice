@@ -9,18 +9,14 @@ import { SetTaskImageUseCase } from './application/usecases/set-task-image.useca
 import { UpdateTaskUseCase } from './application/usecases/update-task.usecase';
 import { ValidateCreateTaskUseCase } from './application/usecases/validate-create-task.usecase';
 import { ValidateUpdateTaskUseCase } from './application/usecases/validate-update-task.usecase';
-import { IMAGE_STORAGE } from './application/ports/image-storage.port';
-import { TASK_REPOSITORY } from './application/ports/task-repository.port';
-import { TaskEntity } from './infrastructure/entities/task.entity';
-import { TypeormTaskRepository } from './infrastructure/repositories/typeorm-task.repository';
-import { LocalImageStorage } from './infrastructure/storage/local-image-storage';
+import { TaskEntity } from './infrastructure/task.entity';
 import { TasksController } from './presentation/tasks.controller';
 
 /**
- * tasks モジュールの DI 配線（クリーンアーキテクチャ / Onion）。
+ * tasks モジュールの DI 配線（レイヤード + UseCase）。
  *
- * UseCase（application）はポート（TASK_REPOSITORY / IMAGE_STORAGE）に依存し、
- * その実体（infrastructure の TypeORM 実装・ローカル FS 実装）をここで束ねる（依存性逆転）。
+ * presentation(Controller) → application(UseCase) → infrastructure(TypeORM Repository) の素直な
+ * 依存。UseCase は `@InjectRepository` で Repository を直接利用する（ポートによる逆転はしない）。
  */
 @Module({
   imports: [TypeOrmModule.forFeature([TaskEntity])],
@@ -35,8 +31,6 @@ import { TasksController } from './presentation/tasks.controller';
     DeleteTaskUseCase,
     SetTaskImageUseCase,
     RemoveTaskImageUseCase,
-    { provide: TASK_REPOSITORY, useClass: TypeormTaskRepository },
-    { provide: IMAGE_STORAGE, useClass: LocalImageStorage },
   ],
 })
 export class TasksModule {}

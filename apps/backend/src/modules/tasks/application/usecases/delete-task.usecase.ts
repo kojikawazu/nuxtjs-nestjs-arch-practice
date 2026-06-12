@@ -1,21 +1,19 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { TaskNotFoundError } from '../../domain/task-errors';
-import { TASK_REPOSITORY, type TaskRepositoryPort } from '../ports/task-repository.port';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TaskEntity } from '../../infrastructure/task.entity';
+import { findOwnedTask } from '../task.util';
 
-/** 自分のタスクを削除する（存在=404 / 非所有=403）。 */
+/** 自分のタスクを削除する（存在しない=404 / 非所有=403）。 */
 @Injectable()
 export class DeleteTaskUseCase {
   constructor(
-    @Inject(TASK_REPOSITORY)
-    private readonly tasks: TaskRepositoryPort,
+    @InjectRepository(TaskEntity)
+    private readonly tasks: Repository<TaskEntity>,
   ) {}
 
   async execute(userId: string, id: string): Promise<void> {
-    const task = await this.tasks.findById(id);
-    if (!task) {
-      throw new TaskNotFoundError();
-    }
-    task.assertOwnedBy(userId);
-    await this.tasks.deleteById(task.id);
+    const entity = await findOwnedTask(this.tasks, userId, id);
+    await this.tasks.delete({ id: entity.id });
   }
 }

@@ -15,10 +15,8 @@
 
 | 層 | ツール | モック対象 | 狙い |
 |---|---|---|---|
-| BE Domain 単体（tasks） | Jest | なし（純粋） | 業務ルール（既定値・開始≤終了・所有者認可・更新）をフレームワーク非依存で検証 |
-| BE UseCase 単体（tasks） | Jest | ポートの**偽実装**（インメモリ Repository / Storage） | ユースケースの分岐（404/403/DryRun は永続化しない 等）を検証。fs モック不要 |
+| BE UseCase 単体（tasks） | Jest | Repository(DB) のみ（画像系は fs も） | 認可(404/403)・日付検証・DryRun は永続化しない・画像命名を本物で検証 |
 | BE Service 単体（auth/users） | Jest | Repository(DB) のみ | ビジネスロジック・認可・トークン回転を本物で検証 |
-| BE Storage/Mapper 単体（tasks） | Jest | fs（`node:fs/promises`）のみ | MIME 判定・サーバ生成名・パストラバーサル防止・Entity⇄ドメイン変換 |
 | BE e2e | Jest + supertest（in-memory SQLite） | なし | HTTP 境界・認可・バリデーション・エラーレスポンス |
 | FE Composable `useTasks` | Vitest + **MSW** | backend への HTTP のみ | 副作用を Composable に閉じ込めた設計の検証 |
 | FE Composable `useAuth` | Vitest + **registerEndpoint** | Nitro BFF (`/api/auth/*`) | トークンがメモリに入る/消えるロジック |

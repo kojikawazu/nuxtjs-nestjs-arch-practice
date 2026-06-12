@@ -11,7 +11,7 @@ import { configuration } from '../src/config/configuration';
 import { configureUploadStatic } from '../src/config/static-assets';
 import { AuthModule } from '../src/modules/auth/auth.module';
 import { RefreshTokenEntity } from '../src/modules/auth/entities/refresh-token.entity';
-import { TaskEntity } from '../src/modules/tasks/infrastructure/entities/task.entity';
+import { TaskEntity } from '../src/modules/tasks/infrastructure/task.entity';
 import { TasksModule } from '../src/modules/tasks/tasks.module';
 import { UserEntity } from '../src/modules/users/user.entity';
 import { UsersModule } from '../src/modules/users/users.module';

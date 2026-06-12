@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { configuration } from './config/configuration';
 import { UserEntity } from './modules/users/user.entity';
 import { RefreshTokenEntity } from './modules/auth/entities/refresh-token.entity';
-import { TaskEntity } from './modules/tasks/infrastructure/entities/task.entity';
+import { TaskEntity } from './modules/tasks/infrastructure/task.entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';

@@ -1,17 +1,41 @@
-import { buildTask, createFakeTaskRepository } from '../../../../../test/fakes/task-fakes';
+import {
+  USER,
+  buildEntity,
+  createRepoMock,
+  asRepo,
+  type RepoMock,
+} from '../../../../../test/fakes/task-fakes';
 import { ListTasksUseCase } from './list-tasks.usecase';
 
 describe('ListTasksUseCase', () => {
-  it('正常系: 自分のタスクのみを返す', async () => {
-    const repo = createFakeTaskRepository([
-      buildTask({ id: 'a', userId: 'user-1' }),
-      buildTask({ id: 'b', userId: 'user-2' }),
+  let repo: RepoMock;
+  let usecase: ListTasksUseCase;
+
+  beforeEach(() => {
+    repo = createRepoMock();
+    usecase = new ListTasksUseCase(asRepo(repo));
+  });
+
+  it('正常系: 自分のタスクを createdAt 降順で問い合わせ、契約 Task にマップして返す', async () => {
+    repo.find.mockResolvedValue([buildEntity()]);
+
+    const result = await usecase.execute(USER);
+
+    expect(repo.find).toHaveBeenCalledWith({
+      where: { userId: USER },
+      order: { createdAt: 'DESC' },
+    });
+    expect(result).toEqual([
+      {
+        id: 'task-1',
+        title: '買い物',
+        description: '牛乳を買う',
+        status: 'todo',
+        startDate: '2026-01-10T00:00:00.000Z',
+        endDate: undefined,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+      },
     ]);
-    const usecase = new ListTasksUseCase(repo);
-
-    const result = await usecase.execute('user-1');
-
-    expect(repo.findManyByUser).toHaveBeenCalledWith('user-1');
-    expect(result.map((t) => t.id)).toEqual(['a']);
   });
 });

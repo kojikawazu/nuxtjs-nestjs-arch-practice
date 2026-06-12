@@ -1,25 +1,26 @@
-import { Inject, Injectable } from '@nestjs/common';
-import type { TaskUpdateInput } from '../../domain/task';
-import { TaskNotFoundError } from '../../domain/task-errors';
-import { TASK_REPOSITORY, type TaskRepositoryPort } from '../ports/task-repository.port';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TaskEntity } from '../../infrastructure/task.entity';
+import type { UpdateTaskDto } from '../../presentation/dto/update-task.dto';
+import { assertDateOrder, findOwnedTask } from '../task.util';
 
 /**
  * タスク更新の DryRun（検証のみ・保存しない）。
- * 所有権（存在=404 / 非所有=403）を確認し、更新後の開始≤終了も検証するが、状態は変えない。
+ * 所有権（存在=404 / 非所有=403）を確認し、更新後に確定する値で開始≤終了を検証する。
  */
 @Injectable()
 export class ValidateUpdateTaskUseCase {
   constructor(
-    @Inject(TASK_REPOSITORY)
-    private readonly tasks: TaskRepositoryPort,
+    @InjectRepository(TaskEntity)
+    private readonly tasks: Repository<TaskEntity>,
   ) {}
 
-  async execute(userId: string, id: string, patch: TaskUpdateInput): Promise<void> {
-    const task = await this.tasks.findById(id);
-    if (!task) {
-      throw new TaskNotFoundError();
-    }
-    task.assertOwnedBy(userId);
-    task.assertUpdatable(patch);
+  async execute(userId: string, id: string, dto: UpdateTaskDto): Promise<void> {
+    const entity = await findOwnedTask(this.tasks, userId, id);
+    const startDate = dto.startDate !== undefined ? new Date(dto.startDate) : entity.startDate;
+    const endDate =
+      dto.endDate !== undefined ? (dto.endDate ? new Date(dto.endDate) : null) : entity.endDate;
+    assertDateOrder(startDate, endDate);
   }
 }

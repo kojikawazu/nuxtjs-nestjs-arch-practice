@@ -1,30 +1,42 @@
-import { TaskAccessDeniedError, TaskNotFoundError } from '../../domain/task-errors';
-import { buildTask, createFakeTaskRepository } from '../../../../../test/fakes/task-fakes';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  OTHER,
+  USER,
+  buildEntity,
+  createRepoMock,
+  asRepo,
+  type RepoMock,
+} from '../../../../../test/fakes/task-fakes';
 import { DeleteTaskUseCase } from './delete-task.usecase';
 
 describe('DeleteTaskUseCase', () => {
-  it('正常系: 所有者なら deleteById を呼ぶ', async () => {
-    const repo = createFakeTaskRepository([buildTask({ id: 'task-1', userId: 'user-1' })]);
-    const usecase = new DeleteTaskUseCase(repo);
+  let repo: RepoMock;
+  let usecase: DeleteTaskUseCase;
 
-    await usecase.execute('user-1', 'task-1');
-
-    expect(repo.deleteById).toHaveBeenCalledWith('task-1');
+  beforeEach(() => {
+    repo = createRepoMock();
+    usecase = new DeleteTaskUseCase(asRepo(repo));
   });
 
-  it('異常系: 存在しないタスクは TaskNotFoundError で deleteById を呼ばない', async () => {
-    const repo = createFakeTaskRepository();
-    const usecase = new DeleteTaskUseCase(repo);
+  it('正常系: 所有者なら delete を呼ぶ', async () => {
+    repo.findOne.mockResolvedValue(buildEntity());
 
-    await expect(usecase.execute('user-1', 'missing')).rejects.toBeInstanceOf(TaskNotFoundError);
-    expect(repo.deleteById).not.toHaveBeenCalled();
+    await usecase.execute(USER, 'task-1');
+
+    expect(repo.delete).toHaveBeenCalledWith({ id: 'task-1' });
   });
 
-  it('準正常系: 他人のタスク削除は TaskAccessDeniedError で deleteById を呼ばない', async () => {
-    const repo = createFakeTaskRepository([buildTask({ id: 'task-1', userId: 'user-2' })]);
-    const usecase = new DeleteTaskUseCase(repo);
+  it('異常系: 存在しないタスクの削除は NotFoundException で delete されない', async () => {
+    repo.findOne.mockResolvedValue(null);
 
-    await expect(usecase.execute('user-1', 'task-1')).rejects.toBeInstanceOf(TaskAccessDeniedError);
-    expect(repo.deleteById).not.toHaveBeenCalled();
+    await expect(usecase.execute(USER, 'missing')).rejects.toBeInstanceOf(NotFoundException);
+    expect(repo.delete).not.toHaveBeenCalled();
+  });
+
+  it('準正常系: 他人のタスク削除は ForbiddenException で delete されない', async () => {
+    repo.findOne.mockResolvedValue(buildEntity({ userId: OTHER }));
+
+    await expect(usecase.execute(USER, 'task-1')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repo.delete).not.toHaveBeenCalled();
   });
 });
