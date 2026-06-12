@@ -15,7 +15,8 @@
 
 | 層 | ツール | モック対象 | 狙い |
 |---|---|---|---|
-| BE Service 単体 | Jest | Repository(DB) のみ | ビジネスロジック・認可・トークン回転を本物で検証 |
+| BE UseCase 単体（tasks） | Jest | Repository(DB) のみ（画像系は fs も） | 認可(404/403)・日付検証・DryRun は永続化しない・画像命名を本物で検証 |
+| BE Service 単体（auth/users） | Jest | Repository(DB) のみ | ビジネスロジック・認可・トークン回転を本物で検証 |
 | BE e2e | Jest + supertest（in-memory SQLite） | なし | HTTP 境界・認可・バリデーション・エラーレスポンス |
 | FE Composable `useTasks` | Vitest + **MSW** | backend への HTTP のみ | 副作用を Composable に閉じ込めた設計の検証 |
 | FE Composable `useAuth` | Vitest + **registerEndpoint** | Nitro BFF (`/api/auth/*`) | トークンがメモリに入る/消えるロジック |

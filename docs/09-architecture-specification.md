@@ -48,9 +48,38 @@ graph TD
 
 ## レイヤード構成（backend）
 
+モジュールごとに 2 つの構成が混在する（学習目的の段階的移行）。
+
+### auth / users（従来レイヤード）
+
 - presentation: Controller / DTO
 - application: Service（ユースケース・認可・トークン回転）
 - infrastructure: Entity / TypeORM Repository
+
+層はファイルの役割（`*.controller.ts` / `*.service.ts` / `*.entity.ts`）で区別する。
+
+### tasks（レイヤード + UseCase・フォルダ分離）
+
+presentation → application → infrastructure の素直な依存。太い Service を「1 操作 = 1 UseCase」に分解し、
+フォルダで層を分離する。依存性逆転（ポート）はしない＝ UseCase が TypeORM Repository を直接利用する。
+
+```
+modules/tasks/
+├ presentation/
+│  ├ tasks.controller.ts   # HTTP 入口・DTO 受け・UseCase へ委譲
+│  └ dto/                  # class-validator の DTO（契約型を implements）
+├ application/
+│  ├ usecases/             # 1 ルート = 1 ユースケース（list/create/get/update/delete/validate*/image*）
+│  └ task.util.ts          # 認可(findOwnedTask)・日付検証・契約変換・画像 I/O の共有ヘルパー
+└ infrastructure/
+   └ task.entity.ts        # TypeORM Entity
+```
+
+- UseCase は `@InjectRepository(TaskEntity)` で Repository を直接注入し、`NotFoundException` / `ForbiddenException` / `BadRequestException` を直接投げる（グローバルの `AllExceptionsFilter` が `ApiError` 化）。
+- 認可（存在=404 / 非所有=403）・開始≤終了・Entity→契約変換は `task.util.ts` に集約して各 UseCase から再利用する。
+- DI は `tasks.module.ts` で UseCase 群を providers に列挙するのみ（ポート束ねは不要）。
+
+> auth / users は従来レイヤード（Service 集約）のまま。tasks は同じレイヤードに UseCase を足してフォルダ分離した形。
 
 ## 添付画像の保存・配信
 
