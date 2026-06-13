@@ -3,9 +3,9 @@
 > [← コードリーディングガイド 索引](./README.md)
 
 ```
-apps/backend/src/modules/users/user.entity.ts            # User
-apps/backend/src/modules/tasks/task.entity.ts            # Task（User に紐づく）
-apps/backend/src/modules/auth/entities/refresh-token.entity.ts  # RefreshToken
+apps/backend-layered/src/modules/users/user.entity.ts            # User
+apps/backend-layered/src/modules/tasks/task.entity.ts            # Task（User に紐づく）
+apps/backend-layered/src/modules/auth/entities/refresh-token.entity.ts  # RefreshToken
 ```
 
 **関連図**

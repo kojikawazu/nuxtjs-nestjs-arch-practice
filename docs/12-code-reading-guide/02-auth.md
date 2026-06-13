@@ -8,12 +8,12 @@
 
 | ファイル | 役割 |
 |---|---|
-| `apps/backend/src/modules/auth/auth.controller.ts` | register / login / refresh / logout の入口 |
-| `apps/backend/src/modules/auth/auth.service.ts` | パスワード照合・トークン発行・**リフレッシュトークンのローテーション** |
-| `apps/backend/src/modules/auth/strategies/jwt-access.strategy.ts` | アクセストークン（Bearer）の検証 |
-| `apps/backend/src/modules/auth/guards/jwt-auth.guard.ts` | 保護ルートに付ける認証ガード |
-| `apps/backend/src/modules/auth/entities/refresh-token.entity.ts` | リフレッシュトークンのハッシュ保存 |
-| `apps/backend/src/common/decorators/current-user.decorator.ts` | `@CurrentUser()` で認証済みユーザーを取得 |
+| `apps/backend-layered/src/modules/auth/auth.controller.ts` | register / login / refresh / logout の入口 |
+| `apps/backend-layered/src/modules/auth/auth.service.ts` | パスワード照合・トークン発行・**リフレッシュトークンのローテーション** |
+| `apps/backend-layered/src/modules/auth/strategies/jwt-access.strategy.ts` | アクセストークン（Bearer）の検証 |
+| `apps/backend-layered/src/modules/auth/guards/jwt-auth.guard.ts` | 保護ルートに付ける認証ガード |
+| `apps/backend-layered/src/modules/auth/entities/refresh-token.entity.ts` | リフレッシュトークンのハッシュ保存 |
+| `apps/backend-layered/src/common/decorators/current-user.decorator.ts` | `@CurrentUser()` で認証済みユーザーを取得 |
 
 読むポイント:
 
@@ -25,12 +25,12 @@
 
 | ファイル | 役割 |
 |---|---|
-| `apps/frontend/composables/useAuthState.ts` | アクセストークン・ユーザーを `useState`（メモリ）で保持 |
-| `apps/frontend/composables/useAuth.ts` | register / login / refresh / logout のユースケース |
-| `apps/frontend/server/api/auth/*.post.ts` | **Nitro BFF**。backend を呼び、refresh を httpOnly Cookie 化 |
-| `apps/frontend/server/utils/auth-bff.ts` | BFF 共通処理（Cookie 設定・backend 呼び出し） |
-| `apps/frontend/middleware/auth.global.ts` | 未認証で保護ページに来たら `/login` へ |
-| `apps/frontend/plugins/auth-init.client.ts` | リロード後にサイレント更新でセッション復元 |
+| `apps/frontend-spa/composables/useAuthState.ts` | アクセストークン・ユーザーを `useState`（メモリ）で保持 |
+| `apps/frontend-spa/composables/useAuth.ts` | register / login / refresh / logout のユースケース |
+| `apps/frontend-spa/server/api/auth/*.post.ts` | **Nitro BFF**。backend を呼び、refresh を httpOnly Cookie 化 |
+| `apps/frontend-spa/server/utils/auth-bff.ts` | BFF 共通処理（Cookie 設定・backend 呼び出し） |
+| `apps/frontend-spa/middleware/auth.global.ts` | 未認証で保護ページに来たら `/login` へ |
+| `apps/frontend-spa/plugins/auth-init.client.ts` | リロード後にサイレント更新でセッション復元 |
 
 読むポイント:
 

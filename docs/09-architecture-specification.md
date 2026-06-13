@@ -17,10 +17,10 @@
 ```mermaid
 graph TD
   Browser["ブラウザ (Nuxt SPA)"]
-  subgraph Frontend["@app/frontend (Nuxt3 + Nitro)"]
+  subgraph Frontend["@app/frontend-spa (Nuxt3 + Nitro)"]
     BFF["Nitro BFF /api/auth/*<br/>(refresh を httpOnly Cookie 化)"]
   end
-  Backend["@app/backend (NestJS)"]
+  Backend["@app/backend-layered (NestJS)"]
   DB[("MySQL")]
   Spec["@app/api-spec (TypeSpec)"]
   Client["@app/api-client (生成型/クライアント)"]
@@ -83,9 +83,9 @@ modules/tasks/
 
 ## 添付画像の保存・配信
 
-- backend が multipart で受け取り、`UPLOAD_DIR`（既定 `uploads`＝backend 作業ディレクトリ相対。compose では `/repo/apps/backend/uploads` に上書き）にサーバ生成名で保存。`useStaticAssets`（platform-express 組み込み）で `/uploads` プレフィックス配信する。
+- backend が multipart で受け取り、`UPLOAD_DIR`（既定 `uploads`＝backend 作業ディレクトリ相対。compose では `/repo/apps/backend-layered/uploads` に上書き）にサーバ生成名で保存。`useStaticAssets`（platform-express 組み込み）で `/uploads` プレフィックス配信する。
 - DB（`Task.imageUrl`）には公開パスのみ保持し、実体はファイルシステムに置く。
-- compose では named volume（`uploads-data`）を `/repo/apps/backend/uploads` にマウントし、コンテナ再作成でも画像を永続化する（別途のオブジェクトストレージコンテナは使わない）。
+- compose では named volume（`uploads-data`）を `/repo/apps/backend-layered/uploads` にマウントし、コンテナ再作成でも画像を永続化する（別途のオブジェクトストレージコンテナは使わない）。
 - e2e は外部依存を避けるため OS 一時ディレクトリに保存先を隔離する。
 
 ## デプロイ

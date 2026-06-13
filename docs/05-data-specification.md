@@ -1,6 +1,6 @@
 # データ仕様書
 
-データモデル・DB スキーマ・データフローを定義する。実装は `apps/backend` の TypeORM エンティティ。
+データモデル・DB スキーマ・データフローを定義する。実装は `apps/backend-layered` の TypeORM エンティティ。
 
 ## 目次
 

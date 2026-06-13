@@ -30,10 +30,10 @@ pnpm api:gen        # 契約から型/クライアントを生成（FE/BE の前
 
 ```bash
 # backend だけを Docker なしで（SQLite インメモリ）
-DB_TYPE=better-sqlite3 DB_DATABASE=:memory: pnpm --filter @app/backend dev
+DB_TYPE=better-sqlite3 DB_DATABASE=:memory: pnpm --filter @app/backend-layered dev
 # frontend を含めて画面を見る（dev サーバは Vite 7 非互換のため本番ビルド出力を使う）
-pnpm --filter @app/frontend build
-node apps/frontend/.output/server/index.mjs   # NUXT_PUBLIC_API_BASE_URL で backend を指定
+pnpm --filter @app/frontend-spa build
+node apps/frontend-spa/.output/server/index.mjs   # NUXT_PUBLIC_API_BASE_URL で backend を指定
 # まとめて（MySQL + backend + frontend）
 docker compose up --build
 ```
@@ -61,10 +61,10 @@ curl -X POST http://localhost:3001/tasks \
 ### テスト実行
 
 ```bash
-pnpm --filter @app/backend test       # BE 単体(Jest)
-pnpm --filter @app/backend test:e2e   # BE e2e(supertest / SQLite)
-pnpm --filter @app/frontend test      # FE 単体(Vitest + MSW)
-pnpm --filter @app/frontend test:e2e  # 全体 E2E(Playwright, ビルド→起動→実行)
+pnpm --filter @app/backend-layered test       # BE 単体(Jest)
+pnpm --filter @app/backend-layered test:e2e   # BE e2e(supertest / SQLite)
+pnpm --filter @app/frontend-spa test      # FE 単体(Vitest + MSW)
+pnpm --filter @app/frontend-spa test:e2e  # 全体 E2E(Playwright, ビルド→起動→実行)
 ```
 
 > これらは GitHub Actions（`.github/workflows/ci.yml`）で PR・`main` push 時に自動実行される。

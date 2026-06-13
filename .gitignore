@@ -20,7 +20,7 @@ test-results/
 .playwright/
 
 # uploaded files (画像アップロードの保存先。本番は volume）
-apps/backend/uploads/
+apps/backend-layered/uploads/
 
 # env
 .env

@@ -14,8 +14,8 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @app/api-spec build \
   && pnpm --filter @app/api-client generate \
-  && pnpm --filter @app/backend build
+  && pnpm --filter @app/backend-layered build
 
-WORKDIR /repo/apps/backend
+WORKDIR /repo/apps/backend-layered
 EXPOSE 3001
 CMD ["node", "dist/main.js"]

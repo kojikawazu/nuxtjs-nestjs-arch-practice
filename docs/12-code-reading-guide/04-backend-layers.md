@@ -6,7 +6,7 @@ tasks は **レイヤード + UseCase** で実装されている。リクエス�
 **Controller(presentation) → UseCase(application) → TypeORM Repository / Entity(infrastructure)**。
 
 ```
-apps/backend/src/modules/tasks/
+apps/backend-layered/src/modules/tasks/
 ├ presentation/
 │  ├ tasks.controller.ts            # HTTP 入口・DTO 受け・@CurrentUser・UseCase に委譲するだけ
 │  └ dto/*.dto.ts                   # class-validator で入力検証（契約型を implements）
@@ -15,9 +15,9 @@ apps/backend/src/modules/tasks/
 │  └ task.util.ts                   # findOwnedTask / assertDateOrder / toContractTask / 画像 I/O の共有
 └ infrastructure/
    └ task.entity.ts                 # TypeORM Entity
-apps/backend/src/main.ts                                  # ValidationPipe / 例外フィルタ / 静的配信の起動設定
-apps/backend/src/common/filters/http-exception.filter.ts  # 例外を契約 ApiError 形に統一
-apps/backend/src/config/static-assets.ts                  # /uploads 静的配信（画像）
+apps/backend-layered/src/main.ts                                  # ValidationPipe / 例外フィルタ / 静的配信の起動設定
+apps/backend-layered/src/common/filters/http-exception.filter.ts  # 例外を契約 ApiError 形に統一
+apps/backend-layered/src/config/static-assets.ts                  # /uploads 静的配信（画像）
 ```
 
 読むポイント:

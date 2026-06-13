@@ -64,9 +64,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: pnpm --filter @app/backend test
+      - run: pnpm --filter @app/backend-layered test
       # e2e は外部依存なしで動くよう in-memory SQLite を使う
-      - run: pnpm --filter @app/backend test:e2e
+      - run: pnpm --filter @app/backend-layered test:e2e
 
   frontend:
     name: Frontend (unit)
@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: pnpm --filter @app/frontend test
+      - run: pnpm --filter @app/frontend-spa test
 
   e2e:
     name: E2E (Playwright)
@@ -87,6 +87,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       # chromium とその OS 依存をインストール
-      - run: pnpm --filter @app/frontend exec playwright install --with-deps chromium
+      - run: pnpm --filter @app/frontend-spa exec playwright install --with-deps chromium
       # nuxt build → backend(SQLite)/frontend(本番出力) を自動起動して Playwright 実行
-      - run: pnpm --filter @app/frontend test:e2e
+      - run: pnpm --filter @app/frontend-spa test:e2e

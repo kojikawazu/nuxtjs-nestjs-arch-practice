@@ -6,14 +6,14 @@
 
 | 層 | ファイル | モック対象 |
 |---|---|---|
-| BE Service 単体 | `apps/backend/src/modules/**/**.spec.ts` | Repository(DB) と fs のみ |
-| BE e2e | `apps/backend/test/*.e2e-spec.ts` | なし（in-memory SQLite + supertest） |
-| BE e2e 基盤 | `apps/backend/test/test-app.factory.ts` | DB を `:memory:`、画像を一時ディレクトリに隔離 |
-| FE Composable (`useTasks`) | `apps/frontend/tests/unit/useTasks.spec.ts` | backend への HTTP を **MSW** |
-| FE Composable (`useAuth`) | `apps/frontend/tests/unit/useAuth.spec.ts` | Nitro BFF を `registerEndpoint` |
-| FE Component | `apps/frontend/tests/unit/TaskForm.spec.ts` | flatpickr を `vi.mock` |
-| MSW セットアップ | `apps/frontend/tests/setup/msw.ts` | — |
-| 全体 E2E | `apps/frontend/tests/e2e/task-flow.spec.ts` | なし（実スタック / Playwright） |
+| BE Service 単体 | `apps/backend-layered/src/modules/**/**.spec.ts` | Repository(DB) と fs のみ |
+| BE e2e | `apps/backend-layered/test/*.e2e-spec.ts` | なし（in-memory SQLite + supertest） |
+| BE e2e 基盤 | `apps/backend-layered/test/test-app.factory.ts` | DB を `:memory:`、画像を一時ディレクトリに隔離 |
+| FE Composable (`useTasks`) | `apps/frontend-spa/tests/unit/useTasks.spec.ts` | backend への HTTP を **MSW** |
+| FE Composable (`useAuth`) | `apps/frontend-spa/tests/unit/useAuth.spec.ts` | Nitro BFF を `registerEndpoint` |
+| FE Component | `apps/frontend-spa/tests/unit/TaskForm.spec.ts` | flatpickr を `vi.mock` |
+| MSW セットアップ | `apps/frontend-spa/tests/setup/msw.ts` | — |
+| 全体 E2E | `apps/frontend-spa/tests/e2e/task-flow.spec.ts` | なし（実スタック / Playwright） |
 
 読むポイント:
 

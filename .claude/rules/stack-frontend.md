@@ -1,6 +1,6 @@
 ---
 description: フロントエンド（Nuxt3）スタック依存ルール
-globs: apps/frontend/**
+globs: apps/frontend-spa/**
 ---
 
 # フロントエンド規約

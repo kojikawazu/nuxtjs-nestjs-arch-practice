@@ -1,6 +1,6 @@
 ---
 description: バックエンド（NestJS / TypeORM）スタック依存ルール
-globs: apps/backend/**
+globs: apps/backend-layered/**
 ---
 
 # バックエンド規約
