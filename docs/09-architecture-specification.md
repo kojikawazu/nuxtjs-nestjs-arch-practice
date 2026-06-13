@@ -50,13 +50,15 @@ graph TD
 
 アーキテクチャ比較用に複数のバックエンド実装を持つ。**いずれも同一の API 契約（`@app/api-client`）を実装**し、同じ e2e シナリオが両方で通る（外から見た挙動は同一・内部構造のみ異なる）。
 
-| | `apps/backend-layered` | `apps/backend-clean` |
-|---|---|---|
-| tasks の依存方向 | UseCase → TypeORM Repository（直接） | UseCase → **Port(interface)** ← TypeORM 実装（依存性逆転） |
-| ドメイン | TypeORM Entity を直接利用 | フレームワーク非依存の `domain/Task` ＋ ORM Entity を分離 |
-| 業務エラー | `NotFoundException` 等 Nest 例外を直接 throw | `DomainError`（kind）を throw → フィルタが HTTP へ翻訳 |
-| 画像保存 | UseCase が fs を直接呼ぶ（`task.util.ts`） | `ImageStorage` Port ← `LocalImageStorage` 実装 |
-| auth / users | 従来レイヤード | （当面）layered と同一構成 |
+| | `apps/backend-layered` | `apps/backend-clean` | `apps/backend-onion` |
+|---|---|---|---|
+| tasks の依存方向 | UseCase → TypeORM Repository（直接） | UseCase → **Port(interface)** ← TypeORM 実装（依存性逆転） | clean と同じ（依存は内向き） |
+| 契約(interface)の所在 | （なし） | `application/ports/` | **`domain/`（中核が契約を所有）** |
+| ドメインサービス | （なし） | `application/task-access.ts`（関数） | **`domain/services/TaskAccessService`（DI サービス）** |
+| ドメイン | TypeORM Entity を直接利用 | framework 非依存の `domain/Task` ＋ ORM 分離 | clean と同じ |
+| 業務エラー | Nest 例外を直接 throw | `DomainError`（kind）→ フィルタが HTTP 翻訳 | clean と同じ |
+| 画像保存 | UseCase が fs を直接呼ぶ | `ImageStorage` Port ← FS 実装 | clean と同じ（契約は `domain/services/`） |
+| auth / users | 従来レイヤード | （当面）layered と同一構成 | （当面）layered と同一構成 |
 
 ### backend-layered — auth / users（従来レイヤード）
 
@@ -119,6 +121,28 @@ modules/tasks/
 - 業務エラーは `DomainError`（HTTP 非依存）で投げ、`AllExceptionsFilter` が `kind` を見て 404/403/400 と `ApiError` 形へ翻訳する。
 - DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeOrmTaskRepository }` 等として Port ↔ 実装を束ねる（依存性逆転の要）。
 - auth / users は layered と同一構成のまま（機能パリティ優先・clean 化は段階対応）。
+
+### backend-onion — tasks（オニオンアーキテクチャ・契約をドメイン中核が所有）
+
+clean と同じ依存性逆転だが、**契約（interface）の所在**と**ドメインサービス**の扱いが異なる。オニオンでは依存が常に内向き（presentation → application → domain）で、ドメイン中核が自分の必要とする契約を定義する。
+
+```
+modules/tasks/
+├ domain/                          # 中核（最内）
+│  ├ task.ts / task.errors.ts      #   エンティティ + DomainError
+│  ├ repositories/
+│  │  └ task.repository.ts         #   TaskRepository interface + token（★契約を中核が所有）
+│  └ services/
+│     ├ image-storage.ts           #   ImageStorage interface + token（★ドメインが求める能力）
+│     └ task-access.service.ts     #   TaskAccessService（★ドメインサービス: 取得+所有チェック）
+├ application/usecases/            # アプリケーションサービス。domain の契約/サービスに依存
+├ infrastructure/                 # domain の契約を実装（TypeOrmTaskRepository / LocalImageStorage）
+└ presentation/                   # Controller / DTO
+```
+
+- clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。
+- 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。
+- エンティティ・DomainError・例外フィルタ・auth/users は clean と同じ。
 
 ## 添付画像の保存・配信
 

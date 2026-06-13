@@ -105,6 +105,37 @@ services:
     volumes:
       - uploads-clean-data:/repo/apps/backend-clean/uploads
 
+  # オニオンアーキ版バックエンド（比較用）。既定の `docker compose up` では起動せず、
+  # `docker compose --profile onion up backend-onion` で必要時のみ起動する（同一 API 契約・別アーキ）。
+  backend-onion:
+    build:
+      context: .
+      dockerfile: apps/backend-onion/Dockerfile
+    profiles: ['onion']
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_TYPE: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: ${MYSQL_USER:-taskuser}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-taskpassword}
+      DB_DATABASE: ${MYSQL_DATABASE:-taskdb}
+      DB_SYNCHRONIZE: 'true'
+      BACKEND_PORT: 3003
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-900s}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      UPLOAD_DIR: /repo/apps/backend-onion/uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-2097152}
+    ports:
+      - '${BACKEND_ONION_PORT:-3003}:3003'
+    volumes:
+      - uploads-onion-data:/repo/apps/backend-onion/uploads
+
   frontend:
     build:
       context: .
@@ -124,3 +155,4 @@ volumes:
   mysql-data:
   uploads-data:
   uploads-clean-data:
+  uploads-onion-data:
