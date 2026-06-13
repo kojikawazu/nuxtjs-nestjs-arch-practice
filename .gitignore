@@ -21,6 +21,7 @@ test-results/
 
 # uploaded files (画像アップロードの保存先。本番は volume）
 apps/backend-layered/uploads/
+apps/backend-clean/uploads/
 
 # env
 .env

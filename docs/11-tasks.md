@@ -24,11 +24,13 @@
 | 8 | 画像アップロード（1枚・任意） | ✅ | 契約 `imageUrl`+`*/image` 2本 / multer+useStaticAssets(/uploads) / FS+volume / FE 2ステップ・プレビュー |
 | 9 | CI（GitHub Actions） | ✅ | PR/main push で lint・format・typecheck・BE単体/e2e・FE単体・E2E(Playwright) を自動実行 |
 | 10 | 関連 URL + 安全なリンクプレビュー | ✅ | 契約 `url` / `@IsUrl`(http/https) / `UrlPreview`(描画時ガード+rel=noopener) / 確認画面・詳細でプレビュー |
+| 11 | アーキ比較: アプリ複数化 | 🚧 | 既存を `backend-layered`/`frontend-spa` にリネーム → `backend-clean`（tasks を Port で依存性逆転）を追加。CI を matrix 化。今後 onion / SSR を追加予定 |
 
 ## テスト集計
 
-- backend: 単体 40 / e2e 35
-- frontend: 単体 35 / E2E 3
+- backend-layered: 単体 39 / e2e 35
+- backend-clean: 単体 42 / e2e 35（同一 e2e シナリオ）
+- frontend-spa: 単体 35 / E2E 3
 
 ## CI
 

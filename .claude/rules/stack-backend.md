@@ -1,13 +1,22 @@
 ---
 description: バックエンド（NestJS / TypeORM）スタック依存ルール
-globs: apps/backend-layered/**
+globs: apps/backend-*/**
 ---
 
 # バックエンド規約
 
-- **レイヤード**: presentation / application / infrastructure を混在させない。ビジネスロジックは Service / UseCase に置く。
+> アーキテクチャ比較用に複数のバックエンド実装を持つ。**いずれも同一の API 契約（`@app/api-client`）を実装**し、同じ e2e シナリオが通ることを担保する（外から見た挙動は同一・内部構造のみ異なる）。
+
+## アーキ別の構成
+
+- **`backend-layered`（レイヤード + UseCase）**: presentation / application / infrastructure をフォルダ分離。
   - auth / users: 役割で区別する従来レイヤード（Controller/Service/Entity）。
-  - tasks: 同じレイヤードに UseCase 層を足してフォルダ分離（`presentation/` `application/usecases/` `infrastructure/`）。UseCase は TypeORM Repository を直接利用（ポートによる依存性逆転はしない）。共有処理は `application/task.util.ts`。
+  - tasks: UseCase 層を足し、UseCase は TypeORM Repository を**直接**利用（ポートによる依存性逆転はしない）。共有処理は `application/task.util.ts`。
+- **`backend-clean`（クリーンアーキテクチャ）**: tasks を依存性逆転で再構成。
+  - `domain/`（Task エンティティ・業務ルール・DomainError、フレームワーク非依存）→ `application/`（UseCase は `ports/` の interface = `TaskRepository` / `ImageStorage` にのみ依存）→ `infrastructure/`（TypeORM 実装・ローカルFS 実装が Port を実装）→ `presentation/`（Controller）。
+  - UseCase は TypeORM を知らない（`@Inject(TASK_REPOSITORY)`）。これが layered との本質的な差。
+  - 業務エラーは `DomainError`（kind: not_found/forbidden/invalid）で投げ、HTTP への変換は例外フィルタが担う（ドメインは HTTP 非依存）。
+  - auth / users は当面 layered と同じ構成（機能パリティ優先。clean 化は段階対応）。
 - **DTO**: リクエストは `class-validator` の DTO で検証し、可能なら契約型（`@app/api-client`）を `implements` して契約とのズレを型で検出する。
 - **型の共有**: レスポンス型・ドメイン型は `@app/api-client` を `import type` で参照する（実行時依存にしない）。
 - **DB**: カラム型は MySQL / SQLite 双方で動くポータブルな型のみ（enum カラム禁止、`varchar` + 型/バリデーションで担保）。`DB_TYPE` で接続先を切替。
