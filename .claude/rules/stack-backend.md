@@ -17,6 +17,11 @@ globs: apps/backend-*/**
   - UseCase は TypeORM を知らない（`@Inject(TASK_REPOSITORY)`）。これが layered との本質的な差。
   - 業務エラーは `DomainError`（kind: not_found/forbidden/invalid）で投げ、HTTP への変換は例外フィルタが担う（ドメインは HTTP 非依存）。
   - auth / users は当面 layered と同じ構成（機能パリティ優先。clean 化は段階対応）。
+- **`backend-onion`（オニオンアーキテクチャ）**: clean と近いが配置が異なる。
+  - **契約（`TaskRepository` / `ImageStorage` interface）と DI トークンを `domain/` 中核が所有**（clean は `application/ports/` に置く）。`domain/repositories/` `domain/services/`。
+  - 所有チェック等のドメインロジックは**ドメインサービス** `domain/services/task-access.service.ts`（`TaskAccessService`）に置き、application のユースケースが再利用する。
+  - 依存は常に内向き（presentation → application → domain）。infrastructure が domain の契約を実装する。
+  - DomainError・例外フィルタ・auth/users の扱いは clean と同じ。
 - **DTO**: リクエストは `class-validator` の DTO で検証し、可能なら契約型（`@app/api-client`）を `implements` して契約とのズレを型で検出する。
 - **型の共有**: レスポンス型・ドメイン型は `@app/api-client` を `import type` で参照する（実行時依存にしない）。
 - **DB**: カラム型は MySQL / SQLite 双方で動くポータブルな型のみ（enum カラム禁止、`varchar` + 型/バリデーションで担保）。`DB_TYPE` で接続先を切替。
