@@ -17,7 +17,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'pnpm --filter @app/backend dev',
+      command: 'pnpm --filter @app/backend-layered dev',
       cwd: '../../',
       url: 'http://localhost:3001/health',
       reuseExistingServer: !process.env.CI,
