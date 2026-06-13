@@ -40,13 +40,16 @@ Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理ア�
 apps/backend-layered    NestJS API（レイヤード + UseCase。UseCase が TypeORM を直接利用）
 apps/backend-clean      NestJS API（クリーンアーキ。Port で依存性逆転。契約は application/ports）
 apps/backend-onion      NestJS API（オニオン。契約をドメイン中核が所有 + ドメインサービス）
-apps/frontend-spa       Nuxt 3 SPA + Nitro BFF
+apps/frontend-spa       Nuxt 3 SPA（ssr:false。セッション復元はクライアント）+ Nitro BFF
+apps/frontend-ssr       Nuxt 3 SSR（ssr:true。サーバ側でセッション復元）+ Nitro BFF
 packages/api-spec       TypeSpec 契約 → OpenAPI
 packages/api-client     生成した型 + openapi-fetch クライアント
 ```
 
 > `backend-layered` / `backend-clean` / `backend-onion` は**同じ API 契約**を異なるアーキで実装した比較用。
-> 同じ e2e シナリオが全て通る（外から見た挙動は同一）。ローカル起動ポートは layered=3001 / clean=3002 / onion=3003。
+> `frontend-spa` / `frontend-ssr` は**同一機能**を SPA / SSR で実装した比較用。
+> いずれも同じ e2e シナリオが通る（外から見た挙動は同一）。
+> ローカル起動ポート: backend layered=3001 / clean=3002 / onion=3003、frontend spa=3000 / ssr=3010。
 
 ## 前提環境
 

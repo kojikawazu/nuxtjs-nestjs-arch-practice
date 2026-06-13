@@ -7,6 +7,7 @@
 - [システム構成](#システム構成)
 - [技術スタック](#技術スタック)
 - [バックエンドのアーキ構成（layered / clean）](#バックエンドのアーキ構成layered--clean)
+- [フロントエンドのレンダリング方式（SPA / SSR）](#フロントエンドのレンダリング方式spa--ssr)
 - [添付画像の保存・配信](#添付画像の保存配信)
 - [デプロイ](#デプロイ)
 - [起動・生成コマンド](#起動生成コマンド)
@@ -143,6 +144,29 @@ modules/tasks/
 - clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。
 - 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。
 - エンティティ・DomainError・例外フィルタ・auth/users は clean と同じ。
+
+## フロントエンドのレンダリング方式（SPA / SSR）
+
+レンダリング方式の比較用に 2 つの Nuxt 実装を持つ。**機能・画面・API 契約は同一**で、同じ E2E シナリオが両方で通る。
+
+| | `apps/frontend-spa` | `apps/frontend-ssr` |
+|---|---|---|
+| レンダリング | `ssr: false`（クライアントのみ） | `ssr: true`（初期 HTML をサーバ生成） |
+| セッション復元 | クライアント（`plugins/auth-init.client.ts`）。初回ロード後に BFF `/api/auth/refresh` でメモリへ復元 | **サーバ**（`plugins/auth-init.ts`）。初期リクエストで httpOnly refresh Cookie を読み、backend `/auth/refresh` で復元 → `useState` に格納（SSR 描画＋ハイドレーション） |
+| `/tasks` 直アクセス | クライアントで復元後にデータ取得 | **サーバで復元 → サーバで一覧描画**してから配信 |
+| `useApiClient` の base | 常に公開 URL | SSR 時はサーバ用 `apiBaseUrl`、クライアント時は公開 URL |
+| トークンの扱い | access はメモリ、refresh は httpOnly Cookie | 同左（SSR 復元時も refresh は httpOnly のまま。rotate 後の Cookie をサーバが Set-Cookie で返す） |
+
+### SSR 版のセッション復元フロー（要点）
+
+1. ブラウザが `/tasks` を直接リクエスト（httpOnly refresh Cookie 同送）。
+2. Nuxt プラグイン（サーバ実行）が Cookie を読み、backend `/auth/refresh` でアクセストークン＋ユーザーを取得。
+3. ローテーションされた新しい refresh トークンを Cookie に書き戻す（Set-Cookie）。
+4. `useState` にアクセストークン／ユーザーを格納 → グローバルミドルウェアの認可判定とページの `useAsyncData('tasks')` がサーバ側で正しく動作 → 一覧を SSR 描画。
+5. クライアントは同じ `useState`（ペイロード）でハイドレーション。再フェッチ不要。
+
+> アクセストークンは設計上メモリ／JS 露出（短命）で、SSR 版では初期ペイロードにも載る。長命な refresh は SPA/SSR とも httpOnly Cookie に隔離する方針は共通。
+> flatpickr 等のクライアント専用 DOM 操作は `onMounted`（クライアント）に閉じており、サーバは素の `<input>` を描画するためハイドレーション不整合は起きない。
 
 ## 添付画像の保存・配信
 

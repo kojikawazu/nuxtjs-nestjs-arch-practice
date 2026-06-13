@@ -11,7 +11,8 @@
 | バックエンド | `apps/backend-layered/` | レイヤード + UseCase（UseCase が TypeORM を直接利用） | NestJS / TypeORM |
 | バックエンド（比較） | `apps/backend-clean/` | クリーンアーキ（tasks を Port で依存性逆転。契約は application/ports） | NestJS / TypeORM |
 | バックエンド（比較） | `apps/backend-onion/` | オニオン（契約をドメイン中核が所有 + ドメインサービス。同一 API 契約） | NestJS / TypeORM |
-| フロントエンド | `apps/frontend-spa/` | SPA + Nitro BFF。副作用は Composable に集約 | Nuxt 3 / Tailwind |
+| フロントエンド | `apps/frontend-spa/` | SPA（ssr:false）+ Nitro BFF。副作用は Composable に集約 | Nuxt 3 / Tailwind |
+| フロントエンド（比較） | `apps/frontend-ssr/` | SSR（ssr:true）。サーバ側でセッション復元。同一機能 | Nuxt 3 / Tailwind |
 
 > **読み始める前に**: `pnpm api:gen` を実行しておくと、`packages/api-client/src/generated/` に型が生成され、FE/BE 双方の `@app/api-client` import が解決できる（生成物は `.gitignore` 対象）。
 
