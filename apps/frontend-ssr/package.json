@@ -1,0 +1,34 @@
+{
+  "name": "@app/frontend-ssr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nuxt 3 フロントエンド（SSR / サーバ側セッション復元 / Composable / Tailwind / Nitro BFF）",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "nuxt build && playwright test"
+  },
+  "dependencies": {
+    "@app/api-client": "workspace:*",
+    "flatpickr": "^4.6.13"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "^4.0.3",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@playwright/test": "^1.60.0",
+    "@vue/test-utils": "^2.4.10",
+    "happy-dom": "^20.0.0",
+    "msw": "^2.14.6",
+    "nuxt": "^3.21.7",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.8",
+    "vue-tsc": "^2.2.0"
+  }
+}

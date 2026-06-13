@@ -78,20 +78,30 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # SPA / SSR 版を横並びで検証する
+      matrix:
+        pkg: [frontend-spa, frontend-ssr]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: pnpm --filter @app/frontend-spa test
+      - run: pnpm --filter @app/${{ matrix.pkg }} test
 
   e2e:
     name: E2E (Playwright)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # 同じ通しシナリオを SPA / SSR 版それぞれの本番ビルドに対して実行する
+      matrix:
+        pkg: [frontend-spa, frontend-ssr]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       # chromium とその OS 依存をインストール
-      - run: pnpm --filter @app/frontend-spa exec playwright install --with-deps chromium
+      - run: pnpm --filter @app/${{ matrix.pkg }} exec playwright install --with-deps chromium
       # nuxt build → backend(SQLite)/frontend(本番出力) を自動起動して Playwright 実行
-      - run: pnpm --filter @app/frontend-spa test:e2e
+      - run: pnpm --filter @app/${{ matrix.pkg }} test:e2e

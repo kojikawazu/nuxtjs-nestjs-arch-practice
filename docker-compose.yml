@@ -151,6 +151,24 @@ services:
     ports:
       - '${FRONTEND_PORT:-3000}:3000'
 
+  # SSR 版フロントエンド（比較用）。既定の `docker compose up` では起動せず、
+  # `docker compose --profile ssr up frontend-ssr` で必要時のみ起動する（同一機能・SSR）。
+  frontend-ssr:
+    build:
+      context: .
+      dockerfile: apps/frontend-ssr/Dockerfile
+    profiles: ['ssr']
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PORT: 3010
+      # SSR のサーバ側セッション復元・BFF は service 名で backend に到達。クライアントはホスト公開ポート。
+      NUXT_API_BASE_URL: http://backend:3001
+      NUXT_PUBLIC_API_BASE_URL: http://localhost:${BACKEND_PORT:-3001}
+    ports:
+      - '${FRONTEND_SSR_PORT:-3010}:3010'
+
 volumes:
   mysql-data:
   uploads-data:

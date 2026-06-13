@@ -56,11 +56,14 @@ pnpm --filter @app/backend-clean test          # BE(clean) 単体(Jest)
 pnpm --filter @app/backend-clean test:e2e      # BE(clean) e2e(supertest) ※layered と同一シナリオ
 pnpm --filter @app/backend-onion test          # BE(onion) 単体(Jest)
 pnpm --filter @app/backend-onion test:e2e      # BE(onion) e2e(supertest) ※layered と同一シナリオ
-pnpm --filter @app/frontend-spa test      # FE 単体(Vitest)
-pnpm --filter @app/frontend-spa test:e2e  # 全体 E2E(Playwright, ビルド→起動→実行)
+pnpm --filter @app/frontend-spa test      # FE(SPA) 単体(Vitest)
+pnpm --filter @app/frontend-spa test:e2e  # FE(SPA) 全体 E2E(Playwright, ビルド→起動→実行)
+pnpm --filter @app/frontend-ssr test      # FE(SSR) 単体(Vitest)
+pnpm --filter @app/frontend-ssr test:e2e  # FE(SSR) 全体 E2E(Playwright) ※spa と同一シナリオ
 ```
 
 > `backend-clean` / `backend-onion` は `backend-layered` と**同一の e2e シナリオ**が通る（同じ API 契約の別アーキ実装）。CI でも matrix で 3 版すべてを実行する。
+> `frontend-ssr` も `frontend-spa` と**同一の E2E シナリオ**が通る（SPA/SSR で挙動は同一）。CI の frontend 単体・E2E ジョブも matrix で両方を実行する。
 
 ## 既知の制約
 
