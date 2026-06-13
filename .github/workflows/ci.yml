@@ -61,12 +61,17 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # 同一 API 契約を実装する各アーキ版を横並びで検証する（layered / clean / …）
+      matrix:
+        pkg: [backend-layered, backend-clean]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: pnpm --filter @app/backend-layered test
+      - run: pnpm --filter @app/${{ matrix.pkg }} test
       # e2e は外部依存なしで動くよう in-memory SQLite を使う
-      - run: pnpm --filter @app/backend-layered test:e2e
+      - run: pnpm --filter @app/${{ matrix.pkg }} test:e2e
 
   frontend:
     name: Frontend (unit)

@@ -37,11 +37,15 @@ Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理ア�
 ## 構成
 
 ```
-apps/backend-layered    NestJS API
-apps/frontend-spa   Nuxt 3 SPA + Nitro BFF
-packages/api-spec    TypeSpec 契約 → OpenAPI
-packages/api-client  生成した型 + openapi-fetch クライアント
+apps/backend-layered    NestJS API（レイヤード + UseCase。UseCase が TypeORM を直接利用）
+apps/backend-clean      NestJS API（クリーンアーキ。Port で依存性逆転。同一 API 契約）
+apps/frontend-spa       Nuxt 3 SPA + Nitro BFF
+packages/api-spec       TypeSpec 契約 → OpenAPI
+packages/api-client     生成した型 + openapi-fetch クライアント
 ```
+
+> `backend-layered` と `backend-clean` は**同じ API 契約**を異なるアーキで実装した比較用。
+> 同じ e2e シナリオが両方で通る（外から見た挙動は同一）。ローカル起動ポートは layered=3001 / clean=3002。
 
 ## 前提環境
 

@@ -52,9 +52,13 @@
 ```bash
 pnpm --filter @app/backend-layered test       # BE 単体(Jest)
 pnpm --filter @app/backend-layered test:e2e   # BE e2e(supertest)
+pnpm --filter @app/backend-clean test          # BE(clean) 単体(Jest)
+pnpm --filter @app/backend-clean test:e2e      # BE(clean) e2e(supertest) ※layered と同一シナリオ
 pnpm --filter @app/frontend-spa test      # FE 単体(Vitest)
 pnpm --filter @app/frontend-spa test:e2e  # 全体 E2E(Playwright, ビルド→起動→実行)
 ```
+
+> `backend-clean` は `backend-layered` と**同一の e2e シナリオ**が通る（同じ API 契約の別アーキ実装）。CI でも matrix で両方を実行する。
 
 ## 既知の制約
 
