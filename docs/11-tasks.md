@@ -24,7 +24,7 @@
 | 8 | 画像アップロード（1枚・任意） | ✅ | 契約 `imageUrl`+`*/image` 2本 / multer+useStaticAssets(/uploads) / FS+volume / FE 2ステップ・プレビュー |
 | 9 | CI（GitHub Actions） | ✅ | PR/main push で lint・format・typecheck・BE単体/e2e・FE単体・E2E(Playwright) を自動実行 |
 | 10 | 関連 URL + 安全なリンクプレビュー | ✅ | 契約 `url` / `@IsUrl`(http/https) / `UrlPreview`(描画時ガード+rel=noopener) / 確認画面・詳細でプレビュー |
-| 11 | アーキ比較: アプリ複数化 | 🚧 | 既存を `backend-layered`/`frontend-spa` にリネーム → `backend-clean`（Port で依存性逆転）→ `backend-onion`（契約をドメイン中核が所有 + ドメインサービス）→ `frontend-ssr`（SSR + サーバ側セッション復元）を追加。CI を matrix 化（backend 3 版 / frontend 2 版） |
+| 11 | アーキ比較: アプリ複数化 | ✅ | 既存を `backend-layered`/`frontend-spa` にリネーム → `backend-clean`（Port で依存性逆転）→ `backend-onion`（契約をドメイン中核が所有 + ドメインサービス）→ `frontend-ssr`（SSR + サーバ側セッション復元）を追加。CI を matrix 化（backend 3 版 / frontend 2 版）。選定指針を docs/09 に整備 |
 
 ## テスト集計
 
@@ -46,3 +46,5 @@
 - 本番向けマイグレーション運用（synchronize 廃止）
 - タスクの検索・ページネーション
 - frontend の dev サーバ復旧（`nuxt dev` の Vite 7 非互換を解消。現状は `docker compose` か本番ビルド出力で代替）
+- `backend-clean` / `backend-onion` の auth / users もアーキ移行（現状は tasks のみ各アーキ化、auth/users は layered と同一構成）
+- CI の Node 20 アクション非推奨対応（`actions/checkout` 等を Node 24 対応版へ）
