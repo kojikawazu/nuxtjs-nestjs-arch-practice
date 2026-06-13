@@ -5,13 +5,13 @@
 「副作用（HTTP・状態）は Composable に閉じ込め、コンポーネントは表示に専念」が設計の軸。
 
 ```
-apps/frontend/composables/useApiClient.ts   # 生成クライアントにアクセストークンを注入
-apps/frontend/composables/useTasks.ts        # タスク CRUD・DryRun・画像 API のユースケース
-apps/frontend/pages/tasks/index.vue          # 一覧
-apps/frontend/pages/tasks/new.vue            # 新規作成（フォーム → 確認の2段階）
-apps/frontend/pages/tasks/[id]/index.vue     # 詳細
-apps/frontend/pages/tasks/[id]/edit.vue      # 編集
-apps/frontend/components/TaskForm.vue        # 入力フォーム + クライアント検証 + 画像プレビュー
+apps/frontend-spa/composables/useApiClient.ts   # 生成クライアントにアクセストークンを注入
+apps/frontend-spa/composables/useTasks.ts        # タスク CRUD・DryRun・画像 API のユースケース
+apps/frontend-spa/pages/tasks/index.vue          # 一覧
+apps/frontend-spa/pages/tasks/new.vue            # 新規作成（フォーム → 確認の2段階）
+apps/frontend-spa/pages/tasks/[id]/index.vue     # 詳細
+apps/frontend-spa/pages/tasks/[id]/edit.vue      # 編集
+apps/frontend-spa/components/TaskForm.vue        # 入力フォーム + クライアント検証 + 画像プレビュー
 ```
 
 読むポイント:

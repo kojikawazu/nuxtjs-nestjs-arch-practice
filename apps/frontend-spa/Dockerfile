@@ -9,9 +9,9 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @app/api-spec build \
   && pnpm --filter @app/api-client generate \
-  && pnpm --filter @app/frontend build
+  && pnpm --filter @app/frontend-spa build
 
-WORKDIR /repo/apps/frontend
+WORKDIR /repo/apps/frontend-spa
 EXPOSE 3000
 ENV PORT=3000
 CMD ["node", ".output/server/index.mjs"]

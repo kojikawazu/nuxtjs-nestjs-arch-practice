@@ -46,7 +46,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: apps/backend/Dockerfile
+      dockerfile: apps/backend-layered/Dockerfile
     restart: unless-stopped
     depends_on:
       mysql:
@@ -66,18 +66,18 @@ services:
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-900s}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       # 添付画像の保存先。下の volume をこのパスにマウントして永続化する。
-      UPLOAD_DIR: /repo/apps/backend/uploads
+      UPLOAD_DIR: /repo/apps/backend-layered/uploads
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-2097152}
     ports:
       - '${BACKEND_PORT:-3001}:3001'
     volumes:
       # コンテナ再作成で画像が消えないよう named volume で永続化する
-      - uploads-data:/repo/apps/backend/uploads
+      - uploads-data:/repo/apps/backend-layered/uploads
 
   frontend:
     build:
       context: .
-      dockerfile: apps/frontend/Dockerfile
+      dockerfile: apps/frontend-spa/Dockerfile
     restart: unless-stopped
     depends_on:
       - backend

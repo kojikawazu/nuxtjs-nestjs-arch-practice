@@ -24,7 +24,7 @@ importers:
         specifier: ^8.21.0
         version: 8.60.1(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
 
-  apps/backend:
+  apps/backend-layered:
     dependencies:
       '@app/api-client':
         specifier: workspace:*
@@ -145,7 +145,7 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
-  apps/frontend:
+  apps/frontend-spa:
     dependencies:
       '@app/api-client':
         specifier: workspace:*

@@ -14,10 +14,10 @@ globs:
 
 ## テスト
 
-- `pnpm --filter @app/backend test` — BE 単体(Jest)
-- `pnpm --filter @app/backend test:e2e` — BE e2e(supertest / SQLite)
-- `pnpm --filter @app/frontend test` — FE 単体(Vitest)
-- `pnpm --filter @app/frontend test:e2e` — 全体 E2E(Playwright, ビルド→起動→実行)
+- `pnpm --filter @app/backend-layered test` — BE 単体(Jest)
+- `pnpm --filter @app/backend-layered test:e2e` — BE e2e(supertest / SQLite)
+- `pnpm --filter @app/frontend-spa test` — FE 単体(Vitest)
+- `pnpm --filter @app/frontend-spa test:e2e` — 全体 E2E(Playwright, ビルド→起動→実行)
 
 ## 品質
 

@@ -37,8 +37,8 @@ Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理ア�
 ## 構成
 
 ```
-apps/backend    NestJS API
-apps/frontend   Nuxt 3 SPA + Nitro BFF
+apps/backend-layered    NestJS API
+apps/frontend-spa   Nuxt 3 SPA + Nitro BFF
 packages/api-spec    TypeSpec 契約 → OpenAPI
 packages/api-client  生成した型 + openapi-fetch クライアント
 ```
@@ -86,22 +86,22 @@ docker compose up --build   # mysql + backend(:3001) + frontend(:3000)
 
 ```bash
 # backend だけを Docker なしで（SQLite インメモリ・データは再起動で消える）
-DB_TYPE=better-sqlite3 DB_DATABASE=:memory: pnpm --filter @app/backend dev
+DB_TYPE=better-sqlite3 DB_DATABASE=:memory: pnpm --filter @app/backend-layered dev
 
 # MySQL を使う場合は先に DB を起動してから backend を起動
 pnpm db:up
-pnpm --filter @app/backend dev
+pnpm --filter @app/backend-layered dev
 ```
 
-> ℹ️ frontend の dev サーバ（`nuxt dev`）は現状 Vite 7 と非互換で起動しません。ローカルで画面を確認するときは `docker compose up --build`、または本番ビルド出力（`pnpm --filter @app/frontend build` → `node apps/frontend/.output/server/index.mjs`）を使ってください。
+> ℹ️ frontend の dev サーバ（`nuxt dev`）は現状 Vite 7 と非互換で起動しません。ローカルで画面を確認するときは `docker compose up --build`、または本番ビルド出力（`pnpm --filter @app/frontend-spa build` → `node apps/frontend-spa/.output/server/index.mjs`）を使ってください。
 
 ## テスト
 
 ```bash
-pnpm --filter @app/backend test       # 単体(Jest)
-pnpm --filter @app/backend test:e2e   # e2e(supertest / SQLite)
-pnpm --filter @app/frontend test      # 単体(Vitest + MSW)
-pnpm --filter @app/frontend test:e2e  # 全体E2E(Playwright)
+pnpm --filter @app/backend-layered test       # 単体(Jest)
+pnpm --filter @app/backend-layered test:e2e   # e2e(supertest / SQLite)
+pnpm --filter @app/frontend-spa test      # 単体(Vitest + MSW)
+pnpm --filter @app/frontend-spa test:e2e  # 全体E2E(Playwright)
 ```
 
 上記は GitHub Actions（`.github/workflows/ci.yml`）で PR・`main` push 時に自動実行される（lint / format / typecheck も含む）。

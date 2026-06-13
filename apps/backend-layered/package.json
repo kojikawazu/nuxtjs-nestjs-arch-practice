@@ -1,5 +1,5 @@
 {
-  "name": "@app/backend",
+  "name": "@app/backend-layered",
   "version": "0.1.0",
   "private": true,
   "description": "NestJS バックエンド（レイヤードアーキテクチャ / JWT / TypeORM / MySQL）",

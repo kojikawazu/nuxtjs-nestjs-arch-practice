@@ -28,23 +28,23 @@ typecheck: ## 全パッケージの型チェック
 test: test-back test-back-e2e test-front ## BE 単体+e2e と FE 単体をまとめて実行
 
 test-back: ## backend 単体テスト (Jest)
-	pnpm --filter @app/backend test
+	pnpm --filter @app/backend-layered test
 
 test-back-e2e: ## backend e2e テスト (supertest / SQLite)
-	pnpm --filter @app/backend test:e2e
+	pnpm --filter @app/backend-layered test:e2e
 
 test-front: ## frontend 単体テスト (Vitest)
-	pnpm --filter @app/frontend test
+	pnpm --filter @app/frontend-spa test
 
 test-e2e: ## frontend 全体 E2E (Playwright)
-	pnpm --filter @app/frontend test:e2e
+	pnpm --filter @app/frontend-spa test:e2e
 
 ## ───────── 開発サーバ ─────────
 dev-back: ## backend dev サーバ起動
-	pnpm --filter @app/backend dev
+	pnpm --filter @app/backend-layered dev
 
 dev-front: ## frontend dev サーバ起動
-	pnpm --filter @app/frontend dev
+	pnpm --filter @app/frontend-spa dev
 
 ## ───────── Docker ─────────
 db-up: ## MySQL のみ起動

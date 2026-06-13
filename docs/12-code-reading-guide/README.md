@@ -8,8 +8,8 @@
 |---|---|---|---|
 | 契約 | `packages/api-spec/` | API の単一の真実（source of truth） | TypeSpec → OpenAPI |
 | 生成物 | `packages/api-client/` | 契約から生成した型 + 型安全クライアント | openapi-typescript / openapi-fetch |
-| バックエンド | `apps/backend/` | レイヤード（presentation / application / infrastructure） | NestJS / TypeORM |
-| フロントエンド | `apps/frontend/` | SPA + Nitro BFF。副作用は Composable に集約 | Nuxt 3 / Tailwind |
+| バックエンド | `apps/backend-layered/` | レイヤード（presentation / application / infrastructure） | NestJS / TypeORM |
+| フロントエンド | `apps/frontend-spa/` | SPA + Nitro BFF。副作用は Composable に集約 | Nuxt 3 / Tailwind |
 
 > **読み始める前に**: `pnpm api:gen` を実行しておくと、`packages/api-client/src/generated/` に型が生成され、FE/BE 双方の `@app/api-client` import が解決できる（生成物は `.gitignore` 対象）。
 
