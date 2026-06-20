@@ -56,6 +56,7 @@ graph TD
 |---|---|---|---|
 | tasks の依存方向 | UseCase → TypeORM Repository（直接） | UseCase → **Port(interface)** ← TypeORM 実装（依存性逆転） | clean と同じ（依存は内向き） |
 | 契約(interface)の所在 | （なし） | `application/ports/` | **`domain/`（中核が契約を所有）** |
+| 読み取り分離（CQRS） | （なし・list/get も UseCase） | **list/get を `queries/` + 読み取り専用 `TaskQuery` に分離** | clean と同じ（契約は `domain/`） |
 | ドメインサービス | （なし） | `application/task-access.ts`（関数） | **`domain/services/TaskAccessService`（DI サービス）** |
 | ドメイン | TypeORM Entity を直接利用 | framework 非依存の `domain/Task` ＋ ORM 分離 | clean と同じ |
 | 業務エラー | Nest 例外を直接 throw | `DomainError`（kind）→ フィルタが HTTP 翻訳 | clean と同じ |
@@ -104,15 +105,18 @@ modules/tasks/
 │  └ task.errors.ts             #   DomainError（kind: not_found/forbidden/invalid）
 ├ application/
 │  ├ ports/
-│  │  ├ task-repository.port.ts #   TaskRepository（Port）+ DI トークン
+│  │  ├ task-repository.port.ts #   TaskRepository（Port・書き込み）+ DI トークン
+│  │  ├ task-query.port.ts      #   TaskQuery（Port・読み取り専用）+ DI トークン ★CQRS
 │  │  └ image-storage.port.ts   #   ImageStorage（Port）+ DI トークン
-│  ├ usecases/                  #   1 ルート = 1 UseCase。@Inject(TASK_REPOSITORY) で Port に依存
-│  ├ task-access.ts             #   loadOwnedTask（存在/所有チェックの共有）
+│  ├ usecases/                  #   書き込み（create/update/delete/image/validate）。@Inject(TASK_REPOSITORY)
+│  ├ queries/                   #   読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側
+│  ├ task-access.ts             #   loadOwnedTask（存在/所有チェックの共有・書き込み用）
 │  └ task.mapper.ts             #   domain Task → 契約 Task
 ├ infrastructure/
 │  ├ task.orm-entity.ts         #   TypeORM Entity（永続化の詳細）
 │  ├ task.mapper.ts             #   ORM ⇔ domain 変換
-│  ├ typeorm-task.repository.ts #   TaskRepository の TypeORM 実装
+│  ├ typeorm-task.repository.ts #   TaskRepository の TypeORM 実装（書き込み）
+│  ├ typeorm-task.query.ts      #   TaskQuery の TypeORM 実装（ORM 行 → 契約 直射影）★CQRS
 │  └ local-image-storage.ts     #   ImageStorage のローカル FS 実装
 └ presentation/
    ├ tasks.controller.ts        #   HTTP 入口（Multer file → ImageFile に詰め替え）
@@ -122,6 +126,7 @@ modules/tasks/
 - UseCase は `@Inject(TASK_REPOSITORY)` / `@Inject(IMAGE_STORAGE)` で **Port にのみ依存**し、TypeORM・fs を import しない。
 - 業務エラーは `DomainError`（HTTP 非依存）で投げ、`AllExceptionsFilter` が `kind` を見て 404/403/400 と `ApiError` 形へ翻訳する。
 - DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeOrmTaskRepository }` 等として Port ↔ 実装を束ねる（依存性逆転の要）。
+- **読み取りは CQRS で分離**: list/get は `queries/` の Query が読み取り専用 Port `TaskQuery` にのみ依存し、ドメイン `Task` を経由せず ORM 行 → 契約 `Task` を直射影する（[読み取り分離（CQRS-lite）](#読み取り分離cqrs-lite) を参照）。
 - auth / users は layered と同一構成のまま（機能パリティ優先・clean 化は段階対応）。
 
 ### backend-onion — tasks（オニオンアーキテクチャ・契約をドメイン中核が所有）
@@ -133,18 +138,38 @@ modules/tasks/
 ├ domain/                          # 中核（最内）
 │  ├ task.ts / task.errors.ts      #   エンティティ + DomainError
 │  ├ repositories/
-│  │  └ task.repository.ts         #   TaskRepository interface + token（★契約を中核が所有）
+│  │  ├ task.repository.ts         #   TaskRepository interface + token（★契約を中核が所有・書き込み）
+│  │  └ task-query.ts              #   TaskQuery interface + token（★読み取り契約も中核が所有）★CQRS
 │  └ services/
 │     ├ image-storage.ts           #   ImageStorage interface + token（★ドメインが求める能力）
-│     └ task-access.service.ts     #   TaskAccessService（★ドメインサービス: 取得+所有チェック）
-├ application/usecases/            # アプリケーションサービス。domain の契約/サービスに依存
-├ infrastructure/                 # domain の契約を実装（TypeOrmTaskRepository / LocalImageStorage）
+│     └ task-access.service.ts     #   TaskAccessService（★ドメインサービス: 取得+所有チェック・書き込み用）
+├ application/
+│  ├ usecases/                     #   書き込み。domain の契約/サービスに依存
+│  └ queries/                      #   読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側
+├ infrastructure/                 # domain の契約を実装（TypeOrmTaskRepository / TypeOrmTaskQuery / LocalImageStorage）
 └ presentation/                   # Controller / DTO
 ```
 
-- clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。
-- 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。
+- clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。読み取り契約 `TaskQuery` も同様に onion は `domain/repositories/` に置く。
+- 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。読み取り側（Query）は domain を経由しないため、`GetTaskQuery` 内で owner を比較して 404/403 を区別する。
 - エンティティ・DomainError・例外フィルタ・auth/users は clean と同じ。
+
+### 読み取り分離（CQRS-lite）
+
+clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側として書き込みから分離**している（layered は分離せず baseline）。HTTP 契約・e2e シナリオは 3 版で完全に同一。
+
+| | 書き込み（Command） | 読み取り（Query） |
+|---|---|---|
+| 対象ルート | POST/PATCH/DELETE・`*/image`・`*/validate` | `GET /tasks`・`GET /tasks/{id}` |
+| 配置 | `application/usecases/` | `application/queries/` |
+| 依存する契約 | `TaskRepository`（domain `Task` を返す） | `TaskQuery`（**契約 `Task` を直接返す**・読み取り専用） |
+| 契約の所在 | clean=`application/ports/` / onion=`domain/repositories/` | 同左（`task-query` として隣に置く） |
+| 変換 | ORM → domain → 契約（2 段。不変条件を通す） | **ORM 行 → 契約（1 段直射影）**。domain を作らない |
+| 所有判定 | `loadOwnedTask` / `TaskAccessService`（domain `Task.assertOwnedBy`） | Query が owner を比較（`findByIdWithOwner` の戻り owner で 404/403 区別） |
+
+- **狙い**: 参照に不要なドメインエンティティ生成・2 段マッピングを省き、読み取りを軽量化する。単体テストは read 専用 Port（`TaskQuery`）のみモックで済み、書き込み側 Repository を注入しない（依存が痩せる）。
+- **404/403 の区別**: `where {id, userId}` で短絡すると他人のタスクが 404 になり契約に反するため、Query は **id だけで引いて owner を添えて返し**（`findByIdWithOwner`）、呼び出し側で 404（不存在）/ 403（非所有）を分ける。
+- **トレードオフ**: 所有判定と ORM→契約マッピングが書き込み側と別実装になり 2 か所に分散する。tasks は read が 2 本・検索なしのため利益は限定的で、本リポジトリでは「CQRS-lite の形を 1 か所示す」学習目的の比較例として置く（production では検索/集計が育つ見込みで採否を判断）。
 
 ## フロントエンドのレンダリング方式（SPA / SSR）
 
