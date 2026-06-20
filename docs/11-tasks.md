@@ -25,12 +25,13 @@
 | 9 | CI（GitHub Actions） | ✅ | PR/main push で lint・format・typecheck・BE単体/e2e・FE単体・E2E(Playwright) を自動実行 |
 | 10 | 関連 URL + 安全なリンクプレビュー | ✅ | 契約 `url` / `@IsUrl`(http/https) / `UrlPreview`(描画時ガード+rel=noopener) / 確認画面・詳細でプレビュー |
 | 11 | アーキ比較: アプリ複数化 | ✅ | 既存を `backend-layered`/`frontend-spa` にリネーム → `backend-clean`（Port で依存性逆転）→ `backend-onion`（契約をドメイン中核が所有 + ドメインサービス）→ `frontend-ssr`（SSR + サーバ側セッション復元）を追加。CI を matrix 化（backend 3 版 / frontend 2 版）。選定指針を docs/09 に整備 |
+| 12 | アーキ比較: 読み取り分離（CQRS-lite） | ✅ | clean/onion の tasks 読み取り（list/get）を `queries/` + 読み取り専用 `TaskQuery` Port に分離（ORM→契約 直射影・domain 非経由）。layered は分離せず baseline。HTTP 契約・e2e は不変。docs/09 に CQRS 節を追記 |
 
 ## テスト集計
 
 - backend-layered: 単体 39 / e2e 35
-- backend-clean: 単体 42 / e2e 35（同一 e2e シナリオ）
-- backend-onion: 単体 43 / e2e 35（同一 e2e シナリオ）
+- backend-clean: 単体 43 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離）
+- backend-onion: 単体 45 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離）
 - frontend-spa: 単体 35 / E2E 3
 - frontend-ssr: 単体 35 / E2E 3（同一 E2E シナリオ）
 

@@ -1,3 +1,5 @@
+import type { Task as TaskContract } from '@app/api-client';
+import type { TaskQuery } from '../../src/modules/tasks/domain/repositories/task-query';
 import type { TaskRepository } from '../../src/modules/tasks/domain/repositories/task.repository';
 import type { ImageStorage } from '../../src/modules/tasks/domain/services/image-storage';
 import type { TaskAccessService } from '../../src/modules/tasks/domain/services/task-access.service';
@@ -34,6 +36,36 @@ export function createTaskRepoMock(): TaskRepoMock {
 }
 
 export const asTaskRepo = (mock: TaskRepoMock): TaskRepository => mock as unknown as TaskRepository;
+
+// --- TaskQuery（読み取り専用 domain 契約 / CQRS Query 側）のモック ---
+
+export type TaskQueryMock = {
+  listByUserId: jest.Mock;
+  findByIdWithOwner: jest.Mock;
+};
+
+export function createTaskQueryMock(): TaskQueryMock {
+  return {
+    listByUserId: jest.fn(),
+    findByIdWithOwner: jest.fn(),
+  };
+}
+
+export const asTaskQuery = (mock: TaskQueryMock): TaskQuery => mock as unknown as TaskQuery;
+
+/** 契約形（API レスポンス）の Task を組み立てる（Query は契約を直接返すため）。 */
+export function buildContractTask(overrides: Partial<TaskContract> = {}): TaskContract {
+  return {
+    id: 'task-1',
+    title: '買い物',
+    description: '牛乳を買う',
+    status: 'todo',
+    startDate: '2026-01-10T00:00:00.000Z',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    ...overrides,
+  };
+}
 
 // --- TaskAccessService（ドメインサービス）のモック ---
 

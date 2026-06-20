@@ -15,7 +15,8 @@
 
 | 層 | ツール | モック対象 | 狙い |
 |---|---|---|---|
-| BE UseCase 単体（tasks） | Jest | Repository(DB) のみ（画像系は fs も） | 認可(404/403)・日付検証・DryRun は永続化しない・画像命名を本物で検証 |
+| BE UseCase 単体（tasks 書き込み） | Jest | Repository(DB) のみ（画像系は fs も） | 認可(404/403)・日付検証・DryRun は永続化しない・画像命名を本物で検証 |
+| BE Query 単体（tasks 読み取り・clean/onion） | Jest | 読み取り専用 Port `TaskQuery` のみ | CQRS Query 側の所有判定(404/403)・契約直射影を検証。書き込み Repository は注入しない（依存が痩せる） |
 | BE Service 単体（auth/users） | Jest | Repository(DB) のみ | ビジネスロジック・認可・トークン回転を本物で検証 |
 | BE e2e | Jest + supertest（in-memory SQLite） | なし | HTTP 境界・認可・バリデーション・エラーレスポンス |
 | FE Composable `useTasks` | Vitest + **MSW** | backend への HTTP のみ | 副作用を Composable に閉じ込めた設計の検証 |

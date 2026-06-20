@@ -18,10 +18,10 @@ import type { DryRunResult, Task } from '@app/api-client';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/auth.types';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { GetTaskQuery } from '../application/queries/get-task.query';
+import { ListTasksQuery } from '../application/queries/list-tasks.query';
 import { CreateTaskUseCase } from '../application/usecases/create-task.usecase';
 import { DeleteTaskUseCase } from '../application/usecases/delete-task.usecase';
-import { GetTaskUseCase } from '../application/usecases/get-task.usecase';
-import { ListTasksUseCase } from '../application/usecases/list-tasks.usecase';
 import { RemoveTaskImageUseCase } from '../application/usecases/remove-task-image.usecase';
 import { SetTaskImageUseCase } from '../application/usecases/set-task-image.usecase';
 import { UpdateTaskUseCase } from '../application/usecases/update-task.usecase';
@@ -32,16 +32,16 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 
 /**
  * タスクの HTTP 入口（presentation 層）。
- * 認証・入力検証（DTO/Pipe）に専念し、処理は各 UseCase（application 層）へ委譲する。
+ * 認証・入力検証（DTO/Pipe）に専念し、処理は各 UseCase（書き込み）/ Query（読み取り）へ委譲する。
  */
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
 export class TasksController {
   constructor(
-    private readonly listTasks: ListTasksUseCase,
+    private readonly listTasks: ListTasksQuery,
     private readonly createTask: CreateTaskUseCase,
     private readonly validateCreateTask: ValidateCreateTaskUseCase,
-    private readonly getTask: GetTaskUseCase,
+    private readonly getTask: GetTaskQuery,
     private readonly updateTask: UpdateTaskUseCase,
     private readonly validateUpdateTask: ValidateUpdateTaskUseCase,
     private readonly deleteTask: DeleteTaskUseCase,
