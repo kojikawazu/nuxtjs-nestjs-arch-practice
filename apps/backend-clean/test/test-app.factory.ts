@@ -9,12 +9,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter';
 import { configuration } from '../src/config/configuration';
 import { configureUploadStatic } from '../src/config/static-assets';
-import { AuthModule } from '../src/modules/auth/auth.module';
-import { RefreshTokenEntity } from '../src/modules/auth/entities/refresh-token.entity';
-import { TaskOrmEntity } from '../src/modules/tasks/infrastructure/task.orm-entity';
-import { TasksModule } from '../src/modules/tasks/tasks.module';
-import { UserEntity } from '../src/modules/users/user.entity';
-import { UsersModule } from '../src/modules/users/users.module';
+import { AuthModule } from '../src/api/auth/auth.module';
+import { RefreshTokenOrmEntity } from '../src/api/auth/infrastructure/refresh-token.orm-entity';
+import { TaskOrmEntity } from '../src/api/tasks/infrastructure/task.orm-entity';
+import { TasksModule } from '../src/api/tasks/tasks.module';
+import { UserOrmEntity } from '../src/api/users/infrastructure/user.orm-entity';
+import { UsersModule } from '../src/api/users/users.module';
 
 /** e2e で生成した一時アップロード先（テスト側で後始末する）。 */
 export let testUploadDir = '';
@@ -42,7 +42,7 @@ export async function createTestApp(): Promise<INestApplication> {
         database: ':memory:',
         dropSchema: true,
         synchronize: true,
-        entities: [UserEntity, RefreshTokenEntity, TaskOrmEntity],
+        entities: [UserOrmEntity, RefreshTokenOrmEntity, TaskOrmEntity],
       }),
       UsersModule,
       AuthModule,

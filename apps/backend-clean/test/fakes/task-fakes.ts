@@ -2,10 +2,10 @@ import type { Task as TaskContract } from '@app/api-client';
 import {
   IMAGE_STORAGE as _IMAGE_STORAGE,
   type ImageStorage,
-} from '../../src/modules/tasks/application/ports/image-storage.port';
-import type { TaskQuery } from '../../src/modules/tasks/application/ports/task-query.port';
-import type { TaskRepository } from '../../src/modules/tasks/application/ports/task-repository.port';
-import { Task, type TaskState } from '../../src/modules/tasks/domain/task';
+} from '../../src/api/tasks/application/ports/image-storage.port';
+import type { TaskQuery } from '../../src/api/tasks/application/ports/task-query.port';
+import type { TaskRepository } from '../../src/api/tasks/application/ports/task-repository.port';
+import { Task, type TaskState } from '../../src/api/tasks/domain/task';
 
 /**
  * tasks UseCase 単体テスト用の共有ヘルパー（クリーンアーキテクチャ版）。
