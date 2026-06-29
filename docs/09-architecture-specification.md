@@ -56,12 +56,13 @@ graph TD
 |---|---|---|---|
 | tasks の依存方向 | UseCase → TypeORM Repository（直接） | UseCase → **Port(interface)** ← TypeORM 実装（依存性逆転） | clean と同じ（依存は内向き） |
 | 契約(interface)の所在 | （なし） | `application/ports/` | **`domain/`（中核が契約を所有）** |
-| 読み取り分離（CQRS） | （なし・list/get も UseCase） | **list/get を `queries/` + 読み取り専用 `TaskQuery` に分離** | clean と同じ（契約は `domain/`） |
+| 読み取り分離（CQRS） | （なし・list/get も UseCase） | **list/get を `query-services/` + 読み取り専用 `TaskQuery` に分離**（戻りは `read-models/`） | clean と同じだが `queries/`（契約は `domain/`） |
 | ドメインサービス | （なし） | `application/task-access.ts`（関数） | **`domain/services/TaskAccessService`（DI サービス）** |
 | ドメイン | TypeORM Entity を直接利用 | framework 非依存の `domain/Task` ＋ ORM 分離 | clean と同じ |
 | 業務エラー | Nest 例外を直接 throw | `DomainError`（kind）→ フィルタが HTTP 翻訳 | clean と同じ |
 | 画像保存 | UseCase が fs を直接呼ぶ | `ImageStorage` Port ← FS 実装 | clean と同じ（契約は `domain/services/`） |
-| auth / users | 従来レイヤード | （当面）layered と同一構成 | （当面）layered と同一構成 |
+| auth / users | 従来レイヤード | **クリーン化済み**（usecase 分解＋ Port: UserRepository/PasswordHasher/TokenIssuer/RefreshTokenRepository） | （当面）layered と同一構成 |
+| 業務エラーの分類 | Nest 例外 | `DomainError` に **conflict(409)/unauthorized(401) を追加**し auth も DomainError 化 | tasks のみ DomainError（auth/users は Nest 例外） |
 
 ### backend-layered — auth / users（従来レイヤード）
 
@@ -98,8 +99,10 @@ modules/tasks/
 
 layered と同じ tasks を、**依存性逆転**で再構成したもの。application 層は Port（interface）にのみ依存し、TypeORM/fs を知らない。Port の実体は infrastructure 層が提供し、`tasks.module.ts` で束ねる。
 
+> ディレクトリ配置: clean は機能スライス（feature slice）として **`src/api/{tasks,auth,users}/`** に置く（layered / onion は `src/modules/` のまま）。下記ツリーのルート `api/tasks/` はこれを指す。
+
 ```
-modules/tasks/
+api/tasks/                      # src/api/tasks（機能スライス）
 ├ domain/                       # 最内層・フレームワーク非依存
 │  ├ task.ts                    #   ドメインエンティティ（認可・日付不変条件・画像付け外し）
 │  └ task.errors.ts             #   DomainError（kind: not_found/forbidden/invalid）
@@ -108,26 +111,67 @@ modules/tasks/
 │  │  ├ task-repository.port.ts #   TaskRepository（Port・書き込み）+ DI トークン
 │  │  ├ task-query.port.ts      #   TaskQuery（Port・読み取り専用）+ DI トークン ★CQRS
 │  │  └ image-storage.port.ts   #   ImageStorage（Port）+ DI トークン
-│  ├ usecases/                  #   書き込み（create/update/delete/image/validate）。@Inject(TASK_REPOSITORY)
-│  ├ queries/                   #   読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側
+│  ├ inputs/                    #   ★ユースケース入力（Command 型）+ 契約→Input 変換。presentation 非依存化の要
+│  │  ├ create-task.input.ts    #     CreateTaskInput + toCreateTaskInput(userId, TaskCreate)
+│  │  └ update-task.input.ts    #     UpdateTaskInput + toUpdateTaskInput(userId, id, TaskUpdate)
+│  ├ read-models/               #   ★読み取り表現（Read Model）。Query 側が返す型を application が所有
+│  │  └ task.read-model.ts      #     TaskReadModel（= 契約 Task）/ TaskReadModelWithOwner
+│  ├ usecases/                  #   書き込み（create/update/delete/image）。@Inject(TASK_REPOSITORY)・引数は Input
+│  ├ query-services/            #   ★読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側（旧 queries/）
+│  ├ validators/                #   ★DryRun（検証のみ・保存しない）。create/update の */validate を集約
 │  ├ task-access.ts             #   loadOwnedTask（存在/所有チェックの共有・書き込み用）
 │  └ task.mapper.ts             #   domain Task → 契約 Task
 ├ infrastructure/
 │  ├ task.orm-entity.ts         #   TypeORM Entity（永続化の詳細）
 │  ├ task.mapper.ts             #   ORM ⇔ domain 変換
 │  ├ typeorm-task.repository.ts #   TaskRepository の TypeORM 実装（書き込み）
-│  ├ typeorm-task.query.ts      #   TaskQuery の TypeORM 実装（ORM 行 → 契約 直射影）★CQRS
+│  ├ typeorm-task.query.ts      #   TaskQuery の TypeORM 実装（ORM 行 → Read Model 直射影）★CQRS
 │  └ local-image-storage.ts     #   ImageStorage のローカル FS 実装
 └ presentation/
-   ├ tasks.controller.ts        #   HTTP 入口（Multer file → ImageFile に詰め替え）
-   └ dto/                       #   class-validator の DTO（契約型を implements）
+   ├ tasks.controller.ts        #   HTTP 入口（DTO→Input 変換・Multer file → ImageFile に詰め替え）
+   ├ dto/                       #   class-validator の DTO（契約型を implements）
+   └ guards/
+      └ jwt-auth.guard.ts       #   auth 所有の JwtAuthGuard を再エクスポート（tasks 文脈の窓口）
 ```
 
 - UseCase は `@Inject(TASK_REPOSITORY)` / `@Inject(IMAGE_STORAGE)` で **Port にのみ依存**し、TypeORM・fs を import しない。
+- **application は presentation を import しない**: UseCase/Validator は presentation の DTO ではなく application 所有の **Input（Command 型）** を受け取る。DTO → Input 変換（`toCreateTaskInput` 等）は契約型を入力に取るため application 側にあっても presentation に依存せず、Controller が境界で詰め替える（依存は常に内向き）。
 - 業務エラーは `DomainError`（HTTP 非依存）で投げ、`AllExceptionsFilter` が `kind` を見て 404/403/400 と `ApiError` 形へ翻訳する。
 - DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeOrmTaskRepository }` 等として Port ↔ 実装を束ねる（依存性逆転の要）。
-- **読み取りは CQRS で分離**: list/get は `queries/` の Query が読み取り専用 Port `TaskQuery` にのみ依存し、ドメイン `Task` を経由せず ORM 行 → 契約 `Task` を直射影する（[読み取り分離（CQRS-lite）](#読み取り分離cqrs-lite) を参照）。
-- auth / users は layered と同一構成のまま（機能パリティ優先・clean 化は段階対応）。
+- **読み取りは CQRS で分離**: list/get は `query-services/` の Query Service が読み取り専用 Port `TaskQuery` にのみ依存し、ドメイン `Task` を経由せず ORM 行 → **Read Model（`read-models/`）** を直射影する（[読み取り分離（CQRS-lite）](#読み取り分離cqrs-lite) を参照）。
+- **DryRun は `validators/` に集約**: `*/validate`（保存せず検証）は `CreateTaskValidator` / `UpdateTaskValidator` が担い、UseCase（保存）とは別 provider に分ける。ドメイン不変条件の実体は domain に残し、validators は「保存せず検証する」オーケストレーションのみを持つ。
+- **`inputs` / `read-models` / `validators` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline、onion=当面 queries 構成のまま）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
+- auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion / layered の auth / users は従来レイヤードのまま。
+
+### backend-clean — auth / users（クリーンアーキテクチャ）
+
+tasks と同じ思想（domain / application / infrastructure / presentation の分離＋ Port による依存性逆転）を auth / users にも適用したもの。**外部 I/O をすべて Port 化**し、ユースケースは bcrypt・JWT・TypeORM を知らない。
+
+```
+api/users/                         # HTTP 入口を持たない（presentation なし）。auth が利用する
+├ domain/user.ts                   #   フレームワーク非依存の User（passwordHash は照合用に保持）
+├ application/
+│  ├ ports/user-repository.port.ts #   UserRepository（findByEmail/findById/create）+ トークン
+│  └ user.mapper.ts                #   domain User → 契約 User（passwordHash を構造的に落とす）
+├ infrastructure/                  #   user.orm-entity / user.mapper / typeorm-user.repository
+└ users.module.ts                  #   USER_REPOSITORY を provide & export
+
+api/auth/
+├ domain/auth.errors.ts            #   EmailAlreadyRegistered(conflict)/InvalidCredentials/InvalidRefreshToken(unauthorized)
+├ application/
+│  ├ ports/                        #   PasswordHasher / TokenIssuer / RefreshTokenRepository（暗号・DB を抽象化）
+│  ├ inputs/                       #   register/login（契約→Input）
+│  ├ usecases/                     #   register / login / refresh / logout（1操作1ユースケース）
+│  ├ validators/register.validator #   DryRun（メール重複）
+│  └ issue-auth-tokens.ts          #   トークン発行＋保存の共有ヘルパー
+├ infrastructure/                  #   bcrypt-password-hasher / jwt-token-issuer / typeorm-refresh-token.repository
+└ presentation/                    #   auth.controller / dto / guards / strategies（Passport は presentation）
+```
+
+- **暗号も Port 化（Full）**: `PasswordHasher`（bcrypt）/ `TokenIssuer`（JWT・secret・jti・exp 抽出を隠蔽）を Port にし、ユースケースは抽象的なトークン文字列だけを扱う。リフレッシュの SHA-256 ハッシュ・定数時間照合は `RefreshTokenRepository` 実装の内部に閉じる（application はハッシュ方式を知らない）。
+- **業務エラーは DomainError に統一**: `DomainErrorKind` に `conflict`(409)/`unauthorized`(401) を追加し、auth も HTTP 非依存の `DomainError` を投げる（フィルタが翻訳）。これで tasks とエラーモデルが揃う。
+- **テストの形が痩せる**: usecase 単体は 4 つの Port をモックするだけで分岐（重複・認可・回転）を検証でき、実 bcrypt/JWT は infrastructure の spec（`bcrypt-password-hasher` / `jwt-token-issuer`）で個別に検証する。
+- HTTP 契約・e2e シナリオは layered と同一（外から見た挙動は不変）。
 
 ### backend-onion — tasks（オニオンアーキテクチャ・契約をドメイン中核が所有）
 
@@ -152,7 +196,7 @@ modules/tasks/
 
 - clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。読み取り契約 `TaskQuery` も同様に onion は `domain/repositories/` に置く。
 - 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。読み取り側（Query）は domain を経由しないため、`GetTaskQuery` 内で owner を比較して 404/403 を区別する。
-- エンティティ・DomainError・例外フィルタ・auth/users は clean と同じ。
+- エンティティ・DomainError・例外フィルタは clean と同じ（tasks）。**auth / users は従来レイヤードのまま**（clean のみ auth/users もクリーン化済み）。
 
 ### 読み取り分離（CQRS-lite）
 
@@ -160,11 +204,11 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 
 | | 書き込み（Command） | 読み取り（Query） |
 |---|---|---|
-| 対象ルート | POST/PATCH/DELETE・`*/image`・`*/validate` | `GET /tasks`・`GET /tasks/{id}` |
-| 配置 | `application/usecases/` | `application/queries/` |
-| 依存する契約 | `TaskRepository`（domain `Task` を返す） | `TaskQuery`（**契約 `Task` を直接返す**・読み取り専用） |
+| 対象ルート | POST/PATCH/DELETE・`*/image`（書き込み）/ `*/validate`（DryRun） | `GET /tasks`・`GET /tasks/{id}` |
+| 配置 | `application/usecases/`（保存）/ clean は `application/validators/`（DryRun） | clean=`application/query-services/` / onion=`application/queries/` |
+| 依存する契約 | `TaskRepository`（domain `Task` を返す） | `TaskQuery`（**Read Model を直接返す**・読み取り専用） |
 | 契約の所在 | clean=`application/ports/` / onion=`domain/repositories/` | 同左（`task-query` として隣に置く） |
-| 変換 | ORM → domain → 契約（2 段。不変条件を通す） | **ORM 行 → 契約（1 段直射影）**。domain を作らない |
+| 変換 | ORM → domain → 契約（2 段。不変条件を通す） | **ORM 行 → Read Model（1 段直射影）**。clean は `read-models/` の `TaskReadModel`、domain を作らない |
 | 所有判定 | `loadOwnedTask` / `TaskAccessService`（domain `Task.assertOwnedBy`） | Query が owner を比較（`findByIdWithOwner` の戻り owner で 404/403 区別） |
 
 - **狙い**: 参照に不要なドメインエンティティ生成・2 段マッピングを省き、読み取りを軽量化する。単体テストは read 専用 Port（`TaskQuery`）のみモックで済み、書き込み側 Repository を注入しない（依存が痩せる）。
