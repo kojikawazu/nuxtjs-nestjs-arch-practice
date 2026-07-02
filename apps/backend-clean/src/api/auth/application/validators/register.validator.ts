@@ -8,7 +8,7 @@ import type { RegisterInput } from '../inputs/register.input';
 
 /**
  * 登録の DryRun（検証のみ・保存しない）。
- * DTO 検証は ValidationPipe が済ませている前提で、ここでは業務ルール（メール重複）だけを確認する。
+ * DTO 検証は ZodValidationPipe が済ませている前提で、ここでは業務ルール（メール重複）だけを確認する。
  * ユーザー作成・トークン発行は一切行わない（重複 → 409 はそのまま伝播）。
  */
 @Injectable()

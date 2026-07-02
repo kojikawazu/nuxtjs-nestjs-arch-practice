@@ -1,6 +1,13 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
-import type { AuthTokens, DryRunResult } from '@app/api-client';
+import type {
+  AuthTokens,
+  DryRunResult,
+  LoginRequest,
+  RefreshRequest,
+  RegisterRequest,
+} from '@app/api-client';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { toLoginInput } from '../application/inputs/login.input';
 import { toRegisterInput } from '../application/inputs/register.input';
 import { LoginUseCase } from '../application/usecases/login.usecase';
@@ -9,9 +16,9 @@ import { RefreshUseCase } from '../application/usecases/refresh.usecase';
 import { RegisterUseCase } from '../application/usecases/register.usecase';
 import { RegisterValidator } from '../application/validators/register.validator';
 import type { AuthenticatedUser } from '../auth.types';
-import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
-import { RegisterDto } from './dto/register.dto';
+import { loginSchema } from './dto/login.dto';
+import { refreshSchema } from './dto/refresh.dto';
+import { registerSchema } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 /**
@@ -31,27 +38,31 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  register(@Body() dto: RegisterDto): Promise<AuthTokens> {
-    return this.registerUser.execute(toRegisterInput(dto));
+  register(
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterRequest,
+  ): Promise<AuthTokens> {
+    return this.registerUser.execute(toRegisterInput(body));
   }
 
   @Post('register/validate')
   @HttpCode(200)
-  async registerValidate(@Body() dto: RegisterDto): Promise<DryRunResult> {
-    await this.registerValidator.execute(toRegisterInput(dto));
+  async registerValidate(
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterRequest,
+  ): Promise<DryRunResult> {
+    await this.registerValidator.execute(toRegisterInput(body));
     return { valid: true };
   }
 
   @Post('login')
   @HttpCode(200)
-  login(@Body() dto: LoginDto): Promise<AuthTokens> {
-    return this.loginUser.execute(toLoginInput(dto));
+  login(@Body(new ZodValidationPipe(loginSchema)) body: LoginRequest): Promise<AuthTokens> {
+    return this.loginUser.execute(toLoginInput(body));
   }
 
   @Post('refresh')
   @HttpCode(200)
-  refresh(@Body() dto: RefreshDto): Promise<AuthTokens> {
-    return this.refreshSession.execute(dto.refreshToken);
+  refresh(@Body(new ZodValidationPipe(refreshSchema)) body: RefreshRequest): Promise<AuthTokens> {
+    return this.refreshSession.execute(body.refreshToken);
   }
 
   @Post('logout')
