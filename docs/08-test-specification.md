@@ -18,6 +18,7 @@
 | BE UseCase 単体（tasks 書き込み） | Jest | Repository(DB) のみ（画像系は fs も） | 認可(404/403)・日付検証・DryRun は永続化しない・画像命名を本物で検証 |
 | BE Query 単体（tasks 読み取り・clean/onion） | Jest | 読み取り専用 Port `TaskQuery` のみ | CQRS Query 側の所有判定(404/403)・契約直射影を検証。書き込み Repository は注入しない（依存が痩せる） |
 | BE Service 単体（auth/users） | Jest | Repository(DB) のみ | ビジネスロジック・認可・トークン回転を本物で検証 |
+| BE 入力検証単体（clean のみ・zod） | Jest | なし | `ZodValidationPipe`（400 翻訳）と各スキーマ（必須・列挙・ISO 日付・url は http/https・未知キー拒否）を本物の zod で検証 |
 | BE e2e | Jest + supertest（in-memory SQLite） | なし | HTTP 境界・認可・バリデーション・エラーレスポンス |
 | FE Composable `useTasks` | Vitest + **MSW** | backend への HTTP のみ | 副作用を Composable に閉じ込めた設計の検証 |
 | FE Composable `useAuth` | Vitest + **registerEndpoint** | Nitro BFF (`/api/auth/*`) | トークンがメモリに入る/消えるロジック |

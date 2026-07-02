@@ -14,8 +14,9 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { DryRunResult, Task } from '@app/api-client';
+import type { DryRunResult, Task, TaskCreate, TaskUpdate } from '@app/api-client';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../auth/auth.types';
 import { toCreateTaskInput } from '../application/inputs/create-task.input';
 import { toUpdateTaskInput } from '../application/inputs/update-task.input';
@@ -28,8 +29,8 @@ import { SetTaskImageUseCase } from '../application/usecases/set-task-image.usec
 import { UpdateTaskUseCase } from '../application/usecases/update-task.usecase';
 import { CreateTaskValidator } from '../application/validators/create-task.validator';
 import { UpdateTaskValidator } from '../application/validators/update-task.validator';
-import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
+import { createTaskSchema } from './dto/create-task.dto';
+import { updateTaskSchema } from './dto/update-task.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 /**
@@ -60,17 +61,20 @@ export class TasksController {
 
   @Post()
   @HttpCode(201)
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTaskDto): Promise<Task> {
-    return this.createTask.execute(toCreateTaskInput(user.userId, dto));
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(createTaskSchema)) body: TaskCreate,
+  ): Promise<Task> {
+    return this.createTask.execute(toCreateTaskInput(user.userId, body));
   }
 
   @Post('validate')
   @HttpCode(200)
   async createValidate(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateTaskDto,
+    @Body(new ZodValidationPipe(createTaskSchema)) body: TaskCreate,
   ): Promise<DryRunResult> {
-    this.validateCreateTask.execute(toCreateTaskInput(user.userId, dto));
+    this.validateCreateTask.execute(toCreateTaskInput(user.userId, body));
     return { valid: true };
   }
 
@@ -83,9 +87,9 @@ export class TasksController {
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: UpdateTaskDto,
+    @Body(new ZodValidationPipe(updateTaskSchema)) body: TaskUpdate,
   ): Promise<Task> {
-    return this.updateTask.execute(toUpdateTaskInput(user.userId, id, dto));
+    return this.updateTask.execute(toUpdateTaskInput(user.userId, id, body));
   }
 
   @Post(':id/validate')
@@ -93,9 +97,9 @@ export class TasksController {
   async updateValidate(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: UpdateTaskDto,
+    @Body(new ZodValidationPipe(updateTaskSchema)) body: TaskUpdate,
   ): Promise<DryRunResult> {
-    await this.validateUpdateTask.execute(toUpdateTaskInput(user.userId, id, dto));
+    await this.validateUpdateTask.execute(toUpdateTaskInput(user.userId, id, body));
     return { valid: true };
   }
 
