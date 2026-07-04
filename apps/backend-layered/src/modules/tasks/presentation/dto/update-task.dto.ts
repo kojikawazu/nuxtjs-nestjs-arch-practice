@@ -1,6 +1,11 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { z } from 'zod';
 import type { TaskUpdate } from '@app/api-client';
-import { CreateTaskDto } from './create-task.dto';
+import { createTaskSchema } from './create-task.dto';
 
-/** すべてのフィールドを任意にした更新用 DTO（バリデーションルールは継承される）。 */
-export class UpdateTaskDto extends PartialType(CreateTaskDto) implements TaskUpdate {}
+/**
+ * すべてのフィールドを任意にした更新用スキーマ（バリデーションルールは `createTaskSchema` を継承）。
+ * `.strict()` は `.partial()` にも引き継がれるため、未知キーは引き続き弾く。
+ */
+export const updateTaskSchema = createTaskSchema.partial() satisfies z.ZodType<TaskUpdate>;
+
+export type UpdateTaskDto = z.infer<typeof updateTaskSchema>;
