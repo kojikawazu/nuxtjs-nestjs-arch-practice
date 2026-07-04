@@ -47,7 +47,8 @@
 - **現状（既定）**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する（`pnpm test` / CI は SQLite のまま）。
 - **実装済み（BE IT・3 版）**: `backend-layered` / `backend-clean` / `backend-onion` の各 `test/it/db-fidelity.it-spec.ts` に **DB 忠実性 IT** を追加。MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する（接続先 DB は `taskdb_it`）。実行は `make test-back-it`（= `mysql-test` を `--wait` で healthy まで待って 3 版の `test:it` を順に実行）。
 - **実装済み（BE E2E の MySQL コンテナ化・二役）**: `test/test-app.factory.ts`（3 版）を env で切替可能にし、`E2E_DB_TYPE=mysql` 指定時のみ **`mysql-test` コンテナの `taskdb_e2e`** に繋ぐ（既定は従来どおり SQLite `:memory:`）。**IT=`taskdb_it` / E2E=`taskdb_e2e` を同一コンテナに同居**させ「1 コンテナを DB 名で二役」を実現（`docker/mysql-test-init.sql` が両 DB を作成）。実行は `make test-back-e2e-mysql`（3 版の `test:e2e:mysql`）。
-- **既定テスト/CI は不変**: `pnpm test` / `test:e2e` / CI は **SQLite のまま・Docker 不要**（`.it-spec` は unit/e2e の testRegex 外、`test:e2e` は `E2E_DB_TYPE` 未指定で SQLite）。MySQL コンテナ経路は `make test-back-it` / `make test-back-e2e-mysql` で明示的に叩いた時だけ。
+- **既定の速いテストは SQLite・Docker 不要**: `pnpm test` / `test:e2e` は SQLite（`.it-spec` は unit/e2e の testRegex 外、`test:e2e` は `E2E_DB_TYPE` 未指定で SQLite）。ローカルの MySQL 経路は `make test-back-it` / `make test-back-e2e-mysql`。
+- **CI は両方回す**: SQLite ジョブ（`backend` の unit+e2e / `frontend` / `e2e` Playwright）に加え、**専用ジョブ `backend-mysql`** が `mysql-test` コンテナを起動して IT（`taskdb_it`）と e2e（`taskdb_e2e`）を 3 版とも回す（ローカルと同じ `make` 手順・ubuntu ランナーの docker compose を利用）。
 - **目標（残り）**: `synchronize` を捨てた**本番マイグレーション検証**（実 MySQL でしか踏めない領域。[docs/11](./11-tasks.md) の「本番向けマイグレーション運用」に接続）。
 - **学習的な意味**: 「SQLite（速い）で回すテスト」と「MySQL コンテナ（本番忠実）で回すテスト」の対比自体が、本リポジトリの比較テーマ（同一挙動を別条件で検証）に沿った教材になる。
 
