@@ -11,6 +11,11 @@ import type { CreateTaskInput } from '../inputs/create-task.input';
  */
 @Injectable()
 export class CreateTaskValidator {
+  /**
+   * `Task.draft` で開始≤終了などの不変条件のみ検証する（Repository には触れない＝保存しない）。
+   * @param input: CreateTaskInput（Controller が契約 TaskCreate から変換した Command）
+   * @returns void（検証 NG は DomainError を throw）
+   */
   execute(input: CreateTaskInput): void {
     Task.draft(input);
   }

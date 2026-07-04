@@ -9,6 +9,12 @@ import type { CreateTaskDto } from '../../presentation/dto/create-task.dto';
  */
 @Injectable()
 export class ValidateCreateTaskUseCase {
+  /**
+   * `Task.draft` で開始≤終了などの不変条件のみ検証する（Repository には触れない＝保存しない）。
+   * @param _userId: string（@CurrentUser 由来の所有者 ID・検証では未使用）
+   * @param dto: CreateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskCreate）
+   * @returns void（検証 NG は DomainError を throw）
+   */
   execute(_userId: string, dto: CreateTaskDto): void {
     Task.draft({
       userId: _userId,

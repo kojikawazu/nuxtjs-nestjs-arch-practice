@@ -50,11 +50,27 @@ export class TasksController {
     private readonly removeTaskImage: RemoveTaskImageUseCase,
   ) {}
 
+  /**
+   * タスクの取得(複数)
+   * 実API: GET /tasks
+   * 処理の実体: ListTasksUseCase.execute（application/usecases/list-tasks.usecase.ts）
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元した認証ユーザー）
+   * @returns Promise<Task[]>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   @Get()
   list(@CurrentUser() user: AuthenticatedUser): Promise<Task[]> {
     return this.listTasks.execute(user.userId);
   }
 
+  /**
+   * タスクの作成
+   * 実API: POST /tasks（成功時 201 Created）
+   * 処理の実体: CreateTaskUseCase.execute（application/usecases/create-task.usecase.ts）
+   *   ※ dto は ZodValidationPipe(createTaskSchema) で検証済み（未知キーは .strict で 400）
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param dto: TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @returns Promise<Task>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   @Post()
   @HttpCode(201)
   create(
@@ -64,6 +80,15 @@ export class TasksController {
     return this.createTask.execute(user.userId, dto);
   }
 
+  /**
+   * タスク作成の事前検証（DryRun・DB に保存しない）
+   * 実API: POST /tasks/validate（成功時 200 OK）
+   * 処理の実体: ValidateCreateTaskUseCase.execute（application/usecases/validate-create-task.usecase.ts）
+   *   ※ 開始 ≤ 終了などドメイン不変条件を検証（保存はしない）
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param dto: TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   @Post('validate')
   @HttpCode(200)
   async createValidate(
@@ -74,11 +99,30 @@ export class TasksController {
     return { valid: true };
   }
 
+  /**
+   * タスクの取得(単一)
+   * 実API: GET /tasks/{id}
+   * 処理の実体: GetTaskUseCase.execute（application/usecases/get-task.usecase.ts）
+   *   ※ 不存在=404 / 非所有=403 を区別
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param id: string（対象タスクの ID・パスパラメータ）
+   * @returns Promise<Task>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   @Get(':id')
   get(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Task> {
     return this.getTask.execute(user.userId, id);
   }
 
+  /**
+   * タスクの更新（指定フィールドのみ）
+   * 実API: PATCH /tasks/{id}
+   * 処理の実体: UpdateTaskUseCase.execute（application/usecases/update-task.usecase.ts）
+   *   ※ dto は ZodValidationPipe(updateTaskSchema) で検証済み
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param id: string（対象タスクの ID・パスパラメータ）
+   * @param dto: TaskUpdate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @returns Promise<Task>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   @Patch(':id')
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -88,6 +132,16 @@ export class TasksController {
     return this.updateTask.execute(user.userId, id, dto);
   }
 
+  /**
+   * タスク更新の事前検証（DryRun・DB に保存しない）
+   * 実API: POST /tasks/{id}/validate（成功時 200 OK）
+   * 処理の実体: ValidateUpdateTaskUseCase.execute（application/usecases/validate-update-task.usecase.ts）
+   *   ※ マージ後の値で開始 ≤ 終了などを検証。不存在=404 / 非所有=403 も区別
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param id: string（対象タスクの ID・パスパラメータ）
+   * @param dto: TaskUpdate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   @Post(':id/validate')
   @HttpCode(200)
   async updateValidate(
@@ -99,6 +153,15 @@ export class TasksController {
     return { valid: true };
   }
 
+  /**
+   * タスクの削除
+   * 実API: DELETE /tasks/{id}（成功時 204 No Content）
+   * 処理の実体: DeleteTaskUseCase.execute（application/usecases/delete-task.usecase.ts）
+   *   ※ 不存在=404 / 非所有=403 を区別
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param id: string（対象タスクの ID・パスパラメータ）
+   * @returns Promise<void>（本文なし・204）
+   */
   @Delete(':id')
   @HttpCode(204)
   async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
@@ -106,8 +169,14 @@ export class TasksController {
   }
 
   /**
-   * 画像添付（multipart/form-data, フィールド名 `file`）。
-   * MIME（png/jpeg/webp）とサイズ（≤2MB）を ParseFilePipe で検証し、違反は 400。
+   * 画像添付（1枚・multipart/form-data, フィールド名 `file`）
+   * 実API: POST /tasks/{id}/image
+   * 処理の実体: SetTaskImageUseCase.execute（application/usecases/set-task-image.usecase.ts）
+   *   ※ MIME（png/jpeg/webp）とサイズ（≤2MB）を ParseFilePipe で検証し、違反は 400
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param id: string（対象タスクの ID・パスパラメータ）
+   * @param file: Express.Multer.File（multipart の file フィールド）
+   * @returns Promise<Task>（imageUrl 入り。Task の源: @app/api-client ← packages/api-spec/main.tsp）
    */
   @Post(':id/image')
   @UseInterceptors(FileInterceptor('file'))
@@ -129,7 +198,14 @@ export class TasksController {
     return this.setTaskImage.execute(user.userId, id, file);
   }
 
-  /** 添付画像の削除（更新後の Task を返す）。 */
+  /**
+   * 添付画像の削除
+   * 実API: DELETE /tasks/{id}/image
+   * 処理の実体: RemoveTaskImageUseCase.execute（application/usecases/remove-task-image.usecase.ts）
+   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param id: string（対象タスクの ID・パスパラメータ）
+   * @returns Promise<Task>（imageUrl の消えた Task。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   @Delete(':id/image')
   removeImage(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Task> {
     return this.removeTaskImage.execute(user.userId, id);

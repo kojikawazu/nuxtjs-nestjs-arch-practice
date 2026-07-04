@@ -24,6 +24,11 @@ export class LoginUseCase {
     @Inject(REFRESH_TOKEN_REPOSITORY) private readonly refreshTokens: RefreshTokenRepository,
   ) {}
 
+  /**
+   * メール照合 → パスワード検証 → トークン発行（不一致・不在はどちらも 401＝列挙防止）。
+   * @param input: LoginInput（Controller が契約 LoginRequest から変換した Command）
+   * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async execute(input: LoginInput): Promise<AuthTokens> {
     const user = await this.users.findByEmail(input.email);
     if (!user) {

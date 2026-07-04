@@ -13,6 +13,11 @@ export class ListTasksUseCase {
     private readonly tasks: Repository<TaskEntity>,
   ) {}
 
+  /**
+   * userId のタスクを作成日時の降順で取得し、契約 Task[] に変換して返す。
+   * @param userId: string（@CurrentUser 由来の所有者 ID）
+   * @returns Promise<Task[]>（契約 Task[]。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async execute(userId: string): Promise<Task[]> {
     const rows = await this.tasks.find({
       where: { userId },

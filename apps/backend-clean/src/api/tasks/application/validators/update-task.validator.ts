@@ -17,6 +17,11 @@ export class UpdateTaskValidator {
     private readonly tasks: TaskRepository,
   ) {}
 
+  /**
+   * 所有タスクをロード（不存在=404 / 非所有=403）→ マージ後の値で開始≤終了を検証（保存しない）。
+   * @param input: UpdateTaskInput（Controller が契約 TaskUpdate から変換した Command）
+   * @returns Promise<void>（検証 NG は DomainError を throw）
+   */
   async execute(input: UpdateTaskInput): Promise<void> {
     const task = await loadOwnedTask(this.tasks, input.userId, input.id);
     task.applyUpdate({

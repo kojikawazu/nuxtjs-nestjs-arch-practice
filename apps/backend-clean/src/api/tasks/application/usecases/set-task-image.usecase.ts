@@ -18,6 +18,13 @@ export class SetTaskImageUseCase {
     private readonly storage: ImageStorage,
   ) {}
 
+  /**
+   * 所有タスクをロード → ストレージへ保存 → imageUrl 更新 → 保存確定後に旧ファイルを掃除。
+   * @param userId: string（@CurrentUser 由来の所有者 ID）
+   * @param id: string（対象タスクの ID）
+   * @param file: ImageFile（mimetype/buffer のみ。Controller が Multer file から詰め替え）
+   * @returns Promise<Task>（imageUrl 入りの契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async execute(userId: string, id: string, file: ImageFile): Promise<TaskContract> {
     const task = await loadOwnedTask(this.tasks, userId, id);
     const publicPath = await this.storage.save(task.id, file);

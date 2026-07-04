@@ -13,6 +13,11 @@ export class UpdateTaskUseCase {
     private readonly tasks: TaskRepository,
   ) {}
 
+  /**
+   * 所有タスクをロード（不存在=404 / 非所有=403）→ 指定フィールドを適用（開始≤終了を再検証）→ 保存 → 契約 Task を返す。
+   * @param input: UpdateTaskInput（Controller が契約 TaskUpdate から変換した Command）
+   * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async execute(input: UpdateTaskInput): Promise<TaskContract> {
     const task = await loadOwnedTask(this.tasks, input.userId, input.id);
     task.applyUpdate({
