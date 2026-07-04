@@ -26,7 +26,7 @@ export class RegisterUseCase {
 
   /**
    * メール重複を確認（重複=409）→ パスワードをハッシュ化してユーザー作成 → トークン発行。
-   * @param input: RegisterInput（Controller が契約 RegisterRequest から変換した Command）
+   * @param input - RegisterInput（Controller が契約 RegisterRequest から変換した Command）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(input: RegisterInput): Promise<AuthTokens> {

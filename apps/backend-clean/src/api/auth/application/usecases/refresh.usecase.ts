@@ -27,7 +27,7 @@ export class RefreshUseCase {
 
   /**
    * 署名検証 → 保存ハッシュ照合 → ユーザー存在確認 → 旧トークン失効 → 新規発行。失敗は 401 に集約。
-   * @param token: string（クライアント提示のリフレッシュトークン）
+   * @param token - string（クライアント提示のリフレッシュトークン）
    * @returns Promise<AuthTokens>（新しい access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(token: string): Promise<AuthTokens> {

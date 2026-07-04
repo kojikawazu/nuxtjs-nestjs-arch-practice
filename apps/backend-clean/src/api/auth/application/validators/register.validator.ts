@@ -17,7 +17,7 @@ export class RegisterValidator {
 
   /**
    * メール重複だけを確認する（重複=409）。ユーザー作成・トークン発行はしない。
-   * @param input: RegisterInput（Controller が契約 RegisterRequest から変換した Command）
+   * @param input - RegisterInput（Controller が契約 RegisterRequest から変換した Command）
    * @returns Promise<void>（重複時は EmailAlreadyRegisteredError=409 を throw）
    */
   async execute(input: RegisterInput): Promise<void> {

@@ -13,9 +13,9 @@ export class ValidateUpdateTaskUseCase {
 
   /**
    * 所有タスクをロード（不存在=404 / 非所有=403）→ マージ後の値で開始≤終了を検証（保存しない）。
-   * @param userId: string（@CurrentUser 由来の所有者 ID）
-   * @param id: string（対象タスクの ID）
-   * @param dto: UpdateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskUpdate）
+   * @param userId - string（@CurrentUser 由来の所有者 ID）
+   * @param id - string（対象タスクの ID）
+   * @param dto - UpdateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskUpdate）
    * @returns Promise<void>（検証 NG は DomainError を throw）
    */
   async execute(userId: string, id: string, dto: UpdateTaskDto): Promise<void> {

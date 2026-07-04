@@ -18,8 +18,8 @@ export class GetTaskQueryService {
 
   /**
    * id で 1 件引き、owner を照合（不存在=404 / 非所有=403）して Read Model を返す。
-   * @param userId: string（@CurrentUser 由来の所有者 ID）
-   * @param id: string（対象タスクの ID）
+   * @param userId - string（@CurrentUser 由来の所有者 ID）
+   * @param id - string（対象タスクの ID）
    * @returns Promise<TaskReadModel>（= 契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(userId: string, id: string): Promise<TaskReadModel> {

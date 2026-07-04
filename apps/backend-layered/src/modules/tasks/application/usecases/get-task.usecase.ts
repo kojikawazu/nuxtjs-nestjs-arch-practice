@@ -15,8 +15,8 @@ export class GetTaskUseCase {
 
   /**
    * findOwnedTask で所有 Entity をロード（不存在=404 / 非所有=403）→ 契約 Task に変換して返す。
-   * @param userId: string（@CurrentUser 由来の所有者 ID）
-   * @param id: string（対象タスクの ID）
+   * @param userId - string（@CurrentUser 由来の所有者 ID）
+   * @param id - string（対象タスクの ID）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(userId: string, id: string): Promise<Task> {

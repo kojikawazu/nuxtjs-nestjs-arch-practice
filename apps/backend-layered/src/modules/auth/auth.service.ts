@@ -42,7 +42,7 @@ export class AuthService {
 
   /**
    * 新規登録（メール重複を弾き、パスワードをハッシュ化して作成 → トークン発行）。
-   * @param dto: RegisterDto（ZodValidationPipe 検証済み。= 契約 RegisterRequest）
+   * @param dto - RegisterDto（ZodValidationPipe 検証済み。= 契約 RegisterRequest）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async register(dto: RegisterDto): Promise<AuthTokens> {
@@ -62,7 +62,7 @@ export class AuthService {
   /**
    * 新規登録の DryRun（検証のみ・保存しない）。入力検証は ZodValidationPipe が済ませている前提で、
    * ここでは業務ルール（メール重複）だけを確認する。ユーザー作成・トークン発行は行わない。
-   * @param dto: RegisterDto（ZodValidationPipe 検証済み。= 契約 RegisterRequest）
+   * @param dto - RegisterDto（ZodValidationPipe 検証済み。= 契約 RegisterRequest）
    * @returns Promise<void>（重複時は ConflictException=409 を throw）
    */
   async validateRegister(dto: RegisterDto): Promise<void> {
@@ -74,7 +74,7 @@ export class AuthService {
 
   /**
    * ログイン（メール照合 → パスワード検証 → トークン発行）。不一致・不在はどちらも 401（列挙防止）。
-   * @param dto: LoginDto（ZodValidationPipe 検証済み。= 契約 LoginRequest）
+   * @param dto - LoginDto（ZodValidationPipe 検証済み。= 契約 LoginRequest）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async login(dto: LoginDto): Promise<AuthTokens> {
@@ -92,7 +92,7 @@ export class AuthService {
 
   /**
    * リフレッシュ（ローテーション）。署名検証 → 保存ハッシュ照合 → ユーザー確認 → 旧トークン失効 → 新規発行。失敗は 401。
-   * @param refreshToken: string（クライアント提示のリフレッシュトークン）
+   * @param refreshToken - string（クライアント提示のリフレッシュトークン）
    * @returns Promise<AuthTokens>（新しい access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async refresh(refreshToken: string): Promise<AuthTokens> {
@@ -123,7 +123,7 @@ export class AuthService {
 
   /**
    * 対象ユーザーのリフレッシュトークンをすべて失効させる。
-   * @param userId: string（@CurrentUser 由来のユーザー ID）
+   * @param userId - string（@CurrentUser 由来のユーザー ID）
    * @returns Promise<void>
    */
   async logout(userId: string): Promise<void> {

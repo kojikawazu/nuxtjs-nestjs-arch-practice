@@ -16,9 +16,9 @@ export class UpdateTaskUseCase {
 
   /**
    * findOwnedTask で所有 Entity をロード（不存在=404 / 非所有=403）→ 指定フィールドを反映 → 開始≤終了を再検証 → 保存。
-   * @param userId: string（@CurrentUser 由来の所有者 ID）
-   * @param id: string（対象タスクの ID）
-   * @param dto: UpdateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskUpdate）
+   * @param userId - string（@CurrentUser 由来の所有者 ID）
+   * @param id - string（対象タスクの ID）
+   * @param dto - UpdateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskUpdate）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(userId: string, id: string, dto: UpdateTaskDto): Promise<Task> {

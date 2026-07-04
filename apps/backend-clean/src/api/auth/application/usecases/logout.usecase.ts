@@ -13,7 +13,7 @@ export class LogoutUseCase {
 
   /**
    * 対象ユーザーのリフレッシュトークンをすべて失効させる。
-   * @param userId: string（@CurrentUser 由来のユーザー ID）
+   * @param userId - string（@CurrentUser 由来のユーザー ID）
    * @returns Promise<void>
    */
   async execute(userId: string): Promise<void> {

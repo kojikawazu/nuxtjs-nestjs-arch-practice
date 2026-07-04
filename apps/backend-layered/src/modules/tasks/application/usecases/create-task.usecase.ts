@@ -16,8 +16,8 @@ export class CreateTaskUseCase {
 
   /**
    * 開始≤終了を検証 → Entity を作成して保存 → 契約 Task に変換して返す。
-   * @param userId: string（@CurrentUser 由来の所有者 ID）
-   * @param dto: CreateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskCreate）
+   * @param userId - string（@CurrentUser 由来の所有者 ID）
+   * @param dto - CreateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskCreate）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(userId: string, dto: CreateTaskDto): Promise<Task> {
