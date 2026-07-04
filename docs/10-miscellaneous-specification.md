@@ -25,7 +25,7 @@
 
 - TypeSpec / OpenAPI: `packages/api-spec/main.tsp` → `tsp-output/openapi.yaml`
 - Swagger UI（対話的ドキュメント）: backend 起動中の `http://localhost:3001/docs`
-- 開発ルール: `.claude/rules/`（workflow / testing / stack-backend / stack-frontend ほか）
+- 開発ルール: `.claude/rules/`（[coding-standards](../.claude/rules/coding-standards.md) / [jsdoc](../.claude/rules/jsdoc.md) / workflow / testing / [stack-backend](../.claude/rules/stack-backend.md) / [stack-frontend](../.claude/rules/stack-frontend.md) ほか）。索引は [CLAUDE.md](../CLAUDE.md) の Rules テーブル。
 - 各仕様: `docs/01`〜`11`
 
 ## 付録
