@@ -41,7 +41,7 @@ export class AuthController {
    * 実API: POST /auth/register（成功時 201 Created）
    * 処理の実体: RegisterUseCase.execute（application/usecases/register.usecase.ts）
    *   ※ body は ZodValidationPipe(registerSchema) で検証後、toRegisterInput で Input に変換。メール重複は 409
-   * @param body: RegisterRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @param body - RegisterRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   @Post('register')
@@ -57,7 +57,7 @@ export class AuthController {
    * 実API: POST /auth/register/validate（成功時 200 OK）
    * 処理の実体: RegisterValidator.execute（application/validators/register.validator.ts）
    *   ※ DTO 検証に加えメール重複だけを確認（重複 → 409）
-   * @param body: RegisterRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @param body - RegisterRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   @Post('register/validate')
@@ -74,7 +74,7 @@ export class AuthController {
    * 実API: POST /auth/login（成功時 200 OK）
    * 処理の実体: LoginUseCase.execute（application/usecases/login.usecase.ts）
    *   ※ 認証失敗は 401（ユーザーの有無は区別しない＝列挙防止）
-   * @param body: LoginRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @param body - LoginRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   @Post('login')
@@ -88,7 +88,7 @@ export class AuthController {
    * 実API: POST /auth/refresh（成功時 200 OK）
    * 処理の実体: RefreshUseCase.execute（application/usecases/refresh.usecase.ts）
    *   ※ ハッシュ照合 → 旧トークン失効 → 新規発行。無効/使用済みは 401
-   * @param body: RefreshRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @param body - RefreshRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<AuthTokens>（新しい access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   @Post('refresh')
@@ -102,7 +102,7 @@ export class AuthController {
    * 実API: POST /auth/logout（成功時 204 No Content・要アクセストークン）
    * 処理の実体: LogoutUseCase.execute（application/usecases/logout.usecase.ts）
    *   ※ @UseGuards(JwtAuthGuard) で認証必須。@CurrentUser の userId に紐づく refresh を失効
-   * @param user: AuthenticatedUser（@CurrentUser が JWT から復元）
+   * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @returns Promise<void>（本文なし・204）
    */
   @Post('logout')

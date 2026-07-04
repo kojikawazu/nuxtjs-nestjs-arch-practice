@@ -14,8 +14,8 @@ export class DeleteTaskUseCase {
 
   /**
    * findOwnedTask で所有 Entity をロード（不存在=404 / 非所有=403）してから削除する。
-   * @param userId: string（@CurrentUser 由来の所有者 ID）
-   * @param id: string（対象タスクの ID）
+   * @param userId - string（@CurrentUser 由来の所有者 ID）
+   * @param id - string（対象タスクの ID）
    * @returns Promise<void>
    */
   async execute(userId: string, id: string): Promise<void> {

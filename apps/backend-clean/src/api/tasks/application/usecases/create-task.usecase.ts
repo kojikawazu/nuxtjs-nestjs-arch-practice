@@ -15,7 +15,7 @@ export class CreateTaskUseCase {
 
   /**
    * ドメイン Task を draft（開始≤終了を検証）→ Repository へ保存 → 契約 Task に変換して返す。
-   * @param input: CreateTaskInput（Controller が契約 TaskCreate から変換した Command）
+   * @param input - CreateTaskInput（Controller が契約 TaskCreate から変換した Command）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(input: CreateTaskInput): Promise<TaskContract> {

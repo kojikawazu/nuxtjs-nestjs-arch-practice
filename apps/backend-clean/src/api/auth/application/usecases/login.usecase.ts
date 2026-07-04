@@ -26,7 +26,7 @@ export class LoginUseCase {
 
   /**
    * メール照合 → パスワード検証 → トークン発行（不一致・不在はどちらも 401＝列挙防止）。
-   * @param input: LoginInput（Controller が契約 LoginRequest から変換した Command）
+   * @param input - LoginInput（Controller が契約 LoginRequest から変換した Command）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(input: LoginInput): Promise<AuthTokens> {
