@@ -15,6 +15,8 @@ const STATUS_BY_DOMAIN_KIND: Readonly<Record<DomainErrorKind, HttpStatus>> = {
   not_found: HttpStatus.NOT_FOUND,
   forbidden: HttpStatus.FORBIDDEN,
   invalid: HttpStatus.BAD_REQUEST,
+  conflict: HttpStatus.CONFLICT,
+  unauthorized: HttpStatus.UNAUTHORIZED,
 };
 
 /**

@@ -30,12 +30,13 @@
 | 14 | アーキ比較: clean の auth/users もクリーン化 | ✅ | clean の auth/users を tasks と同じ domain/application/infrastructure/presentation に再構成。外部 I/O を全 Port 化（UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository）し、太い AuthService を register/login/refresh/logout の 4 ユースケース＋ register validator へ分解。`DomainError` に conflict(409)/unauthorized(401) を追加し auth も DomainError 化。HTTP 契約・e2e は不変。layered / onion の auth/users は従来レイヤードのまま |
 | 15 | 検証比較: clean/spa に zod 導入 | ✅ | `backend-clean` の入力検証を class-validator → **zod**（`presentation/dto/` スキーマ + ルート単位 `ZodValidationPipe`）に置換。グローバル `ValidationPipe` 廃止・`.strict()` で未知キー拒否・`satisfies z.ZodType<契約>` で契約ドリフト型検出。`frontend-spa` はフォーム検証（`utils/taskFormSchema.ts`）と backend レスポンスのランタイム検証（`utils/taskSchema.ts`）に zod 採用。layered/onion・frontend-ssr は従来手法のまま（検証手法の比較例）。HTTP 契約・e2e/E2E は不変 |
 | 16 | 検証統一: 全アプリ zod 化 | ✅ | clean/spa で導入した zod を横展開。`backend-onion` / `backend-layered` の入力検証を class-validator → **zod**（ルート単位 `ZodValidationPipe` + `presentation/dto/` スキーマ・`.strict()`・`satisfies z.ZodType<契約型>`）に置換し、グローバル `ValidationPipe`・class-validator/class-transformer/@nestjs/mapped-types を廃止。`frontend-ssr` にフォーム検証（`taskFormSchema`）＋レスポンスのランタイム検証（`taskSchema` を `useTasks` で `parse`）を導入（裸キャストに実行時検証を追加）。これで **5 アプリすべてが zod に統一**（検証手法の比較軸は解消し、backend はアーキ差・frontend はレンダリング差のみに純化）。HTTP 契約・e2e/E2E は不変 |
+| 17 | アーキ比較: onion の auth/users もクリーン化 | ✅ | onion の auth/users を fat `AuthService`/`UsersService` から tasks と同じクリーン構成へ移行。外部 I/O を全 Port 化（UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository）し、太い `AuthService` を register/login/refresh/logout の 4 ユースケース＋ register validator に分解。`DomainErrorKind` に conflict(409)/unauthorized(401) を追加し auth も DomainError 化。契約は onion 流に `domain/repositories/` `domain/services/` が所有（clean は `application/ports/`）。**これで clean/onion とも tasks・auth/users が全クリーン化**（layered のみ baseline）。HTTP 契約・e2e は不変（単体 58→69） |
 
 ## テスト集計
 
 - backend-layered: 単体 52 / e2e 35（入力検証は zod）
 - backend-clean: 単体 76 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod）
-- backend-onion: 単体 58 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・入力検証は zod）
+- backend-onion: 単体 69 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod）
 - frontend-spa: 単体 37 / E2E 3（フォーム/レスポンス検証は zod）
 - frontend-ssr: 単体 37 / E2E 3（フォーム/レスポンス検証は zod）
 
@@ -51,5 +52,5 @@
 - 本番向けマイグレーション運用（synchronize 廃止）
 - タスクの検索・ページネーション
 - frontend の dev サーバ復旧（`nuxt dev` の Vite 7 非互換を解消。現状は `docker compose` か本番ビルド出力で代替）
-- `backend-onion` の auth / users もアーキ移行（clean は移行済み。onion は現状 auth/users が layered と同一構成）
+- `backend-layered` の auth/users アーキ移行（意図的に baseline のまま。比較用に従来レイヤードを残す）
 - CI の Node 20 アクション非推奨対応（`actions/checkout` 等を Node 24 対応版へ）

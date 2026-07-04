@@ -7,11 +7,11 @@ import {
 } from 'typeorm';
 
 /**
- * ユーザー（infrastructure 層）。
+ * ユーザー（infrastructure 層・永続化の詳細）。
  * カラム型は MySQL / SQLite 双方で動くポータブルな型のみを使う。
  */
 @Entity('users')
-export class UserEntity {
+export class UserOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 

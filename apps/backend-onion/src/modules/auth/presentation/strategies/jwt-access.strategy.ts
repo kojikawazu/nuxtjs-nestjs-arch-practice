@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import type { AccessTokenPayload, AuthenticatedUser } from '../auth.types';
+import type { AccessTokenPayload, AuthenticatedUser } from '../../auth.types';
 
 /**
  * アクセストークン検証ストラテジ。
