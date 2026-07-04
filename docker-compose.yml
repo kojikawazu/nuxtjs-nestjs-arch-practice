@@ -36,6 +36,9 @@ services:
       - '${TEST_DB_PORT:-3307}:3306'
     tmpfs:
       - /var/lib/mysql
+    volumes:
+      # 初回起動時に IT/E2E 用の DB（taskdb_it / taskdb_e2e）を作成する
+      - ./docker/mysql-test-init.sql:/docker-entrypoint-initdb.d/10-create-test-dbs.sql:ro
     healthcheck:
       test:
         ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-p${MYSQL_ROOT_PASSWORD:-rootpassword}']

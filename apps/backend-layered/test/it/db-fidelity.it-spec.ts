@@ -9,10 +9,10 @@ import { UserEntity } from '../../src/modules/users/user.entity';
  * in-memory SQLite では踏めない MySQL 固有の挙動（照合順序・一意制約）を使い捨ての MySQL コンテナで確認する。
  * これが「IT を MySQL コンテナで回す意味」の代表例（同じ HTTP シナリオを 2 回書く重複を避け、問いを分ける）。
  *
- * 実行（この 1 コンテナを IT/E2E で共有する想定。ここでは IT が占有・毎回リセット）:
- *   docker compose --profile test up -d mysql-test
+ * 実行（3 版共通・`make test-back-it` が mysql-test を healthy まで待って回す）:
+ *   docker compose --profile test up -d --wait mysql-test
  *   pnpm --filter @app/backend-layered test:it
- * 接続先は既定で compose の mysql-test（127.0.0.1:3307 / taskuser / taskdb_test）。IT_DB_* で上書き可。
+ * 接続先は既定で compose の mysql-test（127.0.0.1:3307 / taskuser / taskdb_it）。IT_DB_* で上書き可。
  */
 const dataSource = new DataSource({
   type: 'mysql',
@@ -20,10 +20,10 @@ const dataSource = new DataSource({
   port: Number(process.env.IT_DB_PORT ?? 3307),
   username: process.env.IT_DB_USERNAME ?? 'taskuser',
   password: process.env.IT_DB_PASSWORD ?? 'taskpassword',
-  database: process.env.IT_DB_DATABASE ?? 'taskdb_test',
+  database: process.env.IT_DB_DATABASE ?? 'taskdb_it',
   entities: [UserEntity],
   synchronize: true,
-  // この IT は DB を占有して毎回作り直す（本格運用では E2E と DB 名を分け、同一コンテナを共有する）
+  // この IT は taskdb_it を占有して毎回作り直す（E2E は taskdb_e2e＝同一 mysql-test コンテナを DB 名で二役）
   dropSchema: true,
 });
 

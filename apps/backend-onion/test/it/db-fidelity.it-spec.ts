@@ -12,7 +12,7 @@ import { UserOrmEntity } from '../../src/modules/users/infrastructure/user.orm-e
  * 実行（3 版共通・`make test-back-it` が mysql-test を healthy まで待って回す）:
  *   docker compose --profile test up -d --wait mysql-test
  *   pnpm --filter @app/backend-onion test:it
- * 接続先は既定で compose の mysql-test（127.0.0.1:3307 / taskuser / taskdb_test）。IT_DB_* で上書き可。
+ * 接続先は既定で compose の mysql-test（127.0.0.1:3307 / taskuser / taskdb_it）。IT_DB_* で上書き可。
  */
 const dataSource = new DataSource({
   type: 'mysql',
@@ -20,10 +20,10 @@ const dataSource = new DataSource({
   port: Number(process.env.IT_DB_PORT ?? 3307),
   username: process.env.IT_DB_USERNAME ?? 'taskuser',
   password: process.env.IT_DB_PASSWORD ?? 'taskpassword',
-  database: process.env.IT_DB_DATABASE ?? 'taskdb_test',
+  database: process.env.IT_DB_DATABASE ?? 'taskdb_it',
   entities: [UserOrmEntity],
   synchronize: true,
-  // この IT は DB を占有して毎回作り直す（本格運用では E2E と DB 名を分け、同一コンテナを共有する）
+  // この IT は taskdb_it を占有して毎回作り直す（E2E は taskdb_e2e＝同一 mysql-test コンテナを DB 名で二役）
   dropSchema: true,
 });
 
