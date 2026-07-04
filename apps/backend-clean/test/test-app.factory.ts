@@ -5,7 +5,7 @@ import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter';
 import { configuration } from '../src/config/configuration';
 import { configureUploadStatic } from '../src/config/static-assets';
@@ -21,7 +21,8 @@ export let testUploadDir = '';
 
 /**
  * e2e 用のアプリ生成。
- * 本番は MySQL だが、テストは外部依存なしで動くよう better-sqlite3 のインメモリ DB を使う。
+ * DB は既定で外部依存なしの better-sqlite3 インメモリを使い、`E2E_DB_TYPE=mysql` 指定時のみ
+ * 使い捨ての MySQL コンテナ（mysql-test の taskdb_e2e）に繋ぐ（本番忠実な E2E 用）。
  * 画像保存先も外部依存を避けるため OS の一時ディレクトリに隔離する。
  * （HTTP 境界・認可・バリデーション・エラーレスポンス・静的配信の検証が目的）
  */
@@ -34,16 +35,33 @@ export async function createTestApp(): Promise<INestApplication> {
   testUploadDir = mkdtempSync(join(tmpdir(), 'task-e2e-uploads-'));
   process.env.UPLOAD_DIR = testUploadDir;
 
+  // 既定は外部依存なしの in-memory SQLite。E2E_DB_TYPE=mysql のときだけ使い捨て MySQL コンテナ（taskdb_e2e）に繋ぐ。
+  const entities = [UserOrmEntity, RefreshTokenOrmEntity, TaskOrmEntity];
+  const dbOptions: TypeOrmModuleOptions =
+    process.env.E2E_DB_TYPE === 'mysql'
+      ? {
+          type: 'mysql',
+          host: process.env.E2E_DB_HOST ?? '127.0.0.1',
+          port: Number(process.env.E2E_DB_PORT ?? 3307),
+          username: process.env.E2E_DB_USERNAME ?? 'taskuser',
+          password: process.env.E2E_DB_PASSWORD ?? 'taskpassword',
+          database: process.env.E2E_DB_DATABASE ?? 'taskdb_e2e',
+          dropSchema: true,
+          synchronize: true,
+          entities,
+        }
+      : {
+          type: 'better-sqlite3',
+          database: ':memory:',
+          dropSchema: true,
+          synchronize: true,
+          entities,
+        };
+
   const moduleRef = await Test.createTestingModule({
     imports: [
       ConfigModule.forRoot({ isGlobal: true, load: [configuration], ignoreEnvFile: true }),
-      TypeOrmModule.forRoot({
-        type: 'better-sqlite3',
-        database: ':memory:',
-        dropSchema: true,
-        synchronize: true,
-        entities: [UserOrmEntity, RefreshTokenOrmEntity, TaskOrmEntity],
-      }),
+      TypeOrmModule.forRoot(dbOptions),
       UsersModule,
       AuthModule,
       TasksModule,
