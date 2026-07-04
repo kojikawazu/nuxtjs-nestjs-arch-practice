@@ -5,6 +5,7 @@
 ## 目次
 
 - [テスト戦略（テスト容易性を最優先に設計）](#テスト戦略テスト容易性を最優先に設計)
+- [テスト層とコンテナ方針（UT / IT / E2E）](#テスト層とコンテナ方針ut--it--e2e)
 - [テストケース方針](#テストケース方針)
 - [カバレッジの要点（実装済み）](#カバレッジの要点実装済み)
 - [テスト実行コマンド](#テスト実行コマンド)
@@ -24,6 +25,29 @@
 | FE Composable `useAuth` | Vitest + **registerEndpoint** | Nitro BFF (`/api/auth/*`) | トークンがメモリに入る/消えるロジック |
 | FE Component | Vitest + Vue Test Utils | 子/HTTP | バリデーション・confirm/emit |
 | 全体 E2E | **Playwright(chromium)** | なし（実スタック） | ユーザー視点の通しシナリオ |
+
+## テスト層とコンテナ方針（UT / IT / E2E）
+
+各層で「どこまでモックし、DB コンテナ（実 MySQL）をどこで使うか」の方針。判断軸は速度と本番忠実度のトレードオフ＝**忠実度が要る層だけコンテナ、速度が要る層はモック / SQLite**。本リポジトリは学習用のため、実装は速度優先の現状を保ちつつ、忠実度側を「目標状態」として定義する。
+
+| 層 | BE | FE | DB / コンテナ |
+|---|---|---|---|
+| **UT（単体）** | usecase/query/service を Repository/Port モック（純粋計算 bcrypt/JWT/zod は実物） | component/composable を MSW / `registerEndpoint` でモック | なし・**コンテナ不要** |
+| **IT（統合）** | **DB 忠実性**を実 MySQL で検証（永続化・制約・型/照合順序・マイグレーション） | component + composable の統合。**モックのまま**（実 DB は得るものが無い） | BE=**MySQL コンテナ** / FE=なし |
+| **E2E / シナリオ** | シナリオ通しを実 MySQL で（HTTP フロー） | Playwright が実 BE（+MySQL）を起動 | **MySQL コンテナ** |
+
+**原則**:
+
+- **UT はモック・コンテナ不要**（速度が命）。FE の IT も component 統合なので**モックで十分**（実 DB を噛ませても遅くなるだけ）。
+- **BE の IT と E2E は問いを分けて 1 つの MySQL コンテナを共有**する（DB 名を分けて二役）: IT=「DB が正しいか（永続化・制約・マイグレーション）」／ E2E=「シナリオが通るか（register→CRUD→画像）」。両方を同一の `supertest+MySQL` にすると中身が重複するため、狙いで分離する。
+- 学習用のため**単速**（毎回 MySQL コンテナ 1 つ）でよい。速度を重視するなら「毎 push = SQLite smoke ／ pre-merge = MySQL の IT/E2E」の 2 速も選べる。
+
+**現状（実装済み）と目標の差分**:
+
+- **現状**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する。
+- **目標（未実装）**: 上表の IT/E2E の MySQL コンテナ化。既存の `docker-compose.yml` の `mysql-test`（`profiles: [test]` で隔離済み）を流用し、`DB_TYPE=mysql` を向けて起動＋health 待ちを CI に足すだけで結線できる（Testcontainers の新規導入は不要）。
+- **副産物**: 実 MySQL の IT なら `synchronize` を捨てた**本番マイグレーションの検証**が可能になる（SQLite では踏めない領域。[docs/11](./11-tasks.md) の「本番向けマイグレーション運用」に接続）。
+- **学習的な意味**: 「SQLite（速い）で回すテスト」と「MySQL コンテナ（本番忠実）で回すテスト」の対比自体が、本リポジトリの比較テーマ（同一挙動を別条件で検証）に沿った教材になる。
 
 ## テストケース方針
 
