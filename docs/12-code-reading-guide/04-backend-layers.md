@@ -9,13 +9,13 @@ tasks は **レイヤード + UseCase** で実装されている。リクエス�
 apps/backend-layered/src/modules/tasks/
 ├ presentation/
 │  ├ tasks.controller.ts            # HTTP 入口・DTO 受け・@CurrentUser・UseCase に委譲するだけ
-│  └ dto/*.dto.ts                   # class-validator で入力検証（契約型を implements）
+│  └ dto/*.dto.ts                   # zod スキーマで入力検証（.strict() + satisfies z.ZodType<契約型>）
 ├ application/
 │  ├ usecases/*.usecase.ts          # 1 ルート = 1 ユースケース。Repository を直接使い処理を完結
 │  └ task.util.ts                   # findOwnedTask / assertDateOrder / toContractTask / 画像 I/O の共有
 └ infrastructure/
    └ task.entity.ts                 # TypeORM Entity
-apps/backend-layered/src/main.ts                                  # ValidationPipe / 例外フィルタ / 静的配信の起動設定
+apps/backend-layered/src/main.ts                                  # 例外フィルタ / 静的配信の起動設定（入力検証はルート単位 ZodValidationPipe）
 apps/backend-layered/src/common/filters/http-exception.filter.ts  # 例外を契約 ApiError 形に統一
 apps/backend-layered/src/config/static-assets.ts                  # /uploads 静的配信（画像）
 ```

@@ -22,8 +22,8 @@ globs: apps/backend-*/**
   - 所有チェック等のドメインロジックは**ドメインサービス** `domain/services/task-access.service.ts`（`TaskAccessService`）に置き、application のユースケースが再利用する。
   - 依存は常に内向き（presentation → application → domain）。infrastructure が domain の契約を実装する。
   - DomainError・例外フィルタ・auth/users の扱いは clean と同じ。
-- **DTO / 入力検証**: 既定は `class-validator` の DTO で検証し、契約型（`@app/api-client`）を `implements` して契約とのズレを型で検出する（`backend-layered` / `backend-onion`）。
-  - **`backend-clean` のみ zod を採用**（検証手法の比較例）。`presentation/dto/` に zod スキーマを置き、ルート単位の `ZodValidationPipe`（`common/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` で未知キーを弾き、`satisfies z.ZodType<契約型>` で契約とのズレを型検出する。検証失敗は `BadRequestException`（400）で、`AllExceptionsFilter` が `ApiError` へ翻訳する（e2e 契約は 3 版で不変）。
+- **DTO / 入力検証**: **全 backend 版（layered / clean / onion）が zod を採用**する。`presentation/dto/` に zod スキーマを置き、ルート単位の `ZodValidationPipe`（`common/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` で未知キーを弾き（旧 `forbidNonWhitelisted` 相当）、`satisfies z.ZodType<契約型>` で契約とのズレを型検出する（旧 `implements 契約型` 相当）。検証失敗は `BadRequestException`（400）で、`AllExceptionsFilter` が `ApiError` へ翻訳する（e2e 契約は 3 版で不変）。
+  - 当初は `backend-clean` のみ zod（他は class-validator）だったが、検証手法を layered / onion へ横展開し zod に統一した（class-validator / class-transformer / @nestjs/mapped-types は 3 版とも除去）。ISO 日付・http/https URL の判定は `common/validation/zod-helpers.ts`（`isIso8601` / `isHttpUrl`）を共有する。
 - **型の共有**: レスポンス型・ドメイン型は `@app/api-client` を `import type` で参照する（実行時依存にしない）。
 - **DB**: カラム型は MySQL / SQLite 双方で動くポータブルな型のみ（enum カラム禁止、`varchar` + 型/バリデーションで担保）。`DB_TYPE` で接続先を切替。
 - **秘密値**: パスワードは bcrypt（72バイト以内）、リフレッシュ等の長い値は SHA-256 + `timingSafeEqual`。

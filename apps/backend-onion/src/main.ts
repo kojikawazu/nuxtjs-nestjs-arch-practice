@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -12,13 +12,8 @@ import { configureUploadStatic } from './config/static-assets';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  // 入力検証はルート単位の ZodValidationPipe（presentation/dto の zod スキーマ）で行うため、
+  // グローバル ValidationPipe は使わない
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({ origin: true, credentials: true });
 

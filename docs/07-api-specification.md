@@ -43,7 +43,7 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 
 - 成功時: `200 DryRunResult { valid: true }`。
 - 失敗時: 通常と同じ `ApiError`（400 バリデーション / 409 メール重複 / 403 非所有 / 404 不存在 / 401 未認証）。
-- 実行する検証: DTO 検証（`ValidationPipe`）に加え、`register/validate` はメール重複、`tasks/{id}/validate` は所有権（404/403）。`tasks/validate`（作成）は DTO 検証のみ。
+- 実行する検証: 入力スキーマ検証（zod `ZodValidationPipe`）に加え、`register/validate` はメール重複、`tasks/{id}/validate` は所有権（404/403）。`tasks/validate`（作成）はスキーマ検証のみ。
 - ユーザー作成・トークン発行・タスク保存は一切行わない（後方互換: 既存エンドポイントは変更なし）。
 
 ### 画像アップロード（タスク添付）
@@ -56,8 +56,8 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 ## リクエスト / レスポンス形式
 
 - 型定義は契約由来（`@app/api-client` の `Task` / `AuthTokens` / `TaskCreate` 等）。`imageUrl` は `Task` のみが持つ（`TaskCreate`/`TaskUpdate` には無い＝クライアントから直接書き換え不可）。
-- リクエストの入力検証は backend 実装ごとに手法が異なる（外形は同一）: `backend-layered` / `backend-onion` は `class-validator` の DTO、`backend-clean` は **zod スキーマ + `ZodValidationPipe`**。いずれも違反は 400 `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean)）。
-- `url`（任意・関連 URL）は `Task` / `TaskCreate` / `TaskUpdate` が持つ。`http`/`https` のみ許可し（`@IsUrl`）、`javascript:`/`data:` 等の危険スキームや 2048 文字超は **400**。確認画面・詳細では安全なリンク（`target="_blank" rel="noopener noreferrer"`）として表示する。
+- リクエストの入力検証は全 backend 版で **zod スキーマ + ルート単位 `ZodValidationPipe`** に統一（`presentation/dto/` のスキーマ・`.strict()` で未知キー拒否・グローバル `ValidationPipe` は不使用）。違反は 400 `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean)）。
+- `url`（任意・関連 URL）は `Task` / `TaskCreate` / `TaskUpdate` が持つ。`http`/`https` のみ許可し（zod `refine(isHttpUrl)`）、`javascript:`/`data:` 等の危険スキームや 2048 文字超は **400**。確認画面・詳細では安全なリンク（`target="_blank" rel="noopener noreferrer"`）として表示する。
 - フロントの BFF（`/api/auth/*`）は上記 backend を呼び出し、リフレッシュトークンを Cookie 化する。
 
 ## 認証

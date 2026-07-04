@@ -1,18 +1,16 @@
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { z } from 'zod';
 import type { RegisterRequest } from '@app/api-client';
 
-/** 契約 (RegisterRequest) を実装。契約が変われば型エラーで気づける。 */
-export class RegisterDto implements RegisterRequest {
-  @IsEmail()
-  email!: string;
+/**
+ * 登録の入力スキーマ（zod）。`satisfies z.ZodType<RegisterRequest>` で契約とのズレを型検出する。
+ * パスワードは bcrypt の 72 バイト制約に整合させ 8〜72 文字に制限する。
+ */
+export const registerSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8).max(72),
+    displayName: z.string().min(1).max(80),
+  })
+  .strict() satisfies z.ZodType<RegisterRequest>;
 
-  @IsString()
-  @MinLength(8)
-  @MaxLength(72)
-  password!: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(80)
-  displayName!: string;
-}
+export type RegisterDto = z.infer<typeof registerSchema>;

@@ -63,7 +63,7 @@ sequenceDiagram
 
 ## 脆弱性対策
 
-- 入力検証: `class-validator` + `ValidationPipe`（`whitelist` / `forbidNonWhitelisted`）。
+- 入力検証: **zod** スキーマ + ルート単位 `ZodValidationPipe`（`.strict()` で未知キー拒否＝旧 `forbidNonWhitelisted` 相当）。全 backend 版で統一。
 - 例外は `AllExceptionsFilter` で契約 `ApiError` 形へ統一（内部情報を漏らさない）。
 - ログイン失敗はユーザー有無を区別しない（列挙防止）。
 
@@ -79,7 +79,7 @@ sequenceDiagram
 
 タスクの `url` を確認画面・詳細で「安全なリンクカード」として表示する。外部コンテンツは一切読み込まない（iframe / 画像 / サーバ fetch なし）ため、SSRF・クリックジャッキング・任意描画のリスクは構造的に発生しない。多層防御で URL を扱う:
 
-- **スキーム allowlist**: `http`/`https` のみ許可。バックエンドは DTO の `@IsUrl({ require_protocol: true, protocols: ['http', 'https'] })` で検証し、`javascript:` / `data:` / `file:` 等は **400** で拒否。長さは 2048 文字まで。
+- **スキーム allowlist**: `http`/`https` のみ許可。バックエンドは zod スキーマの `refine(isHttpUrl)`（`common/validation/zod-helpers.ts`）で検証し、`javascript:` / `data:` / `file:` 等は **400** で拒否。長さは 2048 文字まで。
 - **フロント入力検証**: `TaskForm` が `isSafeHttpUrl()`（`new URL()` + protocol allowlist）で検証し、不正スキームは submit させない。
 - **描画時ガード（最重要）**: Vue は `:href` を `javascript:` に対してサニタイズしない。`UrlPreview` は `isSafeHttpUrl()` を通った値のときだけ `<a>` を描画し、それ以外はリンクを出さず「無効な URL」表示にする（DB を直接改竄された等で不正値が残っても安全）。
 - **リンク属性**: `target="_blank"` には `rel="noopener noreferrer"` を必須付与し、タブナビング（`window.opener` 乗っ取り）と Referer 漏洩を防ぐ。

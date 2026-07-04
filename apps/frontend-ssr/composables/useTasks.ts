@@ -1,4 +1,5 @@
 import type { ApiError, Task, TaskCreate, TaskUpdate } from '@app/api-client';
+import { taskListSchema, taskSchema } from '~/utils/taskSchema';
 
 interface FetchResult<T> {
   data?: T;
@@ -15,6 +16,27 @@ function unwrap<T>(result: FetchResult<T>): T {
     });
   }
   return result.data as T;
+}
+
+/**
+ * backend のレスポンスを契約 `Task` として**ランタイム検証**する（zod）。
+ * 型はコンパイル時の保証にすぎないため、想定外の形（欠落・型崩れ）を境界で検出し、
+ * 不正なら 500 相当のエラーを投げて壊れたデータを画面に流さない。
+ */
+function parseTask(data: unknown): Task {
+  const result = taskSchema.safeParse(data);
+  if (!result.success) {
+    throw createError({ statusCode: 500, statusMessage: 'サーバ応答の形式が不正です' });
+  }
+  return result.data;
+}
+
+function parseTaskList(data: unknown): Task[] {
+  const result = taskListSchema.safeParse(data);
+  if (!result.success) {
+    throw createError({ statusCode: 500, statusMessage: 'サーバ応答の形式が不正です' });
+  }
+  return result.data;
 }
 
 /**
@@ -68,16 +90,16 @@ export function useTasks() {
     return (await res.json()) as Task;
   };
 
-  const list = async (): Promise<Task[]> => unwrap(await client.GET('/tasks'));
+  const list = async (): Promise<Task[]> => parseTaskList(unwrap(await client.GET('/tasks')));
 
   const get = async (id: string): Promise<Task> =>
-    unwrap(await client.GET('/tasks/{id}', { params: { path: { id } } }));
+    parseTask(unwrap(await client.GET('/tasks/{id}', { params: { path: { id } } })));
 
   const create = async (body: TaskCreate): Promise<Task> =>
-    unwrap(await client.POST('/tasks', { body }));
+    parseTask(unwrap(await client.POST('/tasks', { body })));
 
   const update = async (id: string, body: TaskUpdate): Promise<Task> =>
-    unwrap(await client.PATCH('/tasks/{id}', { params: { path: { id } }, body }));
+    parseTask(unwrap(await client.PATCH('/tasks/{id}', { params: { path: { id } }, body })));
 
   /** 作成の事前検証（DryRun・保存しない）。検証 NG は createError として投げる。 */
   const validateCreate = async (body: TaskCreate): Promise<void> => {

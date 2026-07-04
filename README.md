@@ -49,7 +49,7 @@ packages/api-client     生成した型 + openapi-fetch クライアント
 > `backend-layered` / `backend-clean` / `backend-onion` は**同じ API 契約**を異なるアーキで実装した比較用。
 > `frontend-spa` / `frontend-ssr` は**同一機能**を SPA / SSR で実装した比較用。
 > いずれも同じ e2e シナリオが通る（外から見た挙動は同一）。
-> 入力検証の比較例として `backend-clean` と `frontend-spa` は **zod** を採用（他は class-validator / 自前関数）。
+> 入力検証は全アプリで **zod** に統一（3 backend はルート単位 `ZodValidationPipe`、2 frontend はフォーム/レスポンス検証。旧 class-validator / 自前関数から横展開）。
 > ローカル起動ポート: backend layered=3001 / clean=3002 / onion=3003、frontend spa=3000 / ssr=3010。
 
 ## 前提環境

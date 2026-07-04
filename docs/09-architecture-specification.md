@@ -55,7 +55,7 @@ graph TD
 | | `apps/backend-layered` | `apps/backend-clean` | `apps/backend-onion` |
 |---|---|---|---|
 | tasks の依存方向 | UseCase → TypeORM Repository（直接） | UseCase → **Port(interface)** ← TypeORM 実装（依存性逆転） | clean と同じ（依存は内向き） |
-| 入力検証ライブラリ | class-validator（DTO + グローバル `ValidationPipe`） | **zod**（`presentation/dto/` のスキーマ + ルート単位 `ZodValidationPipe`） | class-validator（layered と同じ） |
+| 入力検証ライブラリ | **zod**（`presentation/dto/` のスキーマ + ルート単位 `ZodValidationPipe`。グローバル `ValidationPipe` は不使用） | **zod**（同左） | **zod**（同左） |
 | 契約(interface)の所在 | （なし） | `application/ports/` | **`domain/`（中核が契約を所有）** |
 | 読み取り分離（CQRS） | （なし・list/get も UseCase） | **list/get を `query-services/` + 読み取り専用 `TaskQuery` に分離**（戻りは `read-models/`） | clean と同じだが `queries/`（契約は `domain/`） |
 | ドメインサービス | （なし） | `application/task-access.ts`（関数） | **`domain/services/TaskAccessService`（DI サービス）** |
@@ -82,7 +82,7 @@ presentation → application → infrastructure の素直な依存。太い Serv
 modules/tasks/
 ├ presentation/
 │  ├ tasks.controller.ts   # HTTP 入口・DTO 受け・UseCase へ委譲
-│  └ dto/                  # class-validator の DTO（契約型を implements）
+│  └ dto/                  # zod スキーマ（.strict() + satisfies z.ZodType<契約型>）+ ルート単位 ZodValidationPipe
 ├ application/
 │  ├ usecases/             # 1 ルート = 1 ユースケース（list/create/get/update/delete/validate*/image*）
 │  └ task.util.ts          # 認可(findOwnedTask)・日付検証・契約変換・画像 I/O の共有ヘルパー
@@ -130,7 +130,7 @@ api/tasks/                      # src/api/tasks（機能スライス）
 │  └ local-image-storage.ts     #   ImageStorage のローカル FS 実装
 └ presentation/
    ├ tasks.controller.ts        #   HTTP 入口（DTO→Input 変換・Multer file → ImageFile に詰め替え）
-   ├ dto/                       #   class-validator の DTO（契約型を implements）
+   ├ dto/                       #   zod スキーマ（.strict() + satisfies z.ZodType<契約型>）
    └ guards/
       └ jwt-auth.guard.ts       #   auth 所有の JwtAuthGuard を再エクスポート（tasks 文脈の窓口）
 ```
@@ -142,7 +142,7 @@ api/tasks/                      # src/api/tasks（機能スライス）
 - **読み取りは CQRS で分離**: list/get は `query-services/` の Query Service が読み取り専用 Port `TaskQuery` にのみ依存し、ドメイン `Task` を経由せず ORM 行 → **Read Model（`read-models/`）** を直射影する（[読み取り分離（CQRS-lite）](#読み取り分離cqrs-lite) を参照）。
 - **DryRun は `validators/` に集約**: `*/validate`（保存せず検証）は `CreateTaskValidator` / `UpdateTaskValidator` が担い、UseCase（保存）とは別 provider に分ける。ドメイン不変条件の実体は domain に残し、validators は「保存せず検証する」オーケストレーションのみを持つ。
 - **`inputs` / `read-models` / `validators` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline、onion=当面 queries 構成のまま）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
-- **入力検証は zod（clean のみ）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、ルート単位の `ZodValidationPipe`（`common/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `BadRequestException`（400）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。layered / onion は class-validator のまま（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変、という比較例）。
+- **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、ルート単位の `ZodValidationPipe`（`common/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `BadRequestException`（400）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
 - auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion / layered の auth / users は従来レイヤードのまま。
 
 ### backend-clean — auth / users（クリーンアーキテクチャ）
@@ -225,7 +225,7 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 |---|---|---|
 | レンダリング | `ssr: false`（クライアントのみ） | `ssr: true`（初期 HTML をサーバ生成） |
 | セッション復元 | クライアント（`plugins/auth-init.client.ts`）。初回ロード後に BFF `/api/auth/refresh` でメモリへ復元 | **サーバ**（`plugins/auth-init.ts`）。初期リクエストで httpOnly refresh Cookie を読み、backend `/auth/refresh` で復元 → `useState` に格納（SSR 描画＋ハイドレーション） |
-| 入力/レスポンス検証 | **zod**（フォーム検証 `utils/taskFormSchema.ts` + レスポンスのランタイム検証 `utils/taskSchema.ts`） | 自前関数（`utils/safeUrl.ts` 等。比較例として据え置き） |
+| 入力/レスポンス検証 | **zod**（フォーム検証 `utils/taskFormSchema.ts` + レスポンスのランタイム検証 `utils/taskSchema.ts`） | **zod**（同左。URL 安全判定は `utils/safeUrl.ts` の `isSafeHttpUrl` を共有） |
 | `/tasks` 直アクセス | クライアントで復元後にデータ取得 | **サーバで復元 → サーバで一覧描画**してから配信 |
 | `useApiClient` の base | 常に公開 URL | SSR 時はサーバ用 `apiBaseUrl`、クライアント時は公開 URL |
 | トークンの扱い | access はメモリ、refresh は httpOnly Cookie | 同左（SSR 復元時も refresh は httpOnly のまま。rotate 後の Cookie をサーバが Set-Cookie で返す） |

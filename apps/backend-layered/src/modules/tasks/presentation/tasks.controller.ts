@@ -14,8 +14,9 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { DryRunResult, Task } from '@app/api-client';
+import type { DryRunResult, Task, TaskCreate, TaskUpdate } from '@app/api-client';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../auth/auth.types';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CreateTaskUseCase } from '../application/usecases/create-task.usecase';
@@ -27,8 +28,8 @@ import { SetTaskImageUseCase } from '../application/usecases/set-task-image.usec
 import { UpdateTaskUseCase } from '../application/usecases/update-task.usecase';
 import { ValidateCreateTaskUseCase } from '../application/usecases/validate-create-task.usecase';
 import { ValidateUpdateTaskUseCase } from '../application/usecases/validate-update-task.usecase';
-import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
+import { createTaskSchema } from './dto/create-task.dto';
+import { updateTaskSchema } from './dto/update-task.dto';
 
 /**
  * タスクの HTTP 入口（presentation 層）。
@@ -56,7 +57,10 @@ export class TasksController {
 
   @Post()
   @HttpCode(201)
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTaskDto): Promise<Task> {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(createTaskSchema)) dto: TaskCreate,
+  ): Promise<Task> {
     return this.createTask.execute(user.userId, dto);
   }
 
@@ -64,7 +68,7 @@ export class TasksController {
   @HttpCode(200)
   async createValidate(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateTaskDto,
+    @Body(new ZodValidationPipe(createTaskSchema)) dto: TaskCreate,
   ): Promise<DryRunResult> {
     this.validateCreateTask.execute(user.userId, dto);
     return { valid: true };
@@ -79,7 +83,7 @@ export class TasksController {
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: UpdateTaskDto,
+    @Body(new ZodValidationPipe(updateTaskSchema)) dto: TaskUpdate,
   ): Promise<Task> {
     return this.updateTask.execute(user.userId, id, dto);
   }
@@ -89,7 +93,7 @@ export class TasksController {
   async updateValidate(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: UpdateTaskDto,
+    @Body(new ZodValidationPipe(updateTaskSchema)) dto: TaskUpdate,
   ): Promise<DryRunResult> {
     await this.validateUpdateTask.execute(user.userId, id, dto);
     return { valid: true };

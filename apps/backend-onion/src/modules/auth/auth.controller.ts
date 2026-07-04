@@ -1,11 +1,18 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
-import type { AuthTokens, DryRunResult } from '@app/api-client';
+import type {
+  AuthTokens,
+  DryRunResult,
+  LoginRequest,
+  RefreshRequest,
+  RegisterRequest,
+} from '@app/api-client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthService } from './auth.service';
 import type { AuthenticatedUser } from './auth.types';
-import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
-import { RegisterDto } from './dto/register.dto';
+import { loginSchema } from './dto/login.dto';
+import { refreshSchema } from './dto/refresh.dto';
+import { registerSchema } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -14,26 +21,28 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  register(@Body() dto: RegisterDto): Promise<AuthTokens> {
+  register(@Body(new ZodValidationPipe(registerSchema)) dto: RegisterRequest): Promise<AuthTokens> {
     return this.auth.register(dto);
   }
 
   @Post('register/validate')
   @HttpCode(200)
-  async registerValidate(@Body() dto: RegisterDto): Promise<DryRunResult> {
+  async registerValidate(
+    @Body(new ZodValidationPipe(registerSchema)) dto: RegisterRequest,
+  ): Promise<DryRunResult> {
     await this.auth.validateRegister(dto);
     return { valid: true };
   }
 
   @Post('login')
   @HttpCode(200)
-  login(@Body() dto: LoginDto): Promise<AuthTokens> {
+  login(@Body(new ZodValidationPipe(loginSchema)) dto: LoginRequest): Promise<AuthTokens> {
     return this.auth.login(dto);
   }
 
   @Post('refresh')
   @HttpCode(200)
-  refresh(@Body() dto: RefreshDto): Promise<AuthTokens> {
+  refresh(@Body(new ZodValidationPipe(refreshSchema)) dto: RefreshRequest): Promise<AuthTokens> {
     return this.auth.refresh(dto.refreshToken);
   }
 

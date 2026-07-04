@@ -98,36 +98,26 @@ function validate(): boolean {
   errors.startDate = undefined;
   errors.endDate = undefined;
   errors.url = undefined;
-  const trimmed = title.value.trim();
-  if (trimmed.length === 0) {
-    errors.title = 'タイトルは必須です';
-  } else if (trimmed.length > 120) {
-    errors.title = 'タイトルは120文字以内で入力してください';
-  }
-  if (description.value.length > 2000) {
-    errors.description = '説明は2000文字以内で入力してください';
-  }
-  if (startDate.value === '') {
-    errors.startDate = '開始日は必須です';
-  } else if (endDate.value !== '' && endDate.value < startDate.value) {
-    errors.endDate = '終了日は開始日以降にしてください';
-  }
-  const trimmedUrl = url.value.trim();
-  if (trimmedUrl !== '') {
-    if (trimmedUrl.length > 2048) {
-      errors.url = 'URL は2048文字以内で入力してください';
-    } else if (!isSafeHttpUrl(trimmedUrl)) {
-      errors.url = 'http:// または https:// で始まる URL を入力してください';
+
+  // 入力規則は zod スキーマ（taskFormSchema）に集約し、ここでは結果をフィールド別エラーに割り付ける。
+  const result = taskFormSchema.safeParse({
+    title: title.value,
+    description: description.value,
+    startDate: startDate.value,
+    endDate: endDate.value,
+    url: url.value,
+  });
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      const field = issue.path[0] as keyof typeof errors;
+      // フィールドごとに最初の 1 件だけ表示する（従来の単一メッセージ挙動を維持）。
+      if (field && errors[field] === undefined) {
+        errors[field] = issue.message;
+      }
     }
   }
-  return (
-    !errors.title &&
-    !errors.description &&
-    !errors.startDate &&
-    !errors.endDate &&
-    !errors.url &&
-    !errors.image
-  );
+  // 画像（File 実体）の検証は onFileChange 側で errors.image に入る。
+  return result.success && !errors.image;
 }
 
 function onSubmit() {
