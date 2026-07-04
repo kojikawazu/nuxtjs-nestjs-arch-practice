@@ -28,24 +28,24 @@
 
 ## テスト層とコンテナ方針（UT / IT / E2E）
 
-各層で「どこまでモックし、DB コンテナ（実 MySQL）をどこで使うか」の方針。判断軸は速度と本番忠実度のトレードオフ＝**忠実度が要る層だけコンテナ、速度が要る層はモック / SQLite**。本リポジトリは学習用のため、実装は速度優先の現状を保ちつつ、忠実度側を「目標状態」として定義する。
+各層で「どこまでモックし、DB コンテナ（使い捨ての MySQL）をどこで使うか」の方針。判断軸は速度と本番忠実度のトレードオフ＝**忠実度が要る層だけコンテナ、速度が要る層はモック / SQLite**。本リポジトリは学習用のため、実装は速度優先の現状を保ちつつ、忠実度側を「目標状態」として定義する。
 
 | 層 | BE | FE | DB / コンテナ |
 |---|---|---|---|
 | **UT（単体）** | usecase/query/service を Repository/Port モック（純粋計算 bcrypt/JWT/zod は実物） | component/composable を MSW / `registerEndpoint` でモック | なし・**コンテナ不要** |
-| **IT（統合）** | **DB 忠実性**を実 MySQL で検証（永続化・制約・型/照合順序・マイグレーション） | component + composable の統合。**モックのまま**（実 DB は得るものが無い） | BE=**MySQL コンテナ** / FE=なし |
-| **E2E / シナリオ** | シナリオ通しを実 MySQL で（HTTP フロー） | Playwright が実 BE（+MySQL）を起動 | **MySQL コンテナ** |
+| **IT（統合）** | **DB 忠実性**を MySQL コンテナで検証（永続化・制約・型/照合順序・マイグレーション） | component + composable の統合。**モックのまま**（DB コンテナを噛ませても得るものが無い） | BE=**MySQL コンテナ** / FE=なし |
+| **E2E / シナリオ** | シナリオ通しを MySQL コンテナで（HTTP フロー） | Playwright が実 BE（+MySQL コンテナ）を起動 | **MySQL コンテナ** |
 
 **原則**:
 
-- **UT はモック・コンテナ不要**（速度が命）。FE の IT も component 統合なので**モックで十分**（実 DB を噛ませても遅くなるだけ）。
+- **UT はモック・コンテナ不要**（速度が命）。FE の IT も component 統合なので**モックで十分**（DB コンテナを噛ませても遅くなるだけ）。
 - **BE の IT と E2E は問いを分けて 1 つの MySQL コンテナを共有**する（DB 名を分けて二役）: IT=「DB が正しいか（永続化・制約・マイグレーション）」／ E2E=「シナリオが通るか（register→CRUD→画像）」。両方を同一の `supertest+MySQL` にすると中身が重複するため、狙いで分離する。
 - 学習用のため**単速**（毎回 MySQL コンテナ 1 つ）でよい。速度を重視するなら「毎 push = SQLite smoke ／ pre-merge = MySQL の IT/E2E」の 2 速も選べる。
 
 **現状（実装済み）と目標の差分**:
 
 - **現状（既定）**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する（`pnpm test` / CI は SQLite のまま）。
-- **PoC 実装済み（BE IT）**: `backend-layered` に **DB 忠実性 IT** を 1 本追加（`apps/backend-layered/test/it/db-fidelity.it-spec.ts`）。実 MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する。実行は `make test-back-it`（= `mysql-test` コンテナ起動 + `pnpm --filter @app/backend-layered test:it`）。既定テストからは分離（`.it-spec.ts` は unit/e2e の testRegex に載らない）ため CI は Docker 不要のまま。
+- **PoC 実装済み（BE IT）**: `backend-layered` に **DB 忠実性 IT** を 1 本追加（`apps/backend-layered/test/it/db-fidelity.it-spec.ts`）。MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する。実行は `make test-back-it`（= `mysql-test` コンテナ起動 + `pnpm --filter @app/backend-layered test:it`）。既定テストからは分離（`.it-spec.ts` は unit/e2e の testRegex に載らない）ため CI は Docker 不要のまま。
 - **目標（残り）**: E2E の MySQL コンテナ化と、IT の他 backend 展開。既存 `mysql-test`（`profiles: [test]`）を流用し `DB_TYPE=mysql` を向けるだけで結線でき（Testcontainers 不要）、`synchronize` を捨てた**本番マイグレーション検証**にも接続する（[docs/11](./11-tasks.md) の「本番向けマイグレーション運用」）。
 - **学習的な意味**: 「SQLite（速い）で回すテスト」と「MySQL コンテナ（本番忠実）で回すテスト」の対比自体が、本リポジトリの比較テーマ（同一挙動を別条件で検証）に沿った教材になる。
 
@@ -78,7 +78,7 @@
 ```bash
 pnpm --filter @app/backend-layered test       # BE 単体(Jest)
 pnpm --filter @app/backend-layered test:e2e   # BE e2e(supertest / SQLite)
-pnpm --filter @app/backend-layered test:it    # BE IT(DB忠実性 / 実MySQL・要 mysql-test コンテナ) ※make test-back-it 推奨
+pnpm --filter @app/backend-layered test:it    # BE IT(DB忠実性 / MySQL コンテナ・要 mysql-test 起動) ※make test-back-it 推奨
 pnpm --filter @app/backend-clean test          # BE(clean) 単体(Jest)
 pnpm --filter @app/backend-clean test:e2e      # BE(clean) e2e(supertest) ※layered と同一シナリオ
 pnpm --filter @app/backend-onion test          # BE(onion) 単体(Jest)
