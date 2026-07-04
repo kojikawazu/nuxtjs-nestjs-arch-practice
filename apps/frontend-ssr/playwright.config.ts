@@ -1,9 +1,28 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * E2E（chromium）。webServer で backend(SQLite) と frontend(Nuxt dev) を自動起動する。
- * backend は Docker 不要で動くよう DB_TYPE=better-sqlite3 / :memory: を使う。
+ * E2E（chromium）。webServer で backend と frontend(本番ビルド出力) を自動起動する。
+ * - 既定: backend は Docker 不要の DB_TYPE=better-sqlite3 / :memory:（速い E2E スモーク）。
+ * - `SCENARIO_DB=mysql`: 本番相当のシナリオとして backend を mysql-test の taskdb_e2e に繋ぐ
+ *   （事前に `make test-scenario-mysql` が mysql-test を起動する）。
  */
+const backendDbEnv: Record<string, string> =
+  process.env.SCENARIO_DB === 'mysql'
+    ? {
+        DB_TYPE: 'mysql',
+        DB_HOST: '127.0.0.1',
+        DB_PORT: '3307',
+        DB_USERNAME: 'taskuser',
+        DB_PASSWORD: 'taskpassword',
+        DB_DATABASE: 'taskdb_e2e',
+        DB_SYNCHRONIZE: 'true',
+      }
+    : {
+        DB_TYPE: 'better-sqlite3',
+        DB_DATABASE: ':memory:',
+        DB_SYNCHRONIZE: 'true',
+      };
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -23,9 +42,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: {
-        DB_TYPE: 'better-sqlite3',
-        DB_DATABASE: ':memory:',
-        DB_SYNCHRONIZE: 'true',
+        ...backendDbEnv,
         BACKEND_PORT: '3001',
         JWT_ACCESS_SECRET: 'e2e-access-secret',
         JWT_REFRESH_SECRET: 'e2e-refresh-secret',

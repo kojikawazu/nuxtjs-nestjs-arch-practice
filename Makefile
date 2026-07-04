@@ -1,7 +1,7 @@
 # タスク管理アプリ用 Makefile。
 # 既存の pnpm scripts / docker compose の薄いショートカット（ロジックは二重化しない）。
 .DEFAULT_GOAL := help
-.PHONY: help install gen lint format typecheck test test-back test-back-e2e test-back-it test-back-e2e-mysql test-front test-e2e dev-back dev-front db-up up down reset logs ps
+.PHONY: help install gen lint format typecheck test test-back test-back-e2e test-back-it test-scenario-mysql test-front test-e2e dev-back dev-front db-up up down reset logs ps
 
 help: ## このヘルプを表示
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -39,17 +39,15 @@ test-back-it: ## backend IT (DB 忠実性 / MySQL コンテナが healthy にな
 	pnpm --filter @app/backend-clean test:it
 	pnpm --filter @app/backend-onion test:it
 
-test-back-e2e-mysql: ## backend e2e を MySQL コンテナで実行 (IT と同一 mysql-test・DB は taskdb_e2e)
-	docker compose --profile test up -d --wait mysql-test
-	pnpm --filter @app/backend-layered test:e2e:mysql
-	pnpm --filter @app/backend-clean test:e2e:mysql
-	pnpm --filter @app/backend-onion test:e2e:mysql
-
 test-front: ## frontend 単体テスト (Vitest)
 	pnpm --filter @app/frontend-spa test
 
-test-e2e: ## frontend 全体 E2E (Playwright)
+test-e2e: ## frontend 全体 E2E (Playwright / SQLite・速いスモーク)
 	pnpm --filter @app/frontend-spa test:e2e
+
+test-scenario-mysql: ## FE+BE 通しシナリオを MySQL コンテナで (本番相当・taskdb_e2e)
+	docker compose --profile test up -d --wait mysql-test
+	SCENARIO_DB=mysql pnpm --filter @app/frontend-spa test:e2e
 
 ## ───────── 開発サーバ ─────────
 dev-back: ## backend dev サーバ起動

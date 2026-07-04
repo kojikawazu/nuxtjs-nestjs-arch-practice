@@ -73,20 +73,17 @@ jobs:
       # e2e は外部依存なしで動くよう in-memory SQLite を使う
       - run: pnpm --filter @app/${{ matrix.pkg }} test:e2e
 
-  backend-mysql:
-    name: Backend IT/E2E (MySQL コンテナ)
+  backend-it:
+    name: Backend IT (MySQL コンテナ)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      # 使い捨ての mysql-test コンテナ 1 つを DB 名で二役に使う（IT=taskdb_it / E2E=taskdb_e2e）。
-      # Makefile 経由でコンテナ起動(--wait で healthy 待ち)込みに 3 版を回す＝ローカルと同一手順。
+      # 使い捨ての mysql-test コンテナで DB 忠実性 IT（照合順序・unique）を 3 版とも回す（taskdb_it）。
       - name: DB 忠実性 IT（taskdb_it・3 版）
         run: make test-back-it
-      - name: e2e を MySQL コンテナで（taskdb_e2e・3 版）
-        run: make test-back-e2e-mysql
 
   frontend:
     name: Frontend (unit)
@@ -120,3 +117,17 @@ jobs:
       - run: pnpm --filter @app/${{ matrix.pkg }} exec playwright install --with-deps chromium
       # nuxt build → backend(SQLite)/frontend(本番出力) を自動起動して Playwright 実行
       - run: pnpm --filter @app/${{ matrix.pkg }} test:e2e
+
+  scenario-mysql:
+    name: Scenario (FE+BE / MySQL コンテナ)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @app/frontend-spa exec playwright install --with-deps chromium
+      # 本番相当の通しシナリオ: mysql-test を起動し、backend を taskdb_e2e に繋いで spa の E2E を回す。
+      # 既定の E2E ジョブ（SQLite・速い）とは別の「出荷ゲート」層。
+      - name: 通しシナリオを MySQL コンテナで（taskdb_e2e）
+        run: make test-scenario-mysql

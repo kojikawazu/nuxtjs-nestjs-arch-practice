@@ -13,7 +13,6 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
-    "test:e2e:mysql": "E2E_DB_TYPE=mysql jest --config ./test/jest-e2e.json --runInBand",
     "test:it": "jest --config ./test/jest-it.json --runInBand"
   },
   "dependencies": {
