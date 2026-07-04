@@ -18,6 +18,13 @@ export class SetTaskImageUseCase {
     private readonly config: ConfigService,
   ) {}
 
+  /**
+   * findOwnedTask で所有 Entity をロード → サーバ生成名で保存 → imageUrl 更新 → 保存確定後に旧ファイルを掃除。
+   * @param userId: string（@CurrentUser 由来の所有者 ID）
+   * @param id: string（対象タスクの ID）
+   * @param file: Express.Multer.File（multipart の file フィールド）
+   * @returns Promise<Task>（imageUrl 入りの契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async execute(userId: string, id: string, file: Express.Multer.File): Promise<Task> {
     const entity = await findOwnedTask(this.tasks, userId, id);
     const dir = this.config.getOrThrow<string>('upload.dir');

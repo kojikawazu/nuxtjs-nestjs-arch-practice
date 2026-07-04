@@ -8,6 +8,12 @@ import { assertDateOrder } from '../task.util';
  */
 @Injectable()
 export class ValidateCreateTaskUseCase {
+  /**
+   * 開始≤終了の業務ルールのみ検証する（Repository には触れない＝保存しない）。
+   * @param _userId: string（@CurrentUser 由来の所有者 ID・検証では未使用）
+   * @param dto: CreateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskCreate）
+   * @returns void（検証 NG は BadRequestException=400 を throw）
+   */
   execute(_userId: string, dto: CreateTaskDto): void {
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : null;

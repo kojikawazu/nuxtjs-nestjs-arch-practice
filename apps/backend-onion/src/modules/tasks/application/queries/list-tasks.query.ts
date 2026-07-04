@@ -13,6 +13,11 @@ export class ListTasksQuery {
     private readonly query: TaskQuery,
   ) {}
 
+  /**
+   * userId のタスク一覧を返す（ドメイン Task を経由しない）。
+   * @param userId: string（@CurrentUser 由来の所有者 ID）
+   * @returns Promise<Task[]>（契約 Task[]。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   execute(userId: string): Promise<TaskContract[]> {
     return this.query.listByUserId(userId);
   }

@@ -40,6 +40,11 @@ export class AuthService {
     this.refreshExpiresIn = config.getOrThrow<string>('jwt.refreshExpiresIn');
   }
 
+  /**
+   * 新規登録（メール重複を弾き、パスワードをハッシュ化して作成 → トークン発行）。
+   * @param dto: RegisterDto（ZodValidationPipe 検証済み。= 契約 RegisterRequest）
+   * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async register(dto: RegisterDto): Promise<AuthTokens> {
     const existing = await this.users.findByEmail(dto.email);
     if (existing) {
@@ -55,9 +60,10 @@ export class AuthService {
   }
 
   /**
-   * 新規登録の DryRun（検証のみ）。DTO 検証は ValidationPipe が済ませている前提で、
-   * ここでは業務ルール（メール重複）だけを確認する。ユーザー作成・トークン発行は一切行わない。
-   * 検証 NG はそのまま例外（重複 → 409）として伝播する。
+   * 新規登録の DryRun（検証のみ・保存しない）。入力検証は ZodValidationPipe が済ませている前提で、
+   * ここでは業務ルール（メール重複）だけを確認する。ユーザー作成・トークン発行は行わない。
+   * @param dto: RegisterDto（ZodValidationPipe 検証済み。= 契約 RegisterRequest）
+   * @returns Promise<void>（重複時は ConflictException=409 を throw）
    */
   async validateRegister(dto: RegisterDto): Promise<void> {
     const existing = await this.users.findByEmail(dto.email);
@@ -66,6 +72,11 @@ export class AuthService {
     }
   }
 
+  /**
+   * ログイン（メール照合 → パスワード検証 → トークン発行）。不一致・不在はどちらも 401（列挙防止）。
+   * @param dto: LoginDto（ZodValidationPipe 検証済み。= 契約 LoginRequest）
+   * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async login(dto: LoginDto): Promise<AuthTokens> {
     const user = await this.users.findByEmail(dto.email);
     if (!user) {
@@ -79,6 +90,11 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /**
+   * リフレッシュ（ローテーション）。署名検証 → 保存ハッシュ照合 → ユーザー確認 → 旧トークン失効 → 新規発行。失敗は 401。
+   * @param refreshToken: string（クライアント提示のリフレッシュトークン）
+   * @returns Promise<AuthTokens>（新しい access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
+   */
   async refresh(refreshToken: string): Promise<AuthTokens> {
     let payload: RefreshTokenPayload;
     try {
@@ -105,6 +121,11 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /**
+   * 対象ユーザーのリフレッシュトークンをすべて失効させる。
+   * @param userId: string（@CurrentUser 由来のユーザー ID）
+   * @returns Promise<void>
+   */
   async logout(userId: string): Promise<void> {
     await this.refreshTokens.delete({ userId });
   }

@@ -15,6 +15,11 @@ import type { RegisterInput } from '../inputs/register.input';
 export class RegisterValidator {
   constructor(@Inject(USER_REPOSITORY) private readonly users: UserRepository) {}
 
+  /**
+   * メール重複だけを確認する（重複=409）。ユーザー作成・トークン発行はしない。
+   * @param input: RegisterInput（Controller が契約 RegisterRequest から変換した Command）
+   * @returns Promise<void>（重複時は EmailAlreadyRegisteredError=409 を throw）
+   */
   async execute(input: RegisterInput): Promise<void> {
     const existing = await this.users.findByEmail(input.email);
     if (existing) {
