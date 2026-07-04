@@ -44,12 +44,17 @@ export default tseslint.config(
         'error',
         { require: { MethodDefinition: true }, checkConstructors: false },
       ],
+      // 全引数に @param を要求する（引数の説明漏れを防ぐ）
       'jsdoc/require-param': 'error',
+      // @param は名前だけでなく説明文を必須にする
       'jsdoc/require-param-description': 'error',
+      // @param 名を実引数名と突き合わせる（名前ズレ・順序違い・過不足を検出）。※ colon 併記は不可＝dash スタイル必須
       'jsdoc/check-param-names': 'error',
+      // 戻り値がある関数には @returns を要求する
       'jsdoc/require-returns': 'error',
+      // @returns に説明文を必須にする
       'jsdoc/require-returns-description': 'error',
-      // TypeScript: 型は書かない（シグネチャが source of truth）
+      // TypeScript: 型は書かない（シグネチャが source of truth）。型ブレース系ルールは off にする
       'jsdoc/require-param-type': 'off',
       'jsdoc/require-returns-type': 'off',
     },
