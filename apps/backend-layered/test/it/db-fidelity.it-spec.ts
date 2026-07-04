@@ -3,11 +3,11 @@ import { DataSource } from 'typeorm';
 import { UserEntity } from '../../src/modules/users/user.entity';
 
 /**
- * BE IT（統合テスト・**実 MySQL 必須**）: DB 忠実性の検証。
+ * BE IT（統合テスト・**MySQL コンテナ必須**）: DB 忠実性の検証。
  *
  * 狙いは E2E（シナリオが通るか）とは別で「**DB が正しいか**」——
- * in-memory SQLite では踏めない MySQL 固有の挙動（照合順序・一意制約）を実エンジンで確認する。
- * これが「IT を実 MySQL で回す意味」の代表例（同じ HTTP シナリオを 2 回書く重複を避け、問いを分ける）。
+ * in-memory SQLite では踏めない MySQL 固有の挙動（照合順序・一意制約）を使い捨ての MySQL コンテナで確認する。
+ * これが「IT を MySQL コンテナで回す意味」の代表例（同じ HTTP シナリオを 2 回書く重複を避け、問いを分ける）。
  *
  * 実行（この 1 コンテナを IT/E2E で共有する想定。ここでは IT が占有・毎回リセット）:
  *   docker compose --profile test up -d mysql-test
@@ -27,7 +27,7 @@ const dataSource = new DataSource({
   dropSchema: true,
 });
 
-describe('DB 忠実性 IT（実 MySQL）', () => {
+describe('DB 忠実性 IT（MySQL コンテナ）', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
