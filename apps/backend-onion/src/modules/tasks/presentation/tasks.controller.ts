@@ -18,7 +18,7 @@ import type { DryRunResult, Task, TaskCreate, TaskUpdate } from '@app/api-client
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../auth/auth.types';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { GetTaskQuery } from '../application/queries/get-task.query';
 import { ListTasksQuery } from '../application/queries/list-tasks.query';
 import { CreateTaskUseCase } from '../application/usecases/create-task.usecase';

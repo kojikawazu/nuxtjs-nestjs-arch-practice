@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { configuration } from './config/configuration';
-import { UserEntity } from './modules/users/user.entity';
-import { RefreshTokenEntity } from './modules/auth/entities/refresh-token.entity';
+import { UserOrmEntity } from './modules/users/infrastructure/user.orm-entity';
+import { RefreshTokenOrmEntity } from './modules/auth/infrastructure/refresh-token.orm-entity';
 import { TaskOrmEntity } from './modules/tasks/infrastructure/task.orm-entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { TasksModule } from './modules/tasks/tasks.module';
@@ -20,7 +20,7 @@ import { HealthController } from './health.controller';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const entities = [UserEntity, RefreshTokenEntity, TaskOrmEntity];
+        const entities = [UserOrmEntity, RefreshTokenOrmEntity, TaskOrmEntity];
         const synchronize = config.get<boolean>('db.synchronize') ?? false;
         // ローカル/E2E で Docker 不要に動かすための SQLite 切替
         if (config.getOrThrow<string>('db.type') === 'better-sqlite3') {
