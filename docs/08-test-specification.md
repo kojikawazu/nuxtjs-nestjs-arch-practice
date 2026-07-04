@@ -44,9 +44,9 @@
 
 **現状（実装済み）と目標の差分**:
 
-- **現状**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する。
-- **目標（未実装）**: 上表の IT/E2E の MySQL コンテナ化。既存の `docker-compose.yml` の `mysql-test`（`profiles: [test]` で隔離済み）を流用し、`DB_TYPE=mysql` を向けて起動＋health 待ちを CI に足すだけで結線できる（Testcontainers の新規導入は不要）。
-- **副産物**: 実 MySQL の IT なら `synchronize` を捨てた**本番マイグレーションの検証**が可能になる（SQLite では踏めない領域。[docs/11](./11-tasks.md) の「本番向けマイグレーション運用」に接続）。
+- **現状（既定）**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する（`pnpm test` / CI は SQLite のまま）。
+- **PoC 実装済み（BE IT）**: `backend-layered` に **DB 忠実性 IT** を 1 本追加（`apps/backend-layered/test/it/db-fidelity.it-spec.ts`）。実 MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する。実行は `make test-back-it`（= `mysql-test` コンテナ起動 + `pnpm --filter @app/backend-layered test:it`）。既定テストからは分離（`.it-spec.ts` は unit/e2e の testRegex に載らない）ため CI は Docker 不要のまま。
+- **目標（残り）**: E2E の MySQL コンテナ化と、IT の他 backend 展開。既存 `mysql-test`（`profiles: [test]`）を流用し `DB_TYPE=mysql` を向けるだけで結線でき（Testcontainers 不要）、`synchronize` を捨てた**本番マイグレーション検証**にも接続する（[docs/11](./11-tasks.md) の「本番向けマイグレーション運用」）。
 - **学習的な意味**: 「SQLite（速い）で回すテスト」と「MySQL コンテナ（本番忠実）で回すテスト」の対比自体が、本リポジトリの比較テーマ（同一挙動を別条件で検証）に沿った教材になる。
 
 ## テストケース方針
@@ -77,7 +77,8 @@
 
 ```bash
 pnpm --filter @app/backend-layered test       # BE 単体(Jest)
-pnpm --filter @app/backend-layered test:e2e   # BE e2e(supertest)
+pnpm --filter @app/backend-layered test:e2e   # BE e2e(supertest / SQLite)
+pnpm --filter @app/backend-layered test:it    # BE IT(DB忠実性 / 実MySQL・要 mysql-test コンテナ) ※make test-back-it 推奨
 pnpm --filter @app/backend-clean test          # BE(clean) 単体(Jest)
 pnpm --filter @app/backend-clean test:e2e      # BE(clean) e2e(supertest) ※layered と同一シナリオ
 pnpm --filter @app/backend-onion test          # BE(onion) 単体(Jest)
