@@ -33,8 +33,8 @@ test-back: ## backend 単体テスト (Jest)
 test-back-e2e: ## backend e2e テスト (supertest / SQLite)
 	pnpm --filter @app/backend-layered test:e2e
 
-test-back-it: ## backend IT (DB 忠実性 / 実 MySQL・mysql-test コンテナを起動して実行)
-	docker compose --profile test up -d mysql-test
+test-back-it: ## backend IT (DB 忠実性 / MySQL コンテナが healthy になるまで待って実行)
+	docker compose --profile test up -d --wait mysql-test
 	pnpm --filter @app/backend-layered test:it
 
 test-front: ## frontend 単体テスト (Vitest)
