@@ -45,8 +45,8 @@
 **現状（実装済み）と目標の差分**:
 
 - **現状（既定）**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する（`pnpm test` / CI は SQLite のまま）。
-- **PoC 実装済み（BE IT）**: `backend-layered` に **DB 忠実性 IT** を 1 本追加（`apps/backend-layered/test/it/db-fidelity.it-spec.ts`）。MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する。実行は `make test-back-it`（= `mysql-test` コンテナ起動 + `pnpm --filter @app/backend-layered test:it`）。既定テストからは分離（`.it-spec.ts` は unit/e2e の testRegex に載らない）ため CI は Docker 不要のまま。
-- **目標（残り）**: E2E の MySQL コンテナ化と、IT の他 backend 展開。既存 `mysql-test`（`profiles: [test]`）を流用し `DB_TYPE=mysql` を向けるだけで結線でき（Testcontainers 不要）、`synchronize` を捨てた**本番マイグレーション検証**にも接続する（[docs/11](./11-tasks.md) の「本番向けマイグレーション運用」）。
+- **実装済み（BE IT・3 版）**: `backend-layered` / `backend-clean` / `backend-onion` の各 `test/it/db-fidelity.it-spec.ts` に **DB 忠実性 IT** を追加。MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する。実行は `make test-back-it`（= `mysql-test` を `--wait` で healthy まで待って 3 版の `test:it` を順に実行）。既定テストからは分離（`.it-spec.ts` は unit/e2e の testRegex に載らない）ため **CI は Docker 不要のまま**。
+- **目標（残り）**: **E2E の MySQL コンテナ化**（BE IT と同一 `mysql-test` コンテナを DB 名で二役 = IT/E2E で別 DB を使う）。既存 `mysql-test`（`profiles: [test]`）を流用し `DB_TYPE=mysql` を向けるだけで結線でき（Testcontainers 不要）、`synchronize` を捨てた**本番マイグレーション検証**にも接続する（[docs/11](./11-tasks.md) の「本番向けマイグレーション運用」）。
 - **学習的な意味**: 「SQLite（速い）で回すテスト」と「MySQL コンテナ（本番忠実）で回すテスト」の対比自体が、本リポジトリの比較テーマ（同一挙動を別条件で検証）に沿った教材になる。
 
 ## テストケース方針
