@@ -93,6 +93,25 @@ describe('useTasks', () => {
     await expect(remove('foreign')).rejects.toMatchObject({ statusCode: 403 });
   });
 
+  it('異常系: レスポンスが契約 Task の形でない場合は 500 エラーを投げる（zod 検証）', async () => {
+    // status/startDate 等の必須フィールドが欠落した壊れたレスポンス
+    server.use(http.get(`${BASE}/tasks`, () => HttpResponse.json([{ id: 't1', title: 'x' }])));
+
+    const { list } = useTasks();
+    await expect(list()).rejects.toMatchObject({ statusCode: 500 });
+  });
+
+  it('異常系: 詳細で status が列挙外の壊れた値なら 500 エラーを投げる（zod 検証）', async () => {
+    server.use(
+      http.get(`${BASE}/tasks/bad`, () =>
+        HttpResponse.json({ ...sampleTask, id: 'bad', status: 'archived' }),
+      ),
+    );
+
+    const { get } = useTasks();
+    await expect(get('bad')).rejects.toMatchObject({ statusCode: 500 });
+  });
+
   describe('validateCreate（DryRun・保存しない）', () => {
     it('正常系: 200 が返れば解決する（POST /tasks/validate）', async () => {
       let called = false;
