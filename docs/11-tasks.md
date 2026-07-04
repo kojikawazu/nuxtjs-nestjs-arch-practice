@@ -29,14 +29,15 @@
 | 13 | アーキ比較: clean の application/presentation 細分化 + 機能スライス化 | ✅ | clean のみ `application/inputs`（Command 型＋契約→Input 変換で presentation 依存逆流を解消）/ `read-models`（Read Model を application が所有）/ `validators`（DryRun 集約）/ `query-services`（旧 queries 改名）/ `presentation/guards`（auth の JwtAuthGuard 再エクスポート）を追加。さらに `src/modules/` → **`src/api/{tasks,auth,users}/`**（機能スライス）へリネーム。`forms`/`models`/`schemas`/`resolves`/`interceptors`/`middlewares` は REST+契約駆動では二重管理/不要のため意図的に非採用。HTTP 契約・e2e は不変。layered=baseline / onion=据え置き（`src/modules/` のまま） |
 | 14 | アーキ比較: clean の auth/users もクリーン化 | ✅ | clean の auth/users を tasks と同じ domain/application/infrastructure/presentation に再構成。外部 I/O を全 Port 化（UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository）し、太い AuthService を register/login/refresh/logout の 4 ユースケース＋ register validator へ分解。`DomainError` に conflict(409)/unauthorized(401) を追加し auth も DomainError 化。HTTP 契約・e2e は不変。layered / onion の auth/users は従来レイヤードのまま |
 | 15 | 検証比較: clean/spa に zod 導入 | ✅ | `backend-clean` の入力検証を class-validator → **zod**（`presentation/dto/` スキーマ + ルート単位 `ZodValidationPipe`）に置換。グローバル `ValidationPipe` 廃止・`.strict()` で未知キー拒否・`satisfies z.ZodType<契約>` で契約ドリフト型検出。`frontend-spa` はフォーム検証（`utils/taskFormSchema.ts`）と backend レスポンスのランタイム検証（`utils/taskSchema.ts`）に zod 採用。layered/onion・frontend-ssr は従来手法のまま（検証手法の比較例）。HTTP 契約・e2e/E2E は不変 |
+| 16 | 検証統一: 全アプリ zod 化 | ✅ | clean/spa で導入した zod を横展開。`backend-onion` / `backend-layered` の入力検証を class-validator → **zod**（ルート単位 `ZodValidationPipe` + `presentation/dto/` スキーマ・`.strict()`・`satisfies z.ZodType<契約型>`）に置換し、グローバル `ValidationPipe`・class-validator/class-transformer/@nestjs/mapped-types を廃止。`frontend-ssr` にフォーム検証（`taskFormSchema`）＋レスポンスのランタイム検証（`taskSchema` を `useTasks` で `parse`）を導入（裸キャストに実行時検証を追加）。これで **5 アプリすべてが zod に統一**（検証手法の比較軸は解消し、backend はアーキ差・frontend はレンダリング差のみに純化）。HTTP 契約・e2e/E2E は不変 |
 
 ## テスト集計
 
-- backend-layered: 単体 39 / e2e 35
+- backend-layered: 単体 52 / e2e 35（入力検証は zod）
 - backend-clean: 単体 76 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod）
-- backend-onion: 単体 45 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離）
+- backend-onion: 単体 58 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・入力検証は zod）
 - frontend-spa: 単体 37 / E2E 3（フォーム/レスポンス検証は zod）
-- frontend-ssr: 単体 35 / E2E 3（同一 E2E シナリオ）
+- frontend-ssr: 単体 37 / E2E 3（フォーム/レスポンス検証は zod）
 
 ## CI
 
