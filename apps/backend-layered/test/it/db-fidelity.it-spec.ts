@@ -29,7 +29,20 @@ const dataSource = new DataSource({
 
 describe('DB 忠実性 IT（MySQL コンテナ）', () => {
   beforeAll(async () => {
-    await dataSource.initialize();
+    // MySQL コンテナは起動直後まだ接続を受け付けないことがある（初回初期化中は接続を切る）。
+    // `make test-back-it` は `--wait` で healthy を待つが、単体起動での取りこぼしに備えてリトライする。
+    const maxAttempts = 10;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await dataSource.initialize();
+        return;
+      } catch (err) {
+        if (attempt === maxAttempts) {
+          throw err;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
   });
 
   afterAll(async () => {
