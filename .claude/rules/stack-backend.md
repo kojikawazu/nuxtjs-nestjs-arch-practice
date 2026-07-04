@@ -16,12 +16,12 @@ globs: apps/backend-*/**
   - `domain/`（Task エンティティ・業務ルール・DomainError、フレームワーク非依存）→ `application/`（UseCase は `ports/` の interface = `TaskRepository` / `ImageStorage` にのみ依存）→ `infrastructure/`（TypeORM 実装・ローカルFS 実装が Port を実装）→ `presentation/`（Controller）。
   - UseCase は TypeORM を知らない（`@Inject(TASK_REPOSITORY)`）。これが layered との本質的な差。
   - 業務エラーは `DomainError`（kind: not_found/forbidden/invalid）で投げ、HTTP への変換は例外フィルタが担う（ドメインは HTTP 非依存）。
-  - auth / users は当面 layered と同じ構成（機能パリティ優先。clean 化は段階対応）。
+  - auth / users も同様にクリーン化済み（usecase 分解＋ Port: UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository。`DomainError` に conflict(409)/unauthorized(401) を追加）。
 - **`backend-onion`（オニオンアーキテクチャ）**: clean と近いが配置が異なる。
   - **契約（`TaskRepository` / `ImageStorage` interface）と DI トークンを `domain/` 中核が所有**（clean は `application/ports/` に置く）。`domain/repositories/` `domain/services/`。
   - 所有チェック等のドメインロジックは**ドメインサービス** `domain/services/task-access.service.ts`（`TaskAccessService`）に置き、application のユースケースが再利用する。
   - 依存は常に内向き（presentation → application → domain）。infrastructure が domain の契約を実装する。
-  - DomainError・例外フィルタ・auth/users の扱いは clean と同じ。
+  - DomainError・例外フィルタは clean と同じ。auth / users も clean 同様にクリーン化済み（usecase 分解＋ Port）。ただし契約（interface + DI トークン）は onion 流に `domain/`（`repositories/` `services/`）が所有する。
 - **DTO / 入力検証**: **全 backend 版（layered / clean / onion）が zod を採用**する。`presentation/dto/` に zod スキーマを置き、ルート単位の `ZodValidationPipe`（`common/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` で未知キーを弾き（旧 `forbidNonWhitelisted` 相当）、`satisfies z.ZodType<契約型>` で契約とのズレを型検出する（旧 `implements 契約型` 相当）。検証失敗は `BadRequestException`（400）で、`AllExceptionsFilter` が `ApiError` へ翻訳する（e2e 契約は 3 版で不変）。
   - 当初は `backend-clean` のみ zod（他は class-validator）だったが、検証手法を layered / onion へ横展開し zod に統一した（class-validator / class-transformer / @nestjs/mapped-types は 3 版とも除去）。ISO 日付・http/https URL の判定は `common/validation/zod-helpers.ts`（`isIso8601` / `isHttpUrl`）を共有する。
 - **型の共有**: レスポンス型・ドメイン型は `@app/api-client` を `import type` で参照する（実行時依存にしない）。

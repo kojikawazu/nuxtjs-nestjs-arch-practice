@@ -62,8 +62,8 @@ graph TD
 | ドメイン | TypeORM Entity を直接利用 | framework 非依存の `domain/Task` ＋ ORM 分離 | clean と同じ |
 | 業務エラー | Nest 例外を直接 throw | `DomainError`（kind）→ フィルタが HTTP 翻訳 | clean と同じ |
 | 画像保存 | UseCase が fs を直接呼ぶ | `ImageStorage` Port ← FS 実装 | clean と同じ（契約は `domain/services/`） |
-| auth / users | 従来レイヤード | **クリーン化済み**（usecase 分解＋ Port: UserRepository/PasswordHasher/TokenIssuer/RefreshTokenRepository） | （当面）layered と同一構成 |
-| 業務エラーの分類 | Nest 例外 | `DomainError` に **conflict(409)/unauthorized(401) を追加**し auth も DomainError 化 | tasks のみ DomainError（auth/users は Nest 例外） |
+| auth / users | 従来レイヤード | **クリーン化済み**（usecase 分解＋ Port: UserRepository/PasswordHasher/TokenIssuer/RefreshTokenRepository） | **クリーン化済み**（clean と同じ分解。契約は domain が所有） |
+| 業務エラーの分類 | Nest 例外 | `DomainError` に **conflict(409)/unauthorized(401) を追加**し auth も DomainError 化 | clean と同じ（tasks/auth とも DomainError・conflict/unauthorized 追加済み） |
 
 ### backend-layered — auth / users（従来レイヤード）
 
@@ -143,7 +143,7 @@ api/tasks/                      # src/api/tasks（機能スライス）
 - **DryRun は `validators/` に集約**: `*/validate`（保存せず検証）は `CreateTaskValidator` / `UpdateTaskValidator` が担い、UseCase（保存）とは別 provider に分ける。ドメイン不変条件の実体は domain に残し、validators は「保存せず検証する」オーケストレーションのみを持つ。
 - **`inputs` / `read-models` / `validators` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline、onion=当面 queries 構成のまま）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
 - **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、ルート単位の `ZodValidationPipe`（`common/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `BadRequestException`（400）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
-- auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion / layered の auth / users は従来レイヤードのまま。
+- auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion も同様にクリーン化済み（契約は domain 所有）。layered の auth / users のみ従来レイヤードのまま。
 
 ### backend-clean — auth / users（クリーンアーキテクチャ）
 
@@ -198,7 +198,7 @@ modules/tasks/
 
 - clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。読み取り契約 `TaskQuery` も同様に onion は `domain/repositories/` に置く。
 - 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。読み取り側（Query）は domain を経由しないため、`GetTaskQuery` 内で owner を比較して 404/403 を区別する。
-- エンティティ・DomainError・例外フィルタは clean と同じ（tasks）。**auth / users は従来レイヤードのまま**（clean のみ auth/users もクリーン化済み）。
+- エンティティ・DomainError・例外フィルタは clean と同じ（tasks）。**auth / users も clean 同様にクリーン化済み**（fat `AuthService` を register/login/refresh/logout の 4 ユースケース＋ register validator に分解し、UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository を Port 化。契約は onion 流に `domain/repositories/` `domain/services/` が所有）。layered のみ従来レイヤード。
 
 ### 読み取り分離（CQRS-lite）
 
