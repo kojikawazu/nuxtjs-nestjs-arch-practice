@@ -1,7 +1,7 @@
 # タスク管理アプリ用 Makefile。
 # 既存の pnpm scripts / docker compose の薄いショートカット（ロジックは二重化しない）。
 .DEFAULT_GOAL := help
-.PHONY: help install gen lint format typecheck test test-back test-back-e2e test-front test-e2e dev-back dev-front db-up up down reset logs ps
+.PHONY: help install gen lint format typecheck test test-back test-back-e2e test-back-it test-front test-e2e dev-back dev-front db-up up down reset logs ps
 
 help: ## このヘルプを表示
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -32,6 +32,10 @@ test-back: ## backend 単体テスト (Jest)
 
 test-back-e2e: ## backend e2e テスト (supertest / SQLite)
 	pnpm --filter @app/backend-layered test:e2e
+
+test-back-it: ## backend IT (DB 忠実性 / 実 MySQL・mysql-test コンテナを起動して実行)
+	docker compose --profile test up -d mysql-test
+	pnpm --filter @app/backend-layered test:it
 
 test-front: ## frontend 単体テスト (Vitest)
 	pnpm --filter @app/frontend-spa test
