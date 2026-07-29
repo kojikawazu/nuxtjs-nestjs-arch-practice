@@ -15,9 +15,11 @@ globs:
 ## テスト
 
 - `pnpm --filter @app/backend-layered test` — BE 単体(Jest)
-- `pnpm --filter @app/backend-layered test:e2e` — BE e2e(supertest / SQLite)
+- `pnpm --filter @app/backend-layered test:e2e` — BE e2e(supertest / in-memory SQLite)
+- `pnpm --filter @app/backend-layered test:it` — BE IT(DB 忠実性 / MySQL コンテナ必須。`make test-back-it` が 3 版まとめて実行)
 - `pnpm --filter @app/frontend-spa test` — FE 単体(Vitest)
-- `pnpm --filter @app/frontend-spa test:e2e` — 全体 E2E(Playwright, ビルド→起動→実行)
+- `pnpm --filter @app/frontend-spa test:e2e` — 全体 E2E(Playwright, ビルド→起動→実行 / SQLite)
+- `make test-scenario-mysql` — 通しシナリオ(FE+BE を MySQL コンテナに繋いで実行。本番相当の出荷ゲート)
 
 ## 品質
 
@@ -28,4 +30,5 @@ globs:
 - `pnpm db:up` — MySQL のみ起動
 - `docker compose up --build` — mysql + backend + frontend
 
-> 注: backend e2e / Playwright は外部依存なしで動くよう SQLite を使う（`DB_TYPE=better-sqlite3`）。
+> 注: backend e2e / Playwright は外部依存なしで速く回すため SQLite を使う（`DB_TYPE=better-sqlite3`）。
+> **IT とシナリオだけは MySQL コンテナ（`docker compose --profile test up -d --wait mysql-test`）を前提とする** — SQLite では検出できない本番 DB 固有の挙動（照合順序・unique 制約）を担保する層のため。IT は `taskdb_it`、シナリオは `taskdb_e2e` を使う。
