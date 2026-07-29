@@ -16,6 +16,6 @@ Nuxt.js + NestJS のテスト practice プロジェクト
 | coding-standards.md | 全体 | 言語/PM/Lint・Format・環境変数・シークレット禁止 |
 | jsdoc.md | 全体 | JSDoc/コメント規約（型は書かず why を残す・controller/application に付与） |
 | testing.md | 全体 | テスト分類・原則 |
-| stack-backend.md | apps/backend-* | NestJS/TypeORM 各アーキ版（layered/clean）・DTO・DB・テスト方針 |
+| stack-backend.md | apps/backend-* | NestJS/TypeORM 各アーキ版（layered/clean）・DTO・DB・監査列・テスト方針 |
 | stack-frontend.md | apps/frontend-* | Nuxt3 各方式（SPA/SSR）・Composable・認証・テスト方針 |
 | commands.md | 全体 | pnpm/テスト/Docker のよく使うコマンド |
