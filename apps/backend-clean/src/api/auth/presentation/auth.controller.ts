@@ -6,8 +6,8 @@ import type {
   RefreshRequest,
   RegisterRequest,
 } from '@app/api-client';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { toLoginInput } from '../application/inputs/login.input';
 import { toRegisterInput } from '../application/inputs/register.input';
 import { LoginUseCase } from '../application/usecases/login.usecase';
