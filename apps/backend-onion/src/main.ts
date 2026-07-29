@@ -5,7 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { AllExceptionsFilter } from './shared/presentation/filters/http-exception.filter';
 import { loadOpenApiDocument } from './config/openapi';
 import { configureUploadStatic } from './config/static-assets';
 

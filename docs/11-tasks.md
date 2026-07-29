@@ -35,6 +35,7 @@
 | 19 | レンダリング比較: CSR 確認画面（sessionStorage） | ✅ | `frontend-spa` の確認画面を同一ページ内 step 切替から**独立ルート `/tasks/new/confirm`** へ移行し、draft を **sessionStorage** に保持（`composables/useTaskDraft.ts` + `utils/taskDraftSchema.ts` で読み出し時に zod 検証）。ルート構成・遷移前 DryRun 検証・画像のメモリ保持を SSR 版と揃え、**差を「draft をどこに置くか」の一点に絞った**。結果として Cookie 版のサイズ上限（`payloadByteLimit`）は不要になる一方、sessionStorage 版は**タブ単位で別タブでは復元不可**・**JS から読めるため XSS に弱い**という別の制約を持つ。既存 `task-flow.spec.ts` は `data-testid` 維持により無改修で通る |
 | 20 | Codex 向けルール導線 | ✅ | `.claude/rules/` を唯一の正本として維持したまま、ルートと各アプリ／パッケージに階層型 `AGENTS.md` を追加。Codex は変更対象に応じた共通・スタック別規約を自動参照し、ルール構成の変更時だけ `CLAUDE.md`・`AGENTS.md`・README を同期する。 |
 | 21 | clean: shared 境界の明確化 | ✅ | `backend-clean` の feature 非依存な基盤を `src/shared/`（DomainError 基底、共通 HTTP 例外フィルタ、Zod Pipe、形式検証 helper）へ集約。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、再利用されても `src/api/{feature}/` に維持する境界を規約と設計書へ明記。 |
+| 22 | onion: shared 境界の明確化 | ✅ | `backend-onion` の feature / domain 契約に非依存な基盤を `src/shared/`（DomainError 基底、共通 HTTP 例外フィルタ、Zod Pipe、形式検証 helper）へ集約。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、再利用されても `src/modules/{feature}/` に維持する境界を規約と設計書へ明記。 |
 
 ## テスト集計
 

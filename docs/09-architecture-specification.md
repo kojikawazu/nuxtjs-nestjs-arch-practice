@@ -188,6 +188,8 @@ api/auth/
 
 clean と同じ依存性逆転だが、**契約（interface）の所在**と**ドメインサービス**の扱いが異なる。オニオンでは依存が常に内向き（presentation → application → domain）で、ドメイン中核が自分の必要とする契約を定義する。
 
+> `src/shared/` は feature 名・feature 固有の型・domain の契約を知らない共通基盤のためだけに使う。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、再利用されても各 `modules/{feature}/` に置く。
+
 ```
 modules/tasks/
 ├ domain/                          # 中核（最内）
@@ -203,6 +205,13 @@ modules/tasks/
 │  └ queries/                      #   読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側
 ├ infrastructure/                 # domain の契約を実装（TypeOrmTaskRepository / TypeOrmTaskQuery / LocalImageStorage）
 └ presentation/                   # Controller / DTO
+
+shared/                            # feature / domain 契約に非依存の共通基盤
+├ domain/domain-error.ts            #   DomainError の基底 + 共通 kind
+├ presentation/
+│  ├ filters/http-exception.filter.ts # DomainError / HttpException → ApiError
+│  └ pipes/zod-validation.pipe.ts     # DTO スキーマを実行する汎用 Pipe
+└ validation/zod-helpers.ts         #   ISO 8601・http/https の形式検証
 ```
 
 - clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。読み取り契約 `TaskQuery` も同様に onion は `domain/repositories/` に置く。

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { TaskCreate, TaskStatus } from '@app/api-client';
-import { isHttpUrl, isIso8601 } from '../../../../common/validation/zod-helpers';
+import { isHttpUrl, isIso8601 } from '../../../../shared/validation/zod-helpers';
 
 export const TASK_STATUSES: readonly TaskStatus[] = ['todo', 'in_progress', 'done'];
 
