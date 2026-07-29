@@ -33,4 +33,4 @@ globs: apps/backend-*/**
   - 監査列を複数 Entity で共有する場合は**抽象ベースクラス**（例: `abstract class AuditableEntity`）に集約して `extends` する。TypeORM 組み込みの `BaseEntity`（Active Record 用）と衝突しない名前にする。
   - **例外**: シードデータ・テストで日時を固定する場合のみ明示指定を許容する（本番コードパスには持ち込まない）。
 - **秘密値**: パスワードは bcrypt（72バイト以内）、リフレッシュ等の長い値は SHA-256 + `timingSafeEqual`。
-- **テスト**: Service 単体は Repository のみモック。e2e は supertest + in-memory SQLite。
+- **テスト**: Service 単体は Repository のみモック。e2e は supertest + in-memory SQLite（外部依存なしで速く回す）。**DB 固有の挙動（照合順序・unique 制約）は e2e では検出できない**ため、MySQL コンテナを使う IT（`test:it` / `*.it-spec.ts`）に切り出して 3 版とも回す。レベルの使い分けは [testing.md](./testing.md) を参照。
