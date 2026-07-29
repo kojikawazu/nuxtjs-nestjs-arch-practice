@@ -34,6 +34,7 @@
 | 18 | レンダリング比較: SSR 確認画面 | ✅ | `frontend-ssr` のタスク新規作成の確認画面を、同一ページ内 step 切替から**独立ルート `/tasks/new/confirm` のサーバ描画**へ移行。draft を Nitro BFF の httpOnly Cookie（`task_draft`・30分）に保持し、確認画面は `useRequestFetch()` でサーバ実行して初回 HTML に内容を載せる。DryRun 検証を遷移前に BFF へ移し、確認画面から「検証中/未検証」の中間状態を排除。Cookie 上限（3500バイト・**エンコード後**で判定）はクライアント（入力中のインライン警告・submit ブロック）とサーバ（413・最終防御）で同一基準を共有（`utils/draftSize.ts`）。画像（File）は Cookie に載らないため `useState` + `<ClientOnly>` でクライアント保持。`frontend-spa` は CSR step 切替のまま据え置き（比較軸）。編集フローは対象外。`data-testid` 維持により既存 `task-flow.spec.ts` は無改修で通る |
 | 19 | レンダリング比較: CSR 確認画面（sessionStorage） | ✅ | `frontend-spa` の確認画面を同一ページ内 step 切替から**独立ルート `/tasks/new/confirm`** へ移行し、draft を **sessionStorage** に保持（`composables/useTaskDraft.ts` + `utils/taskDraftSchema.ts` で読み出し時に zod 検証）。ルート構成・遷移前 DryRun 検証・画像のメモリ保持を SSR 版と揃え、**差を「draft をどこに置くか」の一点に絞った**。結果として Cookie 版のサイズ上限（`payloadByteLimit`）は不要になる一方、sessionStorage 版は**タブ単位で別タブでは復元不可**・**JS から読めるため XSS に弱い**という別の制約を持つ。既存 `task-flow.spec.ts` は `data-testid` 維持により無改修で通る |
 | 20 | Codex 向けルール導線 | ✅ | `.claude/rules/` を唯一の正本として維持したまま、ルートと各アプリ／パッケージに階層型 `AGENTS.md` を追加。Codex は変更対象に応じた共通・スタック別規約を自動参照し、ルール構成の変更時だけ `CLAUDE.md`・`AGENTS.md`・README を同期する。 |
+| 21 | clean: shared 境界の明確化 | ✅ | `backend-clean` の feature 非依存な基盤を `src/shared/`（DomainError 基底、共通 HTTP 例外フィルタ、Zod Pipe、形式検証 helper）へ集約。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、再利用されても `src/api/{feature}/` に維持する境界を規約と設計書へ明記。 |
 
 ## テスト集計
 

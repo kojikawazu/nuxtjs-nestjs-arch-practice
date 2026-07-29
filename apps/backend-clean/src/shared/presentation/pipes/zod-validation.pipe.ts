@@ -4,10 +4,7 @@ import type { ZodError, ZodType } from 'zod';
 /**
  * zod スキーマでリクエストボディを検証する Pipe（presentation 境界）。
  *
- * backend-clean だけは class-validator + グローバル `ValidationPipe` の代わりに zod を採用する
- * （layered / onion は class-validator のまま。検証手法の比較例）。
- *
- * - 入力の形式検証は transport（HTTP）の関心事なので、失敗時は class-validator 版と同じく
+ * - 入力の形式検証は transport（HTTP）の関心事なので、失敗時は
  *   `BadRequestException`（400）を投げる。`AllExceptionsFilter` が契約 `ApiError` 形へ翻訳する。
  * - スキーマは `.strict()` を前提とし、未知のキーは弾く（旧 `forbidNonWhitelisted` 相当）。
  * - `new ZodValidationPipe(schema)` としてルート単位で使う（`@Body(new ZodValidationPipe(...))`）。

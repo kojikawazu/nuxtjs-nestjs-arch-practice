@@ -6,7 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter';
+import { AllExceptionsFilter } from '../src/shared/presentation/filters/http-exception.filter';
 import { configuration } from '../src/config/configuration';
 import { configureUploadStatic } from '../src/config/static-assets';
 import { AuthModule } from '../src/api/auth/auth.module';

@@ -102,6 +102,8 @@ layered と同じ tasks を、**依存性逆転**で再構成したもの。appl
 
 > ディレクトリ配置: clean は機能スライス（feature slice）として **`src/api/{tasks,auth,users}/`** に置く（layered / onion は `src/modules/` のまま）。下記ツリーのルート `api/tasks/` はこれを指す。
 
+> `src/shared/` は feature 名・feature 固有の型・Port を知らない共通基盤のためだけに使う。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、再利用されても各 `api/{feature}/` に置く。
+
 ```
 api/tasks/                      # src/api/tasks（機能スライス）
 ├ domain/                       # 最内層・フレームワーク非依存
@@ -133,6 +135,13 @@ api/tasks/                      # src/api/tasks（機能スライス）
    ├ dto/                       #   zod スキーマ（.strict() + satisfies z.ZodType<契約型>）
    └ guards/
       └ jwt-auth.guard.ts       #   auth 所有の JwtAuthGuard を再エクスポート（tasks 文脈の窓口）
+
+shared/                         # feature 非依存の共通基盤
+├ domain/domain-error.ts         #   DomainError の基底 + 共通 kind
+├ presentation/
+│  ├ filters/http-exception.filter.ts # DomainError / HttpException → ApiError
+│  └ pipes/zod-validation.pipe.ts     # DTO スキーマを実行する汎用 Pipe
+└ validation/zod-helpers.ts      #   ISO 8601・http/https の形式検証
 ```
 
 - UseCase は `@Inject(TASK_REPOSITORY)` / `@Inject(IMAGE_STORAGE)` で **Port にのみ依存**し、TypeORM・fs を import しない。
@@ -142,7 +151,7 @@ api/tasks/                      # src/api/tasks（機能スライス）
 - **読み取りは CQRS で分離**: list/get は `query-services/` の Query Service が読み取り専用 Port `TaskQuery` にのみ依存し、ドメイン `Task` を経由せず ORM 行 → **Read Model（`read-models/`）** を直射影する（[読み取り分離（CQRS-lite）](#読み取り分離cqrs-lite) を参照）。
 - **DryRun は `validators/` に集約**: `*/validate`（保存せず検証）は `CreateTaskValidator` / `UpdateTaskValidator` が担い、UseCase（保存）とは別 provider に分ける。ドメイン不変条件の実体は domain に残し、validators は「保存せず検証する」オーケストレーションのみを持つ。
 - **`inputs` / `read-models` / `validators` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline、onion=当面 queries 構成のまま）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
-- **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、ルート単位の `ZodValidationPipe`（`common/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `BadRequestException`（400）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
+- **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、clean では `shared/presentation/pipes/ZodValidationPipe` をルート単位で適用する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `BadRequestException`（400）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
 - auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion も同様にクリーン化済み（契約は domain 所有）。layered の auth / users のみ従来レイヤードのまま。
 
 ### backend-clean — auth / users（クリーンアーキテクチャ）
