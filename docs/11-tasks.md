@@ -36,6 +36,7 @@
 | 20 | Codex 向けルール導線 | ✅ | `.claude/rules/` を唯一の正本として維持したまま、ルートと各アプリ／パッケージに階層型 `AGENTS.md` を追加。Codex は変更対象に応じた共通・スタック別規約を自動参照し、ルール構成の変更時だけ `CLAUDE.md`・`AGENTS.md`・README を同期する。 |
 | 21 | clean: shared 境界の明確化 | ✅ | `backend-clean` の feature 非依存な基盤を `src/shared/`（DomainError 基底、共通 HTTP 例外フィルタ、Zod Pipe、形式検証 helper）へ集約。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、再利用されても `src/api/{feature}/` に維持する境界を規約と設計書へ明記。 |
 | 22 | onion: shared 境界の明確化 | ✅ | `backend-onion` の feature / domain 契約に非依存な基盤を `src/shared/`（DomainError 基底、共通 HTTP 例外フィルタ、Zod Pipe、形式検証 helper）へ集約。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、再利用されても `src/modules/{feature}/` に維持する境界を規約と設計書へ明記。 |
+| 23 | 学習用語集の拡張 | ✅ | `docs/10` の用語集を Vue / Nuxt、API / backend 共通、アーキテクチャ比較、テストの4分類へ拡張。各用語に実装ファイルへのリンクを添え、Clean / Onion の Port 所有・`shared/` 境界・CQRS-lite とテストレベルの使い分けをコードリーディングの入口として説明。 |
 
 ## テスト集計
 
