@@ -1,0 +1,56 @@
+<script setup lang="ts">
+import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
+
+const error = ref<string | null>(null);
+const { accessToken } = useAuthState();
+
+// 画像（File）は Cookie にも JSON にも載せられないため、確認画面まではクライアント側で保持する。
+// SSR で描画されるのはテキスト項目のみで、画像プレビューは確認画面で <ClientOnly> として出す。
+const draftImage = useState<File | null>('task-draft-image', () => null);
+
+/**
+ * 「修正する」で戻ってきた場合に入力値を復元するため、保存済み draft を読み出す。
+ * draft は httpOnly Cookie にあるので BFF 経由で取得し、SSR 実行時は元リクエストの
+ * Cookie を引き継ぐ useRequestFetch を使う（$fetch ではヘッダが転送されず取得できない）。
+ */
+const { data } = await useAsyncData('task-draft-form', () =>
+  useRequestFetch()<{ draft: TaskFormValue | null }>('/api/tasks/draft'),
+);
+
+const initial = computed<Partial<TaskFormValue> | undefined>(() => data.value?.draft ?? undefined);
+
+async function onFormSubmit(payload: TaskFormSubmit) {
+  error.value = null;
+  draftImage.value = payload.imageFile ?? null;
+  try {
+    // draft の保存とサーバ側 DryRun 検証を BFF に委ねる。ここを通過した時点で
+    // 確認画面は「検証通過済みの内容」だけを描画すればよくなる。
+    // アクセストークンはメモリ保持で Cookie に無いため、BFF が backend へ中継できるよう明示的に渡す。
+    await $fetch('/api/tasks/draft', {
+      method: 'POST',
+      body: payload.value,
+      headers: accessToken.value ? { Authorization: `Bearer ${accessToken.value}` } : {},
+    });
+    await navigateTo('/tasks/new/confirm');
+  } catch (e) {
+    error.value = getErrorMessage(e, '入力内容に問題があります');
+  }
+}
+</script>
+
+<template>
+  <div>
+    <h1 class="text-2xl font-bold">タスク新規作成</h1>
+
+    <div class="mt-6">
+      <p v-if="error" class="mb-3 text-sm text-red-600" data-testid="draft-error">{{ error }}</p>
+      <!-- 入力内容は Cookie で確認画面へ運ぶため、Cookie 上限を入力中から知らせる -->
+      <TaskForm
+        :initial="initial"
+        :payload-byte-limit="MAX_DRAFT_BYTES"
+        submit-label="確認へ"
+        @submit="onFormSubmit"
+      />
+    </div>
+  </div>
+</template>
