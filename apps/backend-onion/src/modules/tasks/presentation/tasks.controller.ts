@@ -15,8 +15,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { DryRunResult, Task, TaskCreate, TaskUpdate } from '@app/api-client';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../auth/auth.types';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { GetTaskQuery } from '../application/queries/get-task.query';

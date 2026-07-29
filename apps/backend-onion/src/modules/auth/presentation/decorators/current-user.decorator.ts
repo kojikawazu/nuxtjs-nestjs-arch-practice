@@ -1,6 +1,6 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
-import type { AuthenticatedUser } from '../../modules/auth/auth.types';
+import type { AuthenticatedUser } from '../../auth.types';
 
 /**
  * JwtAuthGuard 通過後に request.user へ格納された認証ユーザーを取り出す。

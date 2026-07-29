@@ -1,4 +1,4 @@
-import { DomainError } from '../../../common/errors/domain-error';
+import { DomainError } from '../../../shared/domain/domain-error';
 
 /**
  * tasks ドメインの業務エラー。NestJS の HttpException ではなく `DomainError` を継承し、
