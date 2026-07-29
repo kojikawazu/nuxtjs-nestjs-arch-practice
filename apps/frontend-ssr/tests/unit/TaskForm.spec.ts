@@ -168,4 +168,45 @@ describe('TaskForm', () => {
     const startInput = wrapper.find<HTMLInputElement>('[data-testid="task-start-date"]');
     expect(startInput.element.value).toBe('2026-06-10');
   });
+
+  // payloadByteLimit: SSR 版の新規作成は入力内容を Cookie で確認画面へ運ぶため、
+  // 文字数とは別に直列化サイズの上限がある（未指定の画面では検証しない）。
+  it('準正常系: 上限指定時、サイズ超過を入力中に表示し submit させない', async () => {
+    const wrapper = await mountSuspended(TaskForm, { props: { payloadByteLimit: 3500 } });
+
+    await wrapper.find('[data-testid="task-title"]').setValue('大きいタスク');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+    // 日本語 1000 文字は文字数上限 2000 以内だが、エンコード後は 9000 バイト相当になる
+    await wrapper.find('[data-testid="task-description"]').setValue('あ'.repeat(1000));
+
+    // submit を待たずエラーが出ている
+    expect(wrapper.find('[data-testid="error-payload-size"]').exists()).toBe(true);
+
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+    expect(wrapper.emitted('submit')).toBeUndefined();
+  });
+
+  it('正常系: 上限指定時でも、収まる入力ならエラーを出さず submit できる', async () => {
+    const wrapper = await mountSuspended(TaskForm, { props: { payloadByteLimit: 3500 } });
+
+    await wrapper.find('[data-testid="task-title"]').setValue('小さいタスク');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+    await wrapper.find('[data-testid="task-description"]').setValue('あ'.repeat(100));
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    expect(wrapper.find('[data-testid="error-payload-size"]').exists()).toBe(false);
+    expect(wrapper.emitted('submit')).toHaveLength(1);
+  });
+
+  it('準正常系: 上限未指定なら、同じ入力でもサイズ検証は行わない', async () => {
+    const wrapper = await mountSuspended(TaskForm);
+
+    await wrapper.find('[data-testid="task-title"]').setValue('大きいタスク');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+    await wrapper.find('[data-testid="task-description"]').setValue('あ'.repeat(1000));
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    expect(wrapper.find('[data-testid="error-payload-size"]').exists()).toBe(false);
+    expect(wrapper.emitted('submit')).toHaveLength(1);
+  });
 });

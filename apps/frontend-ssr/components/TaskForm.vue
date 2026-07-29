@@ -28,6 +28,12 @@ const props = withDefaults(
     /** 既存の添付画像の表示用 URL（編集時のプレビュー） */
     initialImageSrc?: string;
     submitLabel?: string;
+    /**
+     * 送信内容の直列化サイズ上限（バイト）。指定時のみ検証する。
+     * SSR 版の新規作成は入力内容を Cookie で確認画面へ運ぶため上限があり、submit 後に 413 で
+     * 弾かれる前に入力中へ知らせる目的で使う（Cookie を使わない編集フロー等では指定しない）。
+     */
+    payloadByteLimit?: number;
   }>(),
   { submitLabel: '確認へ' },
 );
@@ -92,6 +98,27 @@ function onRemoveImage() {
   errors.image = undefined;
 }
 
+/** 入力欄の生値から、送出する確定内容（契約型）を組み立てる。 */
+function buildValue(): TaskFormValue {
+  return {
+    title: title.value.trim(),
+    description: description.value.trim() === '' ? undefined : description.value.trim(),
+    status: status.value,
+    startDate: new Date(startDate.value).toISOString(),
+    endDate: endDate.value === '' ? undefined : new Date(endDate.value).toISOString(),
+    url: url.value.trim() === '' ? undefined : url.value.trim(),
+  };
+}
+
+/**
+ * 送信内容が `payloadByteLimit` に収まるか。超過分は説明欄に割り付ける
+ * （タイトル・URL には元々短い上限があり、実際に上限を押し上げるのは説明だけのため）。
+ */
+const payloadOverLimit = computed<boolean>(() => {
+  if (props.payloadByteLimit === undefined || startDate.value === '') return false;
+  return draftByteLength(buildValue()) > props.payloadByteLimit;
+});
+
 function validate(): boolean {
   errors.title = undefined;
   errors.description = undefined;
@@ -116,21 +143,15 @@ function validate(): boolean {
       }
     }
   }
+  // 直列化サイズ超過は payloadOverLimit として入力中から常時表示しているため、ここでは submit を止めるだけ。
   // 画像（File 実体）の検証は onFileChange 側で errors.image に入る。
-  return result.success && !errors.image;
+  return result.success && !errors.image && !payloadOverLimit.value;
 }
 
 function onSubmit() {
   if (!validate()) return;
   emit('submit', {
-    value: {
-      title: title.value.trim(),
-      description: description.value.trim() === '' ? undefined : description.value.trim(),
-      status: status.value,
-      startDate: new Date(startDate.value).toISOString(),
-      endDate: endDate.value === '' ? undefined : new Date(endDate.value).toISOString(),
-      url: url.value.trim() === '' ? undefined : url.value.trim(),
-    },
+    value: buildValue(),
     imageFile: imageFile.value ?? undefined,
     removeImage: removeExisting.value,
   });
@@ -166,6 +187,10 @@ function onSubmit() {
         data-testid="error-description"
       >
         {{ errors.description }}
+      </p>
+      <!-- 文字数上限とは別に、確認画面へ運べる直列化サイズの上限を入力中から知らせる -->
+      <p v-if="payloadOverLimit" class="mt-1 text-sm text-red-600" data-testid="error-payload-size">
+        入力内容が大きすぎます。説明を短くしてください
       </p>
     </div>
 

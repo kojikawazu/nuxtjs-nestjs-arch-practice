@@ -60,6 +60,19 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 - `url`（任意・関連 URL）は `Task` / `TaskCreate` / `TaskUpdate` が持つ。`http`/`https` のみ許可し（zod `refine(isHttpUrl)`）、`javascript:`/`data:` 等の危険スキームや 2048 文字超は **400**。確認画面・詳細では安全なリンク（`target="_blank" rel="noopener noreferrer"`）として表示する。
 - フロントの BFF（`/api/auth/*`）は上記 backend を呼び出し、リフレッシュトークンを Cookie 化する。
 
+## フロント BFF（Nitro）エンドポイント
+
+backend の契約とは別に、Nuxt の Nitro が持つ内部 API。ブラウザからのみ呼ばれ、backend へは中継する。
+
+| エンドポイント | 実装 | 用途 |
+|---|---|---|
+| `POST /api/auth/*` | 両 frontend | ログイン・登録・リフレッシュ・ログアウト。refresh を httpOnly Cookie 化 |
+| `POST /api/tasks/draft` | `frontend-ssr` のみ | タスク新規作成の入力内容を httpOnly Cookie `task_draft` に保存。保存前に backend `POST /tasks/validate`（DryRun）へ **Authorization ヘッダを中継**して検証する。形式不正は 400、Cookie 上限超過は **413** |
+| `GET /api/tasks/draft` | `frontend-ssr` のみ | 保存済み draft を返す（`{ draft: TaskDraft \| null }`）。httpOnly のためクライアント JS からは直接読めず、確認画面が SSR 中に `useRequestFetch()` で呼ぶ |
+| `DELETE /api/tasks/draft` | `frontend-ssr` のみ | draft を破棄（タスク作成完了時） |
+
+> `/tasks/validate` は `JwtAuthGuard` 配下だが、アクセストークンはメモリ保持で Cookie に無い。そのためクライアントが `POST /api/tasks/draft` に付けた Bearer を BFF がそのまま中継する（BFF はトークンを保存しない）。
+
 ## 認証
 
 - `Authorization: Bearer <accessToken>`。

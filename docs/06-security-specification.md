@@ -25,6 +25,17 @@
 - フロント: **アクセストークンはメモリ（`useState`）のみ**。localStorage には置かない。
 - **リフレッシュトークンは httpOnly Cookie**（Nitro BFF が管理）。JS から読めずリロード後はサイレント更新で復元。
 
+### 業務データを載せる Cookie（`frontend-ssr` の確認画面）
+
+SSR 確認画面はタスクの入力内容（draft）を Cookie `task_draft` に保持する。トークン以外で Cookie に業務データを置く唯一の箇所のため、方針を明記する。
+
+- 属性は refresh Cookie と同じく `httpOnly` / `sameSite: 'lax'` / `path: '/'` / 本番は `secure`。**JS から読めない**ため XSS で直接抜かれない。
+- **有効期限 30 分**。入力途中の業務データを長期間ブラウザに残さない。タスク作成完了時は `DELETE /api/tasks/draft` で明示的に破棄する。
+- 保持するのは title / description / status / 日付 / URL のみ。**認証情報・秘密値は入れない**。画像（File）も入れない（クライアント state で保持）。
+- 復元時は zod スキーマ（`taskDraftSchema`）で検証し、壊れた値・契約外の `status` は draft なしとして扱う（改竄された Cookie をそのまま画面へ流さない）。
+- サイズ上限はクライアント（入力中の警告）とサーバ（413）の両方で判定する。クライアント側の検証は迂回できるため、サーバ側を最終防御として必ず残す。
+- BFF はクライアントから受け取った Bearer を backend へ**中継するだけで保存しない**。
+
 **ログイン〜リフレッシュのシーケンス**（access はメモリ、refresh は BFF の httpOnly Cookie に隔離される）:
 
 ```mermaid

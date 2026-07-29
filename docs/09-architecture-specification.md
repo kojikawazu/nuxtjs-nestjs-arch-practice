@@ -220,6 +220,7 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 ## フロントエンドのレンダリング方式（SPA / SSR）
 
 レンダリング方式の比較用に 2 つの Nuxt 実装を持つ。**機能・画面・API 契約は同一**で、同じ E2E シナリオが両方で通る。
+ただし**タスク新規作成の確認画面のみ、方式差を比較する目的で実装を分けている**（後述「確認画面の方式差」）。
 
 | | `apps/frontend-spa` | `apps/frontend-ssr` |
 |---|---|---|
@@ -229,6 +230,36 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 | `/tasks` 直アクセス | クライアントで復元後にデータ取得 | **サーバで復元 → サーバで一覧描画**してから配信 |
 | `useApiClient` の base | 常に公開 URL | SSR 時はサーバ用 `apiBaseUrl`、クライアント時は公開 URL |
 | トークンの扱い | access はメモリ、refresh は httpOnly Cookie | 同左（SSR 復元時も refresh は httpOnly のまま。rotate 後の Cookie をサーバが Set-Cookie で返す） |
+| タスク作成の確認画面 | 同一ページ内の step 切替（`pages/tasks/new.vue` の `step: 'form' \| 'confirm'`）。draft はコンポーネントの `ref` | **独立ルート `/tasks/new/confirm` をサーバ描画**。draft は httpOnly Cookie（`pages/tasks/new/{index,confirm}.vue`） |
+
+### 確認画面の方式差（SSR / CSR）
+
+同じ「入力 → 確認 → 確定」フローを、状態の置き場所を変えて実装し比較している。
+
+| | `frontend-spa`（CSR） | `frontend-ssr`（SSR） |
+|---|---|---|
+| URL | `/tasks/new` のまま変わらない | `/tasks/new` → `/tasks/new/confirm` |
+| draft の保持 | コンポーネントの `ref`（メモリ） | httpOnly Cookie `task_draft`（30 分で失効） |
+| 確認内容の描画 | ハイドレーション後にクライアントが描画 | **初回 HTML にサーバが埋め込む**（JS 不要で読める） |
+| リロード | 確認状態ごと消え、フォームへ戻る | 確認内容が残る |
+| 確認画面への直リンク | 不可（URL が無い） | 可。draft 無し・失効時は `/tasks/new` へリダイレクト |
+| サーバ側 DryRun 検証 | 確認画面**進入後**にクライアントから実行 | 確認画面**遷移前**に BFF が実行（到達＝検証済み） |
+| 画像プレビュー | `ref` の File を `createObjectURL` | 同左（`useState` + `<ClientOnly>`）。**File は Cookie に載らないためリロードで消える** |
+
+**SSR 版の draft フロー**:
+
+1. フォーム submit → クライアントが `POST /api/tasks/draft`（メモリのアクセストークンを Bearer で付与）。
+2. Nitro BFF が Cookie 上限チェック → backend `POST /tasks/validate`（DryRun）へ Bearer を中継 → 通過したら draft を httpOnly Cookie に保存。
+3. `/tasks/new/confirm` へ遷移。ページは `useRequestFetch()` で `GET /api/tasks/draft` を**サーバ実行**し、確認内容を含む HTML を返す。
+4. 「作成する」→ `POST /tasks` → 画像があれば `POST /tasks/{id}/image` → `DELETE /api/tasks/draft` で draft 破棄 → 詳細へ。
+
+**設計上の制約（Cookie 直方式を選んだ結果）**:
+
+- Cookie は 1 本あたり約 4KB で、超過分は**エラーにならず黙って破棄**される。BFF 側で 3,500 バイト（Cookie 名・属性のオーバーヘッド分を引いた安全マージン）を超えたら 413 を返して入力画面に留める。
+- サイズ判定は **URL エンコード後**の長さで行う。日本語 1 文字は `%E3%81%82` の 9 文字へ膨らむため、生の JSON 長で測ると上限を大幅に超過する。
+- 結果として、フォームが許可する説明 2,000 文字（`utils/taskFormSchema.ts`）に対し、**日本語では約 380 文字で Cookie 上限に到達する**。文字数では表現できない上限のため、判定を `utils/draftSize.ts` に集約し**クライアント（入力中の警告）とサーバ（413）で同じ基準**を使う。`TaskForm` は `payloadByteLimit` を渡された画面でのみこの検証を行う（Cookie を使わない編集フローでは無効）。413 は Cookie が黙って壊れるのを防ぐ最終防御として残す。
+- 上限そのものを無くすには Nitro のサーバ側ストア + Cookie はセッション ID のみ、という方式へ移す必要がある（未着手候補）。
+- SSR 実行中の取得には `$fetch` ではなく **`useRequestFetch()`** を使う。`$fetch` は元リクエストのヘッダを引き継がないため httpOnly Cookie が Nitro に届かず、draft を取得できない。
 
 ### SSR 版のセッション復元フロー（要点）
 

@@ -31,6 +31,7 @@
 | 15 | 検証比較: clean/spa に zod 導入 | ✅ | `backend-clean` の入力検証を class-validator → **zod**（`presentation/dto/` スキーマ + ルート単位 `ZodValidationPipe`）に置換。グローバル `ValidationPipe` 廃止・`.strict()` で未知キー拒否・`satisfies z.ZodType<契約>` で契約ドリフト型検出。`frontend-spa` はフォーム検証（`utils/taskFormSchema.ts`）と backend レスポンスのランタイム検証（`utils/taskSchema.ts`）に zod 採用。layered/onion・frontend-ssr は従来手法のまま（検証手法の比較例）。HTTP 契約・e2e/E2E は不変 |
 | 16 | 検証統一: 全アプリ zod 化 | ✅ | clean/spa で導入した zod を横展開。`backend-onion` / `backend-layered` の入力検証を class-validator → **zod**（ルート単位 `ZodValidationPipe` + `presentation/dto/` スキーマ・`.strict()`・`satisfies z.ZodType<契約型>`）に置換し、グローバル `ValidationPipe`・class-validator/class-transformer/@nestjs/mapped-types を廃止。`frontend-ssr` にフォーム検証（`taskFormSchema`）＋レスポンスのランタイム検証（`taskSchema` を `useTasks` で `parse`）を導入（裸キャストに実行時検証を追加）。これで **5 アプリすべてが zod に統一**（検証手法の比較軸は解消し、backend はアーキ差・frontend はレンダリング差のみに純化）。HTTP 契約・e2e/E2E は不変 |
 | 17 | アーキ比較: onion の auth/users もクリーン化 | ✅ | onion の auth/users を fat `AuthService`/`UsersService` から tasks と同じクリーン構成へ移行。外部 I/O を全 Port 化（UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository）し、太い `AuthService` を register/login/refresh/logout の 4 ユースケース＋ register validator に分解。`DomainErrorKind` に conflict(409)/unauthorized(401) を追加し auth も DomainError 化。契約は onion 流に `domain/repositories/` `domain/services/` が所有（clean は `application/ports/`）。**これで clean/onion とも tasks・auth/users が全クリーン化**（layered のみ baseline）。HTTP 契約・e2e は不変（単体 58→69） |
+| 18 | レンダリング比較: SSR 確認画面 | ✅ | `frontend-ssr` のタスク新規作成の確認画面を、同一ページ内 step 切替から**独立ルート `/tasks/new/confirm` のサーバ描画**へ移行。draft を Nitro BFF の httpOnly Cookie（`task_draft`・30分）に保持し、確認画面は `useRequestFetch()` でサーバ実行して初回 HTML に内容を載せる。DryRun 検証を遷移前に BFF へ移し、確認画面から「検証中/未検証」の中間状態を排除。Cookie 上限（3500バイト・**エンコード後**で判定）はクライアント（入力中のインライン警告・submit ブロック）とサーバ（413・最終防御）で同一基準を共有（`utils/draftSize.ts`）。画像（File）は Cookie に載らないため `useState` + `<ClientOnly>` でクライアント保持。`frontend-spa` は CSR step 切替のまま据え置き（比較軸）。編集フローは対象外。`data-testid` 維持により既存 `task-flow.spec.ts` は無改修で通る |
 
 ## テスト集計
 
@@ -38,7 +39,7 @@
 - backend-clean: 単体 76 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod）
 - backend-onion: 単体 69 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod）
 - frontend-spa: 単体 37 / E2E 3（フォーム/レスポンス検証は zod）
-- frontend-ssr: 単体 37 / E2E 3（フォーム/レスポンス検証は zod）
+- frontend-ssr: 単体 50 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft）
 
 ## CI
 
@@ -54,3 +55,5 @@
 - frontend の dev サーバ復旧（`nuxt dev` の Vite 7 非互換を解消。現状は `docker compose` か本番ビルド出力で代替）
 - `backend-layered` の auth/users アーキ移行（意図的に baseline のまま。比較用に従来レイヤードを残す）
 - CI の Node 20 アクション非推奨対応（`actions/checkout` 等を Node 24 対応版へ）
+- 確認画面パターンの追加（CSR + sessionStorage 版 / draft を Nitro サーバ側ストアに置く版。後者は Cookie 直の 4KB 制約そのものを撤廃できる）
+- `frontend-ssr` の編集フロー（`/tasks/[id]/edit`）の確認画面も SSR 化するか
