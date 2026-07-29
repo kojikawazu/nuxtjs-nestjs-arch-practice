@@ -26,5 +26,11 @@ globs: apps/backend-*/**
   - 当初は `backend-clean` のみ zod（他は class-validator）だったが、検証手法を layered / onion へ横展開し zod に統一した（class-validator / class-transformer / @nestjs/mapped-types は 3 版とも除去）。ISO 日付・http/https URL の判定は `common/validation/zod-helpers.ts`（`isIso8601` / `isHttpUrl`）を共有する。
 - **型の共有**: レスポンス型・ドメイン型は `@app/api-client` を `import type` で参照する（実行時依存にしない）。
 - **DB**: カラム型は MySQL / SQLite 双方で動くポータブルな型のみ（enum カラム禁止、`varchar` + 型/バリデーションで担保）。`DB_TYPE` で接続先を切替。
+- **監査列**: `createdAt` / `updatedAt` / `deletedAt` は **TypeORM の機構で自動設定する**（アプリケーションコードで値を組み立てない）。
+  - **手動代入を禁止**する。`entity.updatedAt = new Date()` のように usecase / service / repository 層で監査列へ値を書かない（値の生成は TypeORM に委ねる）。ドメイン ↔ ORM のマッパーが**DB から読んだ値をそのまま往復させる**代入（`task.mapper.ts` の `orm.createdAt = s.createdAt`）は、新しい値を作っていないため対象外。
+  - 必ず**専用デコレーター**で宣言する: `@CreateDateColumn()` / `@UpdateDateColumn()` / `@DeleteDateColumn()`。素の `@Column({ type: 'timestamp' })` で代用しない（自動更新が効かなくなる）。
+  - 論理削除を導入する場合は `softDelete()` / `softRemove()` を使い、`deletedAt` へ手で日時を代入しない。
+  - 監査列を複数 Entity で共有する場合は**抽象ベースクラス**（例: `abstract class AuditableEntity`）に集約して `extends` する。TypeORM 組み込みの `BaseEntity`（Active Record 用）と衝突しない名前にする。
+  - **例外**: シードデータ・テストで日時を固定する場合のみ明示指定を許容する（本番コードパスには持ち込まない）。
 - **秘密値**: パスワードは bcrypt（72バイト以内）、リフレッシュ等の長い値は SHA-256 + `timingSafeEqual`。
 - **テスト**: Service 単体は Repository のみモック。e2e は supertest + in-memory SQLite。
