@@ -29,7 +29,8 @@ globs:
 | アーキテクチャ・構成（レイヤー構成・依存・ディレクトリ） | docs/09-architecture-specification.md |
 | テスト方針・テストケース | docs/08-test-specification.md |
 | 環境変数・依存パッケージ・ビルド/起動手順・Docker | README.md / CLAUDE.md（必要に応じ docs/10-miscellaneous-specification.md） |
-| ルール（.claude/rules/）の追加・変更 | CLAUDE.md の Rules テーブル |
+| 規約本文の変更（`.claude/rules/`） | 原則不要（正本のルールファイルのみ） |
+| 規約ファイルの追加・削除・改名・適用範囲変更 | CLAUDE.md / AGENTS.md 群 / README.md（AI エージェント向けルール表） |
 | タスク・進捗 | docs/11-tasks.md |
 
 該当する変更がない場合はスキップする。
@@ -38,3 +39,4 @@ globs:
 
 - **設計書の管理**: タスクごとに設計書を新規作成しない。既存の仕様書ドキュメント（docs/01〜12。12 は `docs/12-code-reading-guide/` フォルダ）に追記・更新する。
 - **README.md 同期**: 環境変数・依存・起動手順・スクリプトに変更があった場合は README.md を更新する。
+- **AI エージェント向け入口の同期**: `.claude/rules/` はルール本文の唯一の正本とする。規約ファイルの構成・名称・適用対象を変更した場合は、Claude Code 向けの `CLAUDE.md`、Codex 向けの該当 `AGENTS.md`、README の対応表を同一 PR で同期する。本文だけの変更では、各入口の更新は不要。

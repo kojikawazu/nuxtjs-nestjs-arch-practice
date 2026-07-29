@@ -121,6 +121,21 @@ pnpm --filter @app/frontend-spa test:e2e  # 全体E2E(Playwright)
 - 実装にはテストを必ず添え、`pnpm lint` / `pnpm format:check` / 各種テストを通す。
 - PR の承認・マージは人間が行う（自動マージ禁止）。詳細な開発ルールは `.claude/rules/`（workflow / testing / git / quality-gate など）を参照。
 
+## AI エージェント向けルール
+
+開発ルールの正本は [`.claude/rules/`](.claude/rules/) です。Claude Code は [`CLAUDE.md`](CLAUDE.md) から、Codex はリポジトリ階層の [`AGENTS.md`](AGENTS.md) から同じルールを参照します。ルール本文は複製せず、変更対象に最も近い `AGENTS.md` が指定する追加ルールも適用します。
+
+| 対象 | Codex 向け指示ファイル | 追加で参照するルール |
+|---|---|---|
+| リポジトリ全体 | [`AGENTS.md`](AGENTS.md) | 共通ルール |
+| `apps/backend-layered/**` | [`apps/backend-layered/AGENTS.md`](apps/backend-layered/AGENTS.md) | NestJS / TypeORM（レイヤード） |
+| `apps/backend-clean/**` | [`apps/backend-clean/AGENTS.md`](apps/backend-clean/AGENTS.md) | NestJS / TypeORM（クリーン） |
+| `apps/backend-onion/**` | [`apps/backend-onion/AGENTS.md`](apps/backend-onion/AGENTS.md) | NestJS / TypeORM（オニオン） |
+| `apps/frontend-spa/**` | [`apps/frontend-spa/AGENTS.md`](apps/frontend-spa/AGENTS.md) | Nuxt 3（SPA） |
+| `apps/frontend-ssr/**` | [`apps/frontend-ssr/AGENTS.md`](apps/frontend-ssr/AGENTS.md) | Nuxt 3（SSR） |
+| `packages/api-spec/**` | [`packages/api-spec/AGENTS.md`](packages/api-spec/AGENTS.md) | TypeSpec 契約・生成 |
+| `packages/api-client/**` | [`packages/api-client/AGENTS.md`](packages/api-client/AGENTS.md) | 生成 API クライアント |
+
 ## ドキュメント
 
 仕様書は [`docs/`](docs/README.md) 配下に番号付きで整理している。索引は [docs/README.md](docs/README.md)、開発ルールは [`.claude/rules/`](.claude/rules/) を参照。
