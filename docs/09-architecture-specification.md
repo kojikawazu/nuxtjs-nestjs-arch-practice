@@ -230,21 +230,37 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 | `/tasks` 直アクセス | クライアントで復元後にデータ取得 | **サーバで復元 → サーバで一覧描画**してから配信 |
 | `useApiClient` の base | 常に公開 URL | SSR 時はサーバ用 `apiBaseUrl`、クライアント時は公開 URL |
 | トークンの扱い | access はメモリ、refresh は httpOnly Cookie | 同左（SSR 復元時も refresh は httpOnly のまま。rotate 後の Cookie をサーバが Set-Cookie で返す） |
-| タスク作成の確認画面 | 同一ページ内の step 切替（`pages/tasks/new.vue` の `step: 'form' \| 'confirm'`）。draft はコンポーネントの `ref` | **独立ルート `/tasks/new/confirm` をサーバ描画**。draft は httpOnly Cookie（`pages/tasks/new/{index,confirm}.vue`） |
+| タスク作成の確認画面 | 独立ルート `/tasks/new/confirm` を**クライアント描画**。draft は sessionStorage | 独立ルート `/tasks/new/confirm` を**サーバ描画**。draft は httpOnly Cookie |
 
 ### 確認画面の方式差（SSR / CSR）
 
 同じ「入力 → 確認 → 確定」フローを、状態の置き場所を変えて実装し比較している。
 
+両版とも `/tasks/new`（入力）→ `/tasks/new/confirm`（確認）の 2 ルート構成・遷移前に DryRun 検証・
+画像はメモリ保持、と**揃えてある**。差は「draft をどこに置くか」の一点に絞ってある。
+
 | | `frontend-spa`（CSR） | `frontend-ssr`（SSR） |
 |---|---|---|
-| URL | `/tasks/new` のまま変わらない | `/tasks/new` → `/tasks/new/confirm` |
-| draft の保持 | コンポーネントの `ref`（メモリ） | httpOnly Cookie `task_draft`（30 分で失効） |
+| draft の保持 | **sessionStorage**（ブラウザ・タブ単位） | **httpOnly Cookie** `task_draft`（サーバ・30 分で失効） |
 | 確認内容の描画 | ハイドレーション後にクライアントが描画 | **初回 HTML にサーバが埋め込む**（JS 不要で読める） |
-| リロード | 確認状態ごと消え、フォームへ戻る | 確認内容が残る |
-| 確認画面への直リンク | 不可（URL が無い） | 可。draft 無し・失効時は `/tasks/new` へリダイレクト |
-| サーバ側 DryRun 検証 | 確認画面**進入後**にクライアントから実行 | 確認画面**遷移前**に BFF が実行（到達＝検証済み） |
-| 画像プレビュー | `ref` の File を `createObjectURL` | 同左（`useState` + `<ClientOnly>`）。**File は Cookie に載らないためリロードで消える** |
+| リロード | 確認内容が残る | 同左 |
+| 別タブで確認画面を開く | **draft が無く入力画面へ戻る**（タブ単位のため） | **復元できる**（Cookie はタブ間で共有） |
+| サイズ上限 | 実質なし（sessionStorage は約 5MB） | **3,500 バイト**（日本語 約 380 文字。下記の制約を参照） |
+| XSS 耐性 | **JS から読める**（XSS で入力内容が漏れうる） | httpOnly のため JS から読めない |
+| 検証の実行主体 | ブラウザ（`useTasks().validateCreate()` を直接） | Nitro BFF（`POST /api/tasks/draft` が backend へ中継） |
+| 画像プレビュー | `useState` の File を `createObjectURL`。**保存できないためリロードで消える** | 同左（`<ClientOnly>` で囲む） |
+
+> **どちらが優れているかではなく、制約が入れ替わる**。Cookie 方式はサイズ上限と引き換えに XSS 耐性とタブ間共有を得て、sessionStorage 方式はサイズ自由と引き換えにその両方を失う。
+
+**CSR 版の draft フロー**:
+
+1. フォーム submit → クライアントが `validateCreate()` で backend の DryRun を直接叩く。
+2. 通過したら `useTaskDraft().save()` が sessionStorage へ保存（画像は `useState` へ退避）。
+3. `/tasks/new/confirm` へ遷移。ページは `load()` で同期的に復元して描画する（サーバは関与しない）。
+4. 「作成する」→ `POST /tasks` → 画像があれば `POST /tasks/{id}/image` → `clear()` で draft 破棄 → 詳細へ。
+
+> `load()` は zod（`utils/taskDraftSchema.ts`）で検証する。sessionStorage は JS から書き換えられるため、
+> 壊れた JSON・契約外の `status` は draft なしとして扱い、不正な内容を確認画面へ流さない。
 
 **SSR 版の draft フロー**:
 

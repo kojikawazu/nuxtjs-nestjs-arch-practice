@@ -77,7 +77,12 @@
   - BE e2e: `POST /tasks/{id}/image` を supertest `.attach` で検証。正常(添付→`GET /uploads/<file>` 200→削除で 404)、不正MIME/超過/ファイル無し(400)、404/403/401。`UPLOAD_DIR` は OS 一時ディレクトリに隔離（外部依存なし）。
   - FE 単体: `useTasks.uploadImage/removeImage`（MSW で multipart を横取り、Bearer 付与を確認）、TaskForm のファイル選択（imageFile emit・非対応MIMEのクライアント検証）。
   - E2E: 画像添付で作成→詳細で表示・実ロード（`naturalWidth>0`）まで確認。
-- SSR 確認画面（`frontend-ssr` のみ・`tests/e2e/ssr-confirm.spec.ts`）:
+- CSR 確認画面（`frontend-spa`・`tests/e2e/csr-confirm.spec.ts`）:
+  - SSR 版との**対**をなす検証。素の GET で取得した HTML に確認内容が**含まれないこと**を assert する（SSR 版は含まれることを assert する）。同じ観点を逆向きに固定することで、両方式の差が回帰で壊れない。
+  - **別タブで `/tasks/new/confirm` を開くと入力画面へ戻される**ことを検証（`context.newPage()`）。sessionStorage がタブ単位であることの帰結で、Cookie 版との決定的な差。
+  - 併せて、リロードで内容が残ること・「修正する」で復元されること・直アクセスで戻されること・**作成完了後に draft が破棄され次の新規作成が空フォームになる**ことを検証。
+  - FE 単体: `useTaskDraft`（保存/復元/破棄・未保存・壊れた JSON・契約外 status・必須欠落）、確認画面の描画（sessionStorage に直接書いてから mount）。
+- SSR 確認画面（`frontend-ssr`・`tests/e2e/ssr-confirm.spec.ts`）:
   - **「本当にサーバが描画しているか」を証明する**のが主眼。ブラウザの Cookie を共有したまま `page.request.get('/tasks/new/confirm')` で素の HTML を取得し、**JS を実行しない応答本文に確認内容が含まれる**ことを検証する。UI 操作だけの検証では CSR と区別できないため、この 1 本が方式差の証拠になる。
   - 併せて、確認画面のリロードで内容が残ること・「修正する」で入力値が復元されること・draft 無しの直アクセスで入力画面へ戻ることを検証。
   - 準正常系: 日本語 1000 文字の説明（文字数上限 2000 は通過）が **submit 前にインラインでエラー表示**され送信できないこと、説明を縮めるとエラーが消えて確認画面へ進めることを検証。Cookie 直方式の制約と、それをユーザーへ伝える位置を仕様として固定する。

@@ -36,6 +36,16 @@ SSR 確認画面はタスクの入力内容（draft）を Cookie `task_draft` �
 - サイズ上限はクライアント（入力中の警告）とサーバ（413）の両方で判定する。クライアント側の検証は迂回できるため、サーバ側を最終防御として必ず残す。
 - BFF はクライアントから受け取った Bearer を backend へ**中継するだけで保存しない**。
 
+### 業務データを載せる sessionStorage（`frontend-spa` の確認画面）
+
+CSR 確認画面は同じ draft を **sessionStorage** に保持する。Cookie 版と比べた性質差を明記する。
+
+- **JS から読める**。XSS を踏むと入力内容が読み出される（httpOnly Cookie にはできない攻撃）。トークン類を置かない方針は Cookie 版と同じで、ここに載せるのは title / description / status / 日付 / URL のみ。
+- サーバへ送信されない。ネットワーク経路やサーバログに入力途中の内容が乗らない点は Cookie 版より有利。
+- **タブ単位**でスコープされ、タブを閉じれば消える。Cookie 版のような明示的な有効期限は持たない。
+- タスク作成完了時は `clear()` で明示的に破棄する（次の新規作成に残さない）。
+- 読み出し時は zod（`utils/taskDraftSchema.ts`）で検証する。JS から書き換え可能なため、壊れた JSON・契約外の `status` は draft なしとして扱う。
+
 **ログイン〜リフレッシュのシーケンス**（access はメモリ、refresh は BFF の httpOnly Cookie に隔離される）:
 
 ```mermaid
