@@ -4,8 +4,8 @@ import {
   USER_REPOSITORY,
   type UserRepository,
 } from '../../../users/application/ports/user-repository.port';
-import { InvalidRefreshTokenError } from '../../domain/auth.errors';
-import { issueAuthTokens } from '../issue-auth-tokens';
+import { InvalidRefreshTokenError } from '../../domain/errors/auth.errors';
+import { issueAuthTokens } from '../services/issue-auth-tokens';
 import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepository,

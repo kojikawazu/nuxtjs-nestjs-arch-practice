@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import type { ApiError } from '@app/api-client';
-import { DomainError, type DomainErrorKind } from '../../domain/domain-error';
+import { DomainError, type DomainErrorKind } from '../../domain/errors/domain-error';
 
 /** ドメインエラーの分類 → HTTP ステータス（presentation 境界での翻訳）。 */
 const STATUS_BY_DOMAIN_KIND: Readonly<Record<DomainErrorKind, HttpStatus>> = {

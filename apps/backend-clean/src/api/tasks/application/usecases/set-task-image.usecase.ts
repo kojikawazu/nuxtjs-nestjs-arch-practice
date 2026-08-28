@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
-import { loadOwnedTask } from '../task-access';
+import { loadOwnedTask } from '../services/task-access';
 import { IMAGE_STORAGE, type ImageFile, type ImageStorage } from '../ports/image-storage.port';
 import { TASK_REPOSITORY, type TaskRepository } from '../ports/task-repository.port';
-import { toContractTask } from '../task.mapper';
+import { toContractTask } from '../mappers/task.mapper';
 
 /**
  * タスクに画像を添付（1 枚・差し替え）する。

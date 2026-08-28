@@ -4,9 +4,9 @@ import {
   USER_REPOSITORY,
   type UserRepository,
 } from '../../../users/application/ports/user-repository.port';
-import { InvalidCredentialsError } from '../../domain/auth.errors';
+import { InvalidCredentialsError } from '../../domain/errors/auth.errors';
 import type { LoginInput } from '../inputs/login.input';
-import { issueAuthTokens } from '../issue-auth-tokens';
+import { issueAuthTokens } from '../services/issue-auth-tokens';
 import { PASSWORD_HASHER, type PasswordHasher } from '../ports/password-hasher.port';
 import {
   REFRESH_TOKEN_REPOSITORY,

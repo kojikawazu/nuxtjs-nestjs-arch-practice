@@ -5,7 +5,7 @@ import {
   createUserRepoMock,
   type UserRepoMock,
 } from '../../../../../test/fakes/auth-fakes';
-import { EmailAlreadyRegisteredError } from '../../domain/auth.errors';
+import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import { RegisterValidator } from './register.validator';
 
 describe('RegisterValidator（DryRun・保存しない）', () => {

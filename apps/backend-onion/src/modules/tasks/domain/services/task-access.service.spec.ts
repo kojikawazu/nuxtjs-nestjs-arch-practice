@@ -1,4 +1,4 @@
-import { TaskAccessDeniedError, TaskNotFoundError } from '../task.errors';
+import { TaskAccessDeniedError, TaskNotFoundError } from '../errors/task.errors';
 import {
   OTHER,
   USER,

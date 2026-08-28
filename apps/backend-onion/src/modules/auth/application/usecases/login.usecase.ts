@@ -8,11 +8,11 @@ import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepository,
 } from '../../domain/repositories/refresh-token.repository';
-import { InvalidCredentialsError } from '../../domain/auth.errors';
+import { InvalidCredentialsError } from '../../domain/errors/auth.errors';
 import { PASSWORD_HASHER, type PasswordHasher } from '../../domain/services/password-hasher';
 import { TOKEN_ISSUER, type TokenIssuer } from '../../domain/services/token-issuer';
 import type { LoginInput } from '../inputs/login.input';
-import { issueAuthTokens } from '../issue-auth-tokens';
+import { issueAuthTokens } from '../services/issue-auth-tokens';
 
 /** ログイン（メール照合 → パスワード検証 → トークン発行）。ユーザー有無は漏らさない。 */
 @Injectable()

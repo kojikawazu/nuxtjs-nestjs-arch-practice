@@ -1,4 +1,4 @@
-import { InvalidDateRangeError, TaskAccessDeniedError } from '../../domain/task.errors';
+import { InvalidDateRangeError, TaskAccessDeniedError } from '../../domain/errors/task.errors';
 import {
   OTHER,
   USER,

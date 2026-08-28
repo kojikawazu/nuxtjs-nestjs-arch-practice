@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import { UserOrmEntity } from '../../src/modules/users/infrastructure/user.orm-entity';
+import { UserOrmEntity } from '../../src/modules/users/infrastructure/entities/user.orm-entity';
 
 /**
  * BE IT（統合テスト・**MySQL コンテナ必須**）: DB 忠実性の検証。

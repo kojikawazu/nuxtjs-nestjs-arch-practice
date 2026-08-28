@@ -3,7 +3,7 @@ import type { Task as TaskContract } from '@app/api-client';
 import { TASK_REPOSITORY, type TaskRepository } from '../../domain/repositories/task.repository';
 import { IMAGE_STORAGE, type ImageStorage } from '../../domain/services/image-storage';
 import { TaskAccessService } from '../../domain/services/task-access.service';
-import { toContractTask } from '../task.mapper';
+import { toContractTask } from '../mappers/task.mapper';
 
 /** タスクの添付画像を削除する（実ファイルも削除。無ければ無視）。 */
 @Injectable()

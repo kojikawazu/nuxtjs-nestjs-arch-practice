@@ -11,7 +11,7 @@ import {
   type TokenIssuerMock,
   type UserRepoMock,
 } from '../../../../../test/fakes/auth-fakes';
-import { InvalidRefreshTokenError } from '../../domain/auth.errors';
+import { InvalidRefreshTokenError } from '../../domain/errors/auth.errors';
 import { RefreshUseCase } from './refresh.usecase';
 
 describe('RefreshUseCase（ローテーション）', () => {

@@ -2,7 +2,7 @@ import {
   InvalidDateRangeError,
   TaskAccessDeniedError,
   TaskNotFoundError,
-} from '../../domain/task.errors';
+} from '../../domain/errors/task.errors';
 import {
   OTHER,
   USER,

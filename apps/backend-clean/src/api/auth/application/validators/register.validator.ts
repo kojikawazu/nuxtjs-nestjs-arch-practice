@@ -3,7 +3,7 @@ import {
   USER_REPOSITORY,
   type UserRepository,
 } from '../../../users/application/ports/user-repository.port';
-import { EmailAlreadyRegisteredError } from '../../domain/auth.errors';
+import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import type { RegisterInput } from '../inputs/register.input';
 
 /**

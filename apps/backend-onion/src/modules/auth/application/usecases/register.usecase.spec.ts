@@ -15,7 +15,7 @@ import {
   type TokenIssuerMock,
   type UserRepoMock,
 } from '../../../../../test/fakes/auth-fakes';
-import { EmailAlreadyRegisteredError } from '../../domain/auth.errors';
+import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import { RegisterUseCase } from './register.usecase';
 
 describe('RegisterUseCase', () => {

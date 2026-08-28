@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
-import { Task } from '../../domain/task';
+import { Task } from '../../domain/entities/task';
 import type { CreateTaskInput } from '../inputs/create-task.input';
 import { TASK_REPOSITORY, type TaskRepository } from '../ports/task-repository.port';
-import { toContractTask } from '../task.mapper';
+import { toContractTask } from '../mappers/task.mapper';
 
 /** タスクを新規作成する（application 層のユースケース。Port と Input にのみ依存）。 */
 @Injectable()

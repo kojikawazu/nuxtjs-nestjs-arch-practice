@@ -4,9 +4,9 @@ import {
   USER_REPOSITORY,
   type UserRepository,
 } from '../../../users/application/ports/user-repository.port';
-import { EmailAlreadyRegisteredError } from '../../domain/auth.errors';
+import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import type { RegisterInput } from '../inputs/register.input';
-import { issueAuthTokens } from '../issue-auth-tokens';
+import { issueAuthTokens } from '../services/issue-auth-tokens';
 import { PASSWORD_HASHER, type PasswordHasher } from '../ports/password-hasher.port';
 import {
   REFRESH_TOKEN_REPOSITORY,

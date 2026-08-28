@@ -11,11 +11,11 @@ import { LogoutUseCase } from './application/usecases/logout.usecase';
 import { RefreshUseCase } from './application/usecases/refresh.usecase';
 import { RegisterUseCase } from './application/usecases/register.usecase';
 import { RegisterValidator } from './application/validators/register.validator';
-import { BcryptPasswordHasher } from './infrastructure/bcrypt-password-hasher';
-import { JwtTokenIssuer } from './infrastructure/jwt-token-issuer';
-import { RefreshTokenOrmEntity } from './infrastructure/refresh-token.orm-entity';
-import { TypeOrmRefreshTokenRepository } from './infrastructure/typeorm-refresh-token.repository';
-import { AuthController } from './presentation/auth.controller';
+import { BcryptPasswordHasher } from './infrastructure/services/bcrypt-password-hasher';
+import { JwtTokenIssuer } from './infrastructure/services/jwt-token-issuer';
+import { RefreshTokenOrmEntity } from './infrastructure/entities/refresh-token.orm-entity';
+import { TypeOrmRefreshTokenRepository } from './infrastructure/repositories/typeorm-refresh-token.repository';
+import { AuthController } from './presentation/controllers/auth.controller';
 import { JwtAccessStrategy } from './presentation/strategies/jwt-access.strategy';
 
 /**

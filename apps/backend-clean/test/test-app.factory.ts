@@ -10,10 +10,10 @@ import { AllExceptionsFilter } from '../src/shared/presentation/filters/http-exc
 import { configuration } from '../src/config/configuration';
 import { configureUploadStatic } from '../src/config/static-assets';
 import { AuthModule } from '../src/api/auth/auth.module';
-import { RefreshTokenOrmEntity } from '../src/api/auth/infrastructure/refresh-token.orm-entity';
-import { TaskOrmEntity } from '../src/api/tasks/infrastructure/task.orm-entity';
+import { RefreshTokenOrmEntity } from '../src/api/auth/infrastructure/entities/refresh-token.orm-entity';
+import { TaskOrmEntity } from '../src/api/tasks/infrastructure/entities/task.orm-entity';
 import { TasksModule } from '../src/api/tasks/tasks.module';
-import { UserOrmEntity } from '../src/api/users/infrastructure/user.orm-entity';
+import { UserOrmEntity } from '../src/api/users/infrastructure/entities/user.orm-entity';
 import { UsersModule } from '../src/api/users/users.module';
 
 /** e2e で生成した一時アップロード先（テスト側で後始末する）。 */

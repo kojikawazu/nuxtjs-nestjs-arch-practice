@@ -8,11 +8,11 @@ import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepository,
 } from '../../domain/repositories/refresh-token.repository';
-import { EmailAlreadyRegisteredError } from '../../domain/auth.errors';
+import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import { PASSWORD_HASHER, type PasswordHasher } from '../../domain/services/password-hasher';
 import { TOKEN_ISSUER, type TokenIssuer } from '../../domain/services/token-issuer';
 import type { RegisterInput } from '../inputs/register.input';
-import { issueAuthTokens } from '../issue-auth-tokens';
+import { issueAuthTokens } from '../services/issue-auth-tokens';
 
 /** 新規登録（メール重複を弾き、パスワードをハッシュ化して作成 → トークン発行）。 */
 @Injectable()

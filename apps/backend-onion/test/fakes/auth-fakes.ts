@@ -2,7 +2,7 @@ import type { PasswordHasher } from '../../src/modules/auth/domain/services/pass
 import type { RefreshTokenRepository } from '../../src/modules/auth/domain/repositories/refresh-token.repository';
 import type { TokenIssuer } from '../../src/modules/auth/domain/services/token-issuer';
 import type { UserRepository } from '../../src/modules/users/domain/repositories/user.repository';
-import { User, type UserState } from '../../src/modules/users/domain/user';
+import { User, type UserState } from '../../src/modules/users/domain/entities/user';
 
 /**
  * auth / users ユースケース単体テスト用の共有ヘルパー（オニオンアーキテクチャ版）。

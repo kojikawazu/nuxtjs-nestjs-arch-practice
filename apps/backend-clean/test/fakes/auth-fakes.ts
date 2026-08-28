@@ -2,7 +2,7 @@ import type { PasswordHasher } from '../../src/api/auth/application/ports/passwo
 import type { RefreshTokenRepository } from '../../src/api/auth/application/ports/refresh-token-repository.port';
 import type { TokenIssuer } from '../../src/api/auth/application/ports/token-issuer.port';
 import type { UserRepository } from '../../src/api/users/application/ports/user-repository.port';
-import { User, type UserState } from '../../src/api/users/domain/user';
+import { User, type UserState } from '../../src/api/users/domain/entities/user';
 
 /**
  * auth / users ユースケース単体テスト用の共有ヘルパー（クリーンアーキテクチャ版）。
