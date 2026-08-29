@@ -15,6 +15,15 @@ const draftImage = useState<File | null>('task-draft-image', () => null);
 const draftErrors = useState<ValidationError[]>('task-draft-errors', () => []);
 const imagePreview = ref<string | null>(null);
 
+/**
+ * 作成に成功したタスクの id。null 以外＝「本体は作成済み」で、この画面には
+ * 画像の再送／断念だけが残る（＝再作成の経路が無い）状態を表す。
+ */
+const createdTaskId = ref<string | null>(null);
+
+/** draft 破棄後も添付を再試行できるよう、画像の実体を手元に退避しておく。 */
+const pendingImage = ref<File | null>(null);
+
 const STATUS_LABEL: Record<string, string> = {
   todo: '未着手',
   in_progress: '進行中',
@@ -46,12 +55,19 @@ onUnmounted(() => {
   if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
 });
 
+/**
+ * タスク本体を作成し、続けて画像を添付する。
+ *
+ * 本体は POST（冪等でない）なので、**作成が通った時点で draft Cookie を破棄する**。
+ * draft は「もう一度作成する」ための唯一の燃料であり、これを消すと画像の添付が失敗しても、
+ * この画面をリロードしても、二重作成が起こりえない（画面も再作成ボタンを出さなくなる）。
+ */
 async function onConfirm() {
-  if (!draft.value) return;
+  // loading 中の再入も弾く（:disabled の反映は次ティックなので、素早い 2 回押しはここまで届く）
+  if (!draft.value || loading.value || createdTaskId.value) return;
   loading.value = true;
   error.value = null;
-  // 本体作成と画像アップロードで catch を分ける。作成が成功した後に差し戻すと、
-  // 送り直しで同じタスクがもう 1 つできてしまうため（POST は冪等でない）。
+
   let created: Task;
   try {
     created = await create({
@@ -75,20 +91,46 @@ async function onConfirm() {
     return;
   }
 
+  // 画像は draft ごと消える前に手元へ退避する（添付は作成後の別 API のため）
+  pendingImage.value = draftImage.value;
   try {
-    // 画像は作成後に別経路でアップロードする（任意・1枚）
-    if (draftImage.value) {
-      await uploadImage(created.id, draftImage.value);
-    }
-    // 作成が完了したら入力内容を残さない
     await $fetch('/api/tasks/draft', { method: 'DELETE' });
-    draftImage.value = null;
-    await navigateTo(`/tasks/${created.id}`);
+  } catch {
+    // draft Cookie の破棄に失敗しても本体は作成済みなので、ここで止めない。
+    // 止めると createdTaskId が入らず loading のまま画面が固まり、作成済みなのに先へ進めなくなる。
+  }
+  draftImage.value = null;
+  createdTaskId.value = created.id;
+
+  await onAttachImage();
+}
+
+/**
+ * 作成済みタスクへ画像を添付し、詳細へ移る（画像が無ければそのまま移る）。
+ * 失敗してもこの画面に留まるだけで、本体は作成済みのまま何度でも押し直せる。
+ */
+async function onAttachImage() {
+  const id = createdTaskId.value;
+  if (!id) return;
+  loading.value = true;
+  error.value = null;
+  try {
+    if (pendingImage.value) {
+      await uploadImage(id, pendingImage.value);
+    }
+    await navigateTo(`/tasks/${id}`);
   } catch (e) {
-    // タスク本体は作成済みなので入力画面へは戻さず、この画面で理由だけ知らせる
     error.value = getErrorMessage(e, '画像の添付に失敗しました');
     loading.value = false;
   }
+}
+
+/** 画像の添付を諦めて、作成済みタスクの詳細へ移る。 */
+async function onSkipImage() {
+  const id = createdTaskId.value;
+  if (!id) return;
+  pendingImage.value = null;
+  await navigateTo(`/tasks/${id}`);
 }
 </script>
 
@@ -142,26 +184,58 @@ async function onConfirm() {
         </div>
       </dl>
 
-      <p v-if="error" class="text-sm text-red-600" data-testid="create-error">{{ error }}</p>
-
-      <div class="flex gap-2">
-        <NuxtLink
-          to="/tasks/new"
-          data-testid="confirm-back"
-          class="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
-        >
-          修正する
-        </NuxtLink>
-        <button
-          type="button"
-          data-testid="confirm-create"
-          class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          :disabled="loading"
-          @click="onConfirm"
-        >
-          作成する
-        </button>
+      <!--
+        部分成功（本体は作成済み・画像だけ失敗）では「作成する」を出さない。
+        再作成の経路そのものを画面から消すことで、押し直しによる重複を防ぐ。
+      -->
+      <div v-if="createdTaskId" class="space-y-3" data-testid="partial-success">
+        <p class="text-sm text-red-600" data-testid="partial-error">
+          タスクは作成されました。画像の添付だけ失敗しました（{{ error }}）
+        </p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            data-testid="image-skip"
+            class="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+            :disabled="loading"
+            @click="onSkipImage"
+          >
+            画像なしで完了する
+          </button>
+          <button
+            type="button"
+            data-testid="image-retry"
+            class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            :disabled="loading"
+            @click="onAttachImage"
+          >
+            画像を再送する
+          </button>
+        </div>
       </div>
+
+      <template v-else>
+        <p v-if="error" class="text-sm text-red-600" data-testid="create-error">{{ error }}</p>
+
+        <div class="flex gap-2">
+          <NuxtLink
+            to="/tasks/new"
+            data-testid="confirm-back"
+            class="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+          >
+            修正する
+          </NuxtLink>
+          <button
+            type="button"
+            data-testid="confirm-create"
+            class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            :disabled="loading"
+            @click="onConfirm"
+          >
+            作成する
+          </button>
+        </div>
+      </template>
     </div>
   </div>
 </template>
