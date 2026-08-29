@@ -174,7 +174,9 @@ shared/                            # feature 非依存の共通基盤
 - 業務エラーは `DomainError`（HTTP 非依存）で投げ、`AllExceptionsFilter` が `kind` を見て 404/403/400 と `ApiError` 形へ翻訳する。
 - DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeOrmTaskRepository }` 等として Port ↔ 実装を束ねる（依存性逆転の要）。
 - **読み取りは CQRS で分離**: list/get は `query-services/` の Query Service が読み取り専用 Port `TaskQuery` にのみ依存し、ドメイン `Task` を経由せず ORM 行 → **Read Model（`read-models/`）** を直射影する（[読み取り分離（CQRS-lite）](#読み取り分離cqrs-lite) を参照）。
-- **DryRun は `validators/` に集約**: `*/validate`（保存せず検証）は `CreateTaskValidator` / `UpdateTaskValidator` が担い、UseCase（保存）とは別 provider に分ける。ドメイン不変条件の実体は domain に残し、validators は「保存せず検証する」オーケストレーションのみを持つ。
+- **業務ルール検証は `validators/` に集約**: `CreateTaskValidator` / `UpdateTaskValidator` が**唯一の検証実体**で、DryRun（`*/validate`）と本登録（`POST` / `PATCH`）の**双方がここを通る**。UseCase は Validator を注入して呼び、自前では検証しない（同じルールを 2 か所に書かないため。片方だけ変更して DryRun と本番の判定が食い違う事故を構造的に防ぐ）。
+  - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask`、`UpdateTaskValidator` → `Task`、`RegisterValidator` → `void`）。UseCase は受け取った実体をそのまま保存するだけでよく、`UpdateTaskValidator` では **SELECT が 1 回で済む**（`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる）。`RegisterValidator` は組み立てるものが無いため `void`。
+  - ドメイン不変条件の実体は domain に残し（`Task.draft` / `applyUpdate`）、validators は「保存せず検証する」オーケストレーションのみを持つ。
 - **`inputs` / `read-models` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline）。**`validators/` は clean / onion 両方**が持つ（onion は読み取りが `queries/`）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
 - **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、clean では `shared/presentation/pipes/ZodValidationPipe` をルート単位で適用する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `BadRequestException`（400）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
 - auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion も同様にクリーン化済み（契約は domain 所有）。layered の auth / users のみ従来レイヤードのまま。
@@ -265,7 +267,7 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 | | 書き込み（Command） | 読み取り（Query） |
 |---|---|---|
 | 対象ルート | POST/PATCH/DELETE・`*/image`（書き込み）/ `*/validate`（DryRun） | `GET /tasks`・`GET /tasks/{id}` |
-| 配置 | `application/usecases/`（保存）/ clean・onion は `application/validators/`（DryRun） | clean=`application/query-services/` / onion=`application/queries/` |
+| 配置 | `application/usecases/`（保存）/ clean・onion は `application/validators/`（検証。DryRun と本登録の双方が通る） | clean=`application/query-services/` / onion=`application/queries/` |
 | 依存する契約 | `TaskRepository`（domain `Task` を返す） | `TaskQuery`（**Read Model を直接返す**・読み取り専用） |
 | 契約の所在 | clean=`application/ports/` / onion=`domain/repositories/` | 同左（`task-query` として隣に置く） |
 | 変換 | ORM → domain → 契約（2 段。不変条件を通す） | **ORM 行 → Read Model（1 段直射影）**。clean は `read-models/` の `TaskReadModel`、domain を作らない |

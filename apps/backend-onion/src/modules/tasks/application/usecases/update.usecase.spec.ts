@@ -9,6 +9,7 @@ import {
   type TaskAccessMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { UpdateTaskValidator } from '../validators/update.validator';
 import { UpdateTaskUseCase } from './update.usecase';
 
 describe('UpdateTaskUseCase', () => {
@@ -19,7 +20,10 @@ describe('UpdateTaskUseCase', () => {
   beforeEach(() => {
     access = createTaskAccessMock();
     repo = createTaskRepoMock();
-    usecase = new UpdateTaskUseCase(asTaskAccess(access), asTaskRepo(repo));
+    usecase = new UpdateTaskUseCase(
+      new UpdateTaskValidator(asTaskAccess(access)),
+      asTaskRepo(repo),
+    );
   });
 
   it('正常系: 指定フィールドのみ更新する（未指定は元のまま）', async () => {
@@ -27,6 +31,8 @@ describe('UpdateTaskUseCase', () => {
 
     const result = await usecase.execute(USER, 'task-1', { status: 'done' });
 
+    // Validator が検証済み Task を返すため UseCase は読み直さない（ロードは 1 回）
+    expect(access.loadOwned).toHaveBeenCalledTimes(1);
     expect(repo.update).toHaveBeenCalledTimes(1);
     expect(result.status).toBe('done');
     expect(result.title).toBe('買い物');

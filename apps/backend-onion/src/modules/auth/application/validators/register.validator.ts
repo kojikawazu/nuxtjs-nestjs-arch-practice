@@ -7,9 +7,13 @@ import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import type { RegisterInput } from '../inputs/register.input';
 
 /**
- * 登録の DryRun（検証のみ・保存しない）。
+ * 登録の業務ルール検証（保存はしない）。
  * 入力検証は ZodValidationPipe が済ませている前提で、ここでは業務ルール（メール重複）だけを確認する。
+ * DryRun（`POST /auth/register/validate`）と本登録（`POST /auth/register`）の双方がここを通る**唯一の検証実体**。
  * ユーザー作成・トークン発行は一切行わない（重複 → 409 はそのまま伝播）。
+ *
+ * 組み立てるものが無いため戻り値は void（`findByEmail` の結果は「居ない」ことしか使わないため、
+ * 本登録側で読み直しても無駄が生じない）。
  */
 @Injectable()
 export class RegisterValidator {

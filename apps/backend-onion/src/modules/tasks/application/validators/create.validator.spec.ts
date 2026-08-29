@@ -1,22 +1,29 @@
 import { InvalidDateRangeError } from '../../domain/errors/task.errors';
-import { USER, createTaskRepoMock, type TaskRepoMock } from '../../../../../test/fakes/task-fakes';
+import { USER } from '../../../../../test/fakes/task-fakes';
 import { CreateTaskValidator } from './create.validator';
 
-describe('CreateTaskValidator（DryRun・保存しない）', () => {
-  let repo: TaskRepoMock;
+describe('CreateTaskValidator（検証のみ・保存しない）', () => {
   let validator: CreateTaskValidator;
 
   beforeEach(() => {
-    repo = createTaskRepoMock();
     validator = new CreateTaskValidator();
   });
 
-  it('正常系: 有効な入力なら例外を投げず、Repository に触れない', () => {
-    expect(() =>
-      validator.execute(USER, { title: '新規', startDate: '2026-01-10T00:00:00.000Z' }),
-    ).not.toThrow();
-    expect(repo.create).not.toHaveBeenCalled();
-    expect(repo.update).not.toHaveBeenCalled();
+  it('正常系: 検証済みの NewTask を返す（既定値を埋める。Repository に依存しない＝書き込みは構造的に不可能）', () => {
+    const draft = validator.execute(USER, {
+      title: '新規',
+      startDate: '2026-01-10T00:00:00.000Z',
+    });
+
+    expect(draft).toEqual({
+      userId: USER,
+      title: '新規',
+      description: null,
+      status: 'todo',
+      startDate: new Date('2026-01-10T00:00:00.000Z'),
+      endDate: null,
+      url: null,
+    });
   });
 
   it('異常系: 終了が開始より前なら InvalidDateRangeError', () => {

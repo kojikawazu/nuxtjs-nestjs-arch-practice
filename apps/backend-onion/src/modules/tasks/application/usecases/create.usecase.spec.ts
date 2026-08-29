@@ -6,6 +6,7 @@ import {
   createTaskRepoMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { CreateTaskValidator } from '../validators/create.validator';
 import { CreateTaskUseCase } from './create.usecase';
 
 describe('CreateTaskUseCase', () => {
@@ -14,7 +15,7 @@ describe('CreateTaskUseCase', () => {
 
   beforeEach(() => {
     repo = createTaskRepoMock();
-    usecase = new CreateTaskUseCase(asTaskRepo(repo));
+    usecase = new CreateTaskUseCase(new CreateTaskValidator(), asTaskRepo(repo));
   });
 
   it('正常系: status 省略時は todo、description/endDate/url 省略時は null で create を呼ぶ', async () => {

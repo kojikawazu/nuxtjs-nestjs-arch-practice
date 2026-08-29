@@ -16,6 +16,7 @@ import {
   type UserRepoMock,
 } from '../../../../../test/fakes/auth-fakes';
 import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
+import { RegisterValidator } from '../validators/register.validator';
 import { RegisterUseCase } from './register.usecase';
 
 describe('RegisterUseCase', () => {
@@ -31,6 +32,7 @@ describe('RegisterUseCase', () => {
     tokenIssuer = createTokenIssuerMock();
     refreshTokens = createRefreshRepoMock();
     usecase = new RegisterUseCase(
+      new RegisterValidator(asUserRepo(users)),
       asUserRepo(users),
       asHasher(hasher),
       asTokenIssuer(tokenIssuer),

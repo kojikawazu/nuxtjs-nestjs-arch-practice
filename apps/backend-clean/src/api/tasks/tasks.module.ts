@@ -28,7 +28,7 @@ import { TasksController } from './presentation/controllers/tasks.controller';
  *
  * 読み取り（list/get）は CQRS の Query 側として TASK_QUERY（参照専用 Port）に分離し、
  * 書き込み（create/update/delete/image）の TASK_REPOSITORY と別経路にしている。
- * 検証のみ（DryRun）は validators が担い、UseCase（保存）とは別 provider にしている。
+ * 業務ルール検証は validators に集約し、DryRun（POST /tasks/validate）と本登録の UseCase の双方がこれを呼ぶ。
  */
 @Module({
   imports: [TypeOrmModule.forFeature([TaskOrmEntity])],
