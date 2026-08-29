@@ -18,19 +18,19 @@ import type { DryRunResult, Task, TaskCreate, TaskUpdate } from '@app/api-client
 import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../../shared/presentation/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../../auth/auth.types';
-import { toCreateTaskInput } from '../../application/inputs/create-task.input';
-import { toUpdateTaskInput } from '../../application/inputs/update-task.input';
-import { GetTaskQueryService } from '../../application/query-services/get-task.query-service';
-import { ListTasksQueryService } from '../../application/query-services/list-tasks.query-service';
-import { CreateTaskUseCase } from '../../application/usecases/create-task.usecase';
-import { DeleteTaskUseCase } from '../../application/usecases/delete-task.usecase';
-import { RemoveTaskImageUseCase } from '../../application/usecases/remove-task-image.usecase';
-import { SetTaskImageUseCase } from '../../application/usecases/set-task-image.usecase';
-import { UpdateTaskUseCase } from '../../application/usecases/update-task.usecase';
-import { CreateTaskValidator } from '../../application/validators/create-task.validator';
-import { UpdateTaskValidator } from '../../application/validators/update-task.validator';
-import { createTaskSchema } from '../dto/create-task.dto';
-import { updateTaskSchema } from '../dto/update-task.dto';
+import { toCreateTaskInput } from '../../application/inputs/create.input';
+import { toUpdateTaskInput } from '../../application/inputs/update.input';
+import { GetTaskQueryService } from '../../application/query-services/get.query-service';
+import { ListTasksQueryService } from '../../application/query-services/list.query-service';
+import { CreateTaskUseCase } from '../../application/usecases/create.usecase';
+import { DeleteTaskUseCase } from '../../application/usecases/delete.usecase';
+import { RemoveTaskImageUseCase } from '../../application/usecases/remove-image.usecase';
+import { SetTaskImageUseCase } from '../../application/usecases/set-image.usecase';
+import { UpdateTaskUseCase } from '../../application/usecases/update.usecase';
+import { CreateTaskValidator } from '../../application/validators/create.validator';
+import { UpdateTaskValidator } from '../../application/validators/update.validator';
+import { createTaskSchema } from '../dto/create.dto';
+import { updateTaskSchema } from '../dto/update.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 /**
@@ -57,7 +57,7 @@ export class TasksController {
   /**
    * タスクの取得(複数)
    * 実API: GET /tasks
-   * 処理の実体: ListTasksQueryService.execute（application/query-services/list-tasks.query-service.ts）
+   * 処理の実体: ListTasksQueryService.execute（application/query-services/list.query-service.ts）
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元した認証ユーザー）
    * @returns Promise<Task[]>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
    */
@@ -69,7 +69,7 @@ export class TasksController {
   /**
    * タスクの作成
    * 実API: POST /tasks（成功時 201 Created）
-   * 処理の実体: CreateTaskUseCase.execute（application/usecases/create-task.usecase.ts）
+   * 処理の実体: CreateTaskUseCase.execute（application/usecases/create.usecase.ts）
    *   ※ body は ZodValidationPipe(createTaskSchema) で検証後、toCreateTaskInput で application の Input に変換
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param body - TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
@@ -87,7 +87,7 @@ export class TasksController {
   /**
    * タスク作成の事前検証（DryRun・DB に保存しない）
    * 実API: POST /tasks/validate（成功時 200 OK）
-   * 処理の実体: CreateTaskValidator.execute（application/validators/create-task.validator.ts）
+   * 処理の実体: CreateTaskValidator.execute（application/validators/create.validator.ts）
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param body - TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
@@ -105,7 +105,7 @@ export class TasksController {
   /**
    * タスクの取得(単一)
    * 実API: GET /tasks/{id}
-   * 処理の実体: GetTaskQueryService.execute（application/query-services/get-task.query-service.ts）
+   * 処理の実体: GetTaskQueryService.execute（application/query-services/get.query-service.ts）
    *   ※ 不存在=404 / 非所有=403 を区別（owner 判定は Query 側で実施）
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
@@ -119,7 +119,7 @@ export class TasksController {
   /**
    * タスクの更新（指定フィールドのみ）
    * 実API: PATCH /tasks/{id}
-   * 処理の実体: UpdateTaskUseCase.execute（application/usecases/update-task.usecase.ts）
+   * 処理の実体: UpdateTaskUseCase.execute（application/usecases/update.usecase.ts）
    *   ※ body は ZodValidationPipe(updateTaskSchema) で検証後、toUpdateTaskInput で Input に変換
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
@@ -138,7 +138,7 @@ export class TasksController {
   /**
    * タスク更新の事前検証（DryRun・DB に保存しない）
    * 実API: POST /tasks/{id}/validate（成功時 200 OK）
-   * 処理の実体: UpdateTaskValidator.execute（application/validators/update-task.validator.ts）
+   * 処理の実体: UpdateTaskValidator.execute（application/validators/update.validator.ts）
    *   ※ マージ後の値で開始 ≤ 終了などを検証。不存在=404 / 非所有=403 も区別
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
@@ -159,7 +159,7 @@ export class TasksController {
   /**
    * タスクの削除
    * 実API: DELETE /tasks/{id}（成功時 204 No Content）
-   * 処理の実体: DeleteTaskUseCase.execute（application/usecases/delete-task.usecase.ts）
+   * 処理の実体: DeleteTaskUseCase.execute（application/usecases/delete.usecase.ts）
    *   ※ 不存在=404 / 非所有=403 を区別
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
@@ -174,7 +174,7 @@ export class TasksController {
   /**
    * 画像添付（1枚・multipart/form-data, フィールド名 `file`）
    * 実API: POST /tasks/{id}/image
-   * 処理の実体: SetTaskImageUseCase.execute（application/usecases/set-task-image.usecase.ts）
+   * 処理の実体: SetTaskImageUseCase.execute（application/usecases/set-image.usecase.ts）
    *   ※ MIME（png/jpeg/webp）とサイズ（≤2MB）を ParseFilePipe で検証し、違反は 400
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
@@ -208,7 +208,7 @@ export class TasksController {
   /**
    * 添付画像の削除
    * 実API: DELETE /tasks/{id}/image
-   * 処理の実体: RemoveTaskImageUseCase.execute（application/usecases/remove-task-image.usecase.ts）
+   * 処理の実体: RemoveTaskImageUseCase.execute（application/usecases/remove-image.usecase.ts）
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
    * @returns Promise<Task>（imageUrl の消えた Task。源: @app/api-client ← packages/api-spec/main.tsp）

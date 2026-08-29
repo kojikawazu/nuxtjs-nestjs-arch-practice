@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CreateTaskUseCase } from './application/usecases/create-task.usecase';
-import { DeleteTaskUseCase } from './application/usecases/delete-task.usecase';
-import { GetTaskUseCase } from './application/usecases/get-task.usecase';
-import { ListTasksUseCase } from './application/usecases/list-tasks.usecase';
-import { RemoveTaskImageUseCase } from './application/usecases/remove-task-image.usecase';
-import { SetTaskImageUseCase } from './application/usecases/set-task-image.usecase';
-import { UpdateTaskUseCase } from './application/usecases/update-task.usecase';
-import { ValidateCreateTaskUseCase } from './application/usecases/validate-create-task.usecase';
-import { ValidateUpdateTaskUseCase } from './application/usecases/validate-update-task.usecase';
+import { CreateTaskUseCase } from './application/usecases/create.usecase';
+import { DeleteTaskUseCase } from './application/usecases/delete.usecase';
+import { GetTaskUseCase } from './application/usecases/get.usecase';
+import { ListTasksUseCase } from './application/usecases/list.usecase';
+import { RemoveTaskImageUseCase } from './application/usecases/remove-image.usecase';
+import { SetTaskImageUseCase } from './application/usecases/set-image.usecase';
+import { UpdateTaskUseCase } from './application/usecases/update.usecase';
+import { ValidateCreateTaskUseCase } from './application/usecases/validate-create.usecase';
+import { ValidateUpdateTaskUseCase } from './application/usecases/validate-update.usecase';
 import { TaskEntity } from './infrastructure/task.entity';
 import { TasksController } from './presentation/tasks.controller';
 
