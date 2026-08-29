@@ -73,6 +73,17 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  // 未知キーを弾いているのはルート単位の ZodValidationPipe（.strict()）。
+  // テスト専用のグローバル ValidationPipe に頼っていないことをここで固定する。
+  it('異常系: 未知キーは .strict() で 422（errors のフィールドはそのキー名）', async () => {
+    const res = await http
+      .post('/auth/register')
+      .send({ ...credentials, email: 'unknown-key@example.com', role: 'admin' })
+      .expect(422);
+
+    expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual(['role']);
+  });
+
   it('異常系: 短すぎるパスワードは 422（errors に password）', async () => {
     const res = await http
       .post('/auth/register')

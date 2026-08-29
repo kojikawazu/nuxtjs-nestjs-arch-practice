@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -23,6 +23,10 @@ export let testUploadDir = '';
  * e2e 用のアプリ生成。
  * 本番は MySQL だが、テストは外部依存なしで動くよう better-sqlite3 のインメモリ DB を使う。
  * 画像保存先も外部依存を避けるため OS の一時ディレクトリに隔離する。
+ *
+ * **入力検証は本番と同じ構成にする**（グローバル ValidationPipe を入れない）。
+ * ルート単位の ZodValidationPipe だけが効く状態でないと、テスト専用のパイプが
+ * 未知キーや型変換を肩代わりし、本番では通らない入力が e2e だけ通ってしまう。
  * （HTTP 境界・認可・バリデーション・エラーレスポンス・静的配信の検証が目的）
  */
 export async function createTestApp(): Promise<INestApplication> {
@@ -51,9 +55,6 @@ export async function createTestApp(): Promise<INestApplication> {
   }).compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>();
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
-  );
   app.useGlobalFilters(new AllExceptionsFilter());
   // 添付画像の静的配信を本番と同じ経路（/uploads）で有効化する
   configureUploadStatic(app, app.get(ConfigService));
