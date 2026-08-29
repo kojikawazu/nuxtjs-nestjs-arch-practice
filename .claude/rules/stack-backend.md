@@ -26,12 +26,13 @@ globs: apps/backend-*/**
   - **共有境界**: `src/shared/` には、feature 名・feature 固有の型・domain 契約に依存しない共通基盤だけを置く（例: `DomainError` の基底、汎用 NestJS Pipe / Filter、形式検証 helper）。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、複数箇所から利用されても `src/modules/{feature}/` に置く。`shared/` は domain 契約を集める場所ではない。
 - **層内のフォルダ分割（clean / onion 共通）**: 層（`presentation` / `application` / `domain` / `infrastructure`）を切ったら、**その中も役割別サブフォルダまで分ける**。層ディレクトリ直下にファイルを裸で置かない（`*.module.ts` / `*.types.ts` のみ feature 直下＝層の外に置く）。`*.spec.ts` は対象ファイルと同じサブフォルダへ置く。
   - `presentation/` — `controllers/` `dto/` `guards/` `decorators/` `strategies/`
-  - `application/` — `usecases/` `validators/` `mappers/` `services/`（＋ clean のみ `ports/` `inputs/` `read-models/` `query-services/`、onion は読み取りが `queries/`）
+  - `application/` — `usecases/` `validators/` `mappers/` `services/` `inputs/`（＋ clean のみ `ports/` `read-models/` `query-services/`、onion は読み取りが `queries/`）
   - `domain/` — `entities/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`）
   - `infrastructure/` — `repositories/` `services/` `entities/`（ORM Entity）`mappers/`
   - **domain と infrastructure は同じ語彙で対称に保つ**（`domain/repositories/` の契約 ↔ `infrastructure/repositories/` の実装、`domain/services/ImageStorage` ↔ `infrastructure/services/LocalImageStorage`）。どの実装がどの契約を満たすかをフォルダ位置だけで辿れるようにするため。
   - **空フォルダは作らない**（`forms` / `models` 等の未使用概念は置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。
   - layered は対象外（tasks のみ層分離し、auth / users は従来レイヤードのまま＝比較軸として維持する）。
+- **application は presentation を import しない（clean / onion）**: Controller が契約型（`TaskCreate` / `TaskUpdate` / `RegisterRequest` 等）を `application/inputs/` の変換関数で Command 型（`CreateTaskInput` 等）に直してから UseCase / Validator を呼ぶ。変換関数の引数は **DTO 型（`z.infer<...>`）ではなく契約型**にする（契約型は `@app/api-client` にあり presentation・application のどちらからも等距離なので、共通語彙にすると依存が内向きに揃う）。ISO 文字列 → `Date` の正規化も境界であるこの変換で済ませ、内側に文字列日付を持ち込まない。
 - **業務ルール検証は Validator に集約する（clean / onion）**: `application/validators/` の Validator を**唯一の検証実体**とし、UseCase は Validator を注入して呼ぶ。自前で同じ検証を書かない（同じルールが 2 か所に散ると、片方だけ変更したときに気づけないため）。
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask` / `UpdateTaskValidator` → `Task`）。UseCase はそれをそのまま保存するだけでよく、ロードを伴う検証でも DB read が 1 回で済む。`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる。
   - 組み立てるものが無い Validator は `void` でよい（`RegisterValidator` はメール重複の有無しか使わないため）。

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
 import { TASK_REPOSITORY, type TaskRepository } from '../../domain/repositories/task.repository';
-import type { UpdateTaskDto } from '../../presentation/dto/update.dto';
+import type { UpdateTaskInput } from '../inputs/update.input';
 import { toContractTask } from '../mappers/task.mapper';
 import { UpdateTaskValidator } from '../validators/update.validator';
 
@@ -17,13 +17,11 @@ export class UpdateTaskUseCase {
   /**
    * Validator がロード（不存在=404 / 非所有=403）・更新適用・検証まで済ませた Task を保存し、契約 Task を返す。
    * Validator が検証済み Task を返すため、ここで読み直さない（SELECT は 1 回）。
-   * @param userId - string（@CurrentUser 由来の所有者 ID）
-   * @param id - string（対象タスクの ID）
-   * @param dto - UpdateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskUpdate）
+   * @param input - UpdateTaskInput（Controller が契約 TaskUpdate から変換した Command）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
-  async execute(userId: string, id: string, dto: UpdateTaskDto): Promise<TaskContract> {
-    const task = await this.validator.execute(userId, id, dto);
+  async execute(input: UpdateTaskInput): Promise<TaskContract> {
+    const task = await this.validator.execute(input);
     const saved = await this.tasks.update(task);
     return toContractTask(saved);
   }

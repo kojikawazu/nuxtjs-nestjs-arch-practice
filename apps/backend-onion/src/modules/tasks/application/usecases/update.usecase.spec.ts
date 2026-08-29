@@ -9,6 +9,7 @@ import {
   type TaskAccessMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { toUpdateTaskInput } from '../inputs/update.input';
 import { UpdateTaskValidator } from '../validators/update.validator';
 import { UpdateTaskUseCase } from './update.usecase';
 
@@ -29,7 +30,7 @@ describe('UpdateTaskUseCase', () => {
   it('正常系: 指定フィールドのみ更新する（未指定は元のまま）', async () => {
     access.loadOwned.mockResolvedValue(buildTask());
 
-    const result = await usecase.execute(USER, 'task-1', { status: 'done' });
+    const result = await usecase.execute(toUpdateTaskInput(USER, 'task-1', { status: 'done' }));
 
     // Validator が検証済み Task を返すため UseCase は読み直さない（ロードは 1 回）
     expect(access.loadOwned).toHaveBeenCalledTimes(1);
@@ -41,7 +42,9 @@ describe('UpdateTaskUseCase', () => {
   it('正常系: url を指定すると更新され、契約 Task に反映される', async () => {
     access.loadOwned.mockResolvedValue(buildTask());
 
-    const result = await usecase.execute(USER, 'task-1', { url: 'https://example.org/a' });
+    const result = await usecase.execute(
+      toUpdateTaskInput(USER, 'task-1', { url: 'https://example.org/a' }),
+    );
 
     expect(result.url).toBe('https://example.org/a');
   });
@@ -49,9 +52,9 @@ describe('UpdateTaskUseCase', () => {
   it('準正常系: ドメインサービスが拒否したら update されない', async () => {
     access.loadOwned.mockRejectedValue(new TaskAccessDeniedError());
 
-    await expect(usecase.execute(USER, 'task-1', { title: 'x' })).rejects.toBeInstanceOf(
-      TaskAccessDeniedError,
-    );
+    await expect(
+      usecase.execute(toUpdateTaskInput(USER, 'task-1', { title: 'x' })),
+    ).rejects.toBeInstanceOf(TaskAccessDeniedError);
     expect(repo.update).not.toHaveBeenCalled();
   });
 
@@ -59,7 +62,7 @@ describe('UpdateTaskUseCase', () => {
     access.loadOwned.mockResolvedValue(buildTask()); // 既存 startDate = 2026-01-10
 
     await expect(
-      usecase.execute(USER, 'task-1', { endDate: '2026-01-05T00:00:00.000Z' }),
+      usecase.execute(toUpdateTaskInput(USER, 'task-1', { endDate: '2026-01-05T00:00:00.000Z' })),
     ).rejects.toBeInstanceOf(InvalidDateRangeError);
     expect(repo.update).not.toHaveBeenCalled();
   });
