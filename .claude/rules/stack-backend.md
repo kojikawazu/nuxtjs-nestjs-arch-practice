@@ -27,7 +27,7 @@ globs: apps/backend-*/**
 - **層内のフォルダ分割（clean / onion 共通）**: 層（`presentation` / `application` / `domain` / `infrastructure`）を切ったら、**その中も役割別サブフォルダまで分ける**。層ディレクトリ直下にファイルを裸で置かない（`*.module.ts` / `*.types.ts` のみ feature 直下＝層の外に置く）。`*.spec.ts` は対象ファイルと同じサブフォルダへ置く。
   - `presentation/` — `controllers/` `dto/` `guards/` `decorators/` `strategies/`
   - `application/` — `usecases/` `validators/` `mappers/` `services/` `inputs/`（＋ clean のみ `ports/` `read-models/` `query-services/`、onion は読み取りが `queries/`）
-  - `domain/` — `entities/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`）
+  - `domain/` — `entities/` `value-objects/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`）
   - `infrastructure/` — `repositories/` `services/` `entities/`（ORM Entity）`mappers/`
   - **domain と infrastructure は同じ語彙で対称に保つ**（`domain/repositories/` の契約 ↔ `infrastructure/repositories/` の実装、`domain/services/ImageStorage` ↔ `infrastructure/services/LocalImageStorage`）。どの実装がどの契約を満たすかをフォルダ位置だけで辿れるようにするため。
   - **空フォルダは作らない**（未使用の概念フォルダは置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。**置かないフォルダとその理由**は下記「採用しない概念」を参照。
@@ -43,6 +43,18 @@ globs: apps/backend-*/**
   - **`models/` `schemas/`**: 契約の真実は `packages/api-spec/main.tsp`（→ `@app/api-client`）にあるため、別に型やスキーマの一覧を持つと二重管理になる。
   - **`resolves/`**: GraphQL 専用の概念で、REST では出番がない。
   - **`interceptors/` `middlewares/`**: 現状は `AllExceptionsFilter`（例外→`ApiError`）と `FileInterceptor`（multipart）で足りている。必要になった時点で作る。
+- **domain の構成要素と使い分け（clean / onion）**: `domain/` に置けるのは下記 3 種。判定軸は「不変かどうか」ではなく **同一性（identity）を持つか**と**置き場所があるか**。
+  | 要素 | 判定基準 | 置き場所 | 例 |
+  |---|---|---|---|
+  | **Entity** | **同一性（id）を持ち**、時間とともに状態が変わる。等価性は id で決まる | `domain/entities/` | `Task` / `User` |
+  | **Value Object** | 同一性を持たず、**属性だけで等価**。**不変** | `domain/value-objects/` | `DateRange`（開始・終了の対） |
+  | **Domain Service** | Entity にも VO にも**自然な置き場所がない**操作（複数の集約にまたがる／契約越しの取得が要る） | onion は `domain/services/`、clean は `application/services/` | `TaskAccessService`（取得＋所有チェック） |
+  - **「VO 以外は Domain Service」ではない**。この切り分けを字義どおり適用すると Entity まで Domain Service になり、状態を持たない**貧血ドメイン**になる。Domain Service は**置き場所が無いときの最後の手段**で、既定の受け皿ではない。単一の Entity / VO の責務で済むならそちらのメソッドにする。
+  - **VO の要件**:
+    - **不変**にする（`readonly`。値を変えるときは新しいインスタンスを作る）。共有しても壊れないことが VO の存在価値なので、setter を持たせない。
+    - **同一性を持たせない**。等価性は属性で決まる（必要なら `equals()` を持たせる。id は持たせない）。
+    - **不正な状態のインスタンスを作れないようにする**。生成時（ファクトリ / private constructor）に検証し、**通ったあとは常に妥当**であることを型で保証する。これが「検証関数を呼び忘れる」経路を消す仕組み。
+  - **VO と zod の責務分担**: VO が担うのは **zod のスキーマでは表現しにくい、フィールド間の関係**だけ（例: 開始 ≤ 終了）。**単一フィールドの長さ・形式・列挙は `presentation/dto/` の zod に残す**（`title` は 1〜120 文字、`url` は http/https 等）。両方に書くと同じルールの入口が 2 つになり、片方だけ変えたときに気づけない。
 - **業務ルール検証は Validator に集約する（clean / onion）**: `application/validators/` の Validator を**唯一の検証実体**とし、UseCase は Validator を注入して呼ぶ。自前で同じ検証を書かない（同じルールが 2 か所に散ると、片方だけ変更したときに気づけないため）。
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask` / `UpdateTaskValidator` → `Task`）。UseCase はそれをそのまま保存するだけでよく、ロードを伴う検証でも DB read が 1 回で済む。`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる。
   - 組み立てるものが無い Validator は `void` でよい（`RegisterValidator` はメール重複の有無しか使わないため）。
