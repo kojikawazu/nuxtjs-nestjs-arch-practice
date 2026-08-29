@@ -108,7 +108,7 @@ modules/tasks/
 | `infrastructure/` | `repositories/` `services/` `entities/`（ORM Entity）`mappers/` |
 
 - **狙いは契約と実装の対称性**。`domain/repositories/task.repository.ts`（契約）↔ `infrastructure/repositories/typeorm-task.repository.ts`（実装）、`domain/services/image-storage.ts` ↔ `infrastructure/services/local-image-storage.ts` のように、**どの実装がどの契約を満たすかをフォルダ位置だけで辿れる**。barrel を置かず相対 import で繋ぐ本リポジトリでは、この対称性が依存方向の可読性を直接支える（clean では契約が `application/ports/` にあるため、対称の相手は application 側になる）。
-- **空フォルダは作らない**（`forms` / `models` 等の未使用概念は置かない）が、**実ファイルが 1 個でもサブフォルダは作る**。置き場所の判断を毎回発生させないことを、ファイル 1 個のフォルダのコストより優先する。
+- **空フォルダは作らない**（未使用の概念フォルダは置かない）が、**実ファイルが 1 個でもサブフォルダは作る**。置き場所の判断を毎回発生させないことを、ファイル 1 個のフォルダのコストより優先する。置かないフォルダの一覧と理由は下記「採用しない概念」を参照。
 - **layered は対象外**。tasks のみ層分離し、auth / users は従来レイヤード（Controller/Service/Entity を役割で区別）のまま維持する ──「層分割の有無」自体が 3 版の比較軸であるため。
 - **ファイル名から feature 名を落とす（層分割とは別で、3 版すべてに適用）**。feature フォルダ配下で操作ごとに分かれるファイル（usecase / validator / query / dto / input）は `create.usecase.ts` `update.validator.ts` `set-image.usecase.ts` のように feature 名を持たない。パス（`tasks/application/usecases/`）が既に feature を示すため。一方 `task.mapper.ts` / `task-access.ts` / `task.repository.ts` / `task.orm-entity.ts` のように**エンティティそのものを指すファイルは feature 名を残す**（落とすと `mapper.ts` となり対象がパスから消える）。`tasks.module.ts` / `tasks.controller.ts` は NestJS 慣習どおり。**クラス名は据え置き**（`create.validator.ts` → `CreateTaskValidator`）。
 
@@ -177,7 +177,28 @@ shared/                            # feature 非依存の共通基盤
 - **業務ルール検証は `validators/` に集約**: `CreateTaskValidator` / `UpdateTaskValidator` が**唯一の検証実体**で、UseCase は Validator を注入して呼び、自前では検証しない（同じルールを 2 か所に書かないため）。
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask`、`UpdateTaskValidator` → `Task`、`RegisterValidator` → `void`）。UseCase は受け取った実体をそのまま保存するだけでよく、`UpdateTaskValidator` では **SELECT が 1 回で済む**（`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる）。`RegisterValidator` は組み立てるものが無いため `void`。
   - ドメイン不変条件の実体は domain に残し（`Task.draft` / `applyUpdate`）、validators は「保存せず検証する」オーケストレーションのみを持つ。
-- **`read-models` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline）。**`inputs/` は clean / onion 両方**が持つ（依存を内向きに保つための境界変換なので、どちらのアーキでも要る）。**`validators/` は clean / onion 両方**が持つ（onion は読み取りが `queries/`）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
+- **`read-models` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline）。**`inputs/` は clean / onion 両方**が持つ（依存を内向きに保つための境界変換なので、どちらのアーキでも要る）。**`validators/` は clean / onion 両方**が持つ（onion は読み取りが `queries/`）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（→ 次項「採用しない概念」）。
+
+### 採用しない概念
+
+「無いこと」自体が設計判断なので、迷ったときに再導入されないよう理由ごと残す（正本は [.claude/rules/stack-backend.md](../.claude/rules/stack-backend.md)）。
+
+| 概念 | 置かない理由 |
+|---|---|
+| **`forms/`（Laravel の FormRequest 相当）** | FormRequest は `authorize()` と `rules()`（形式ルールと `unique:` 等の DB ルール）を 1 クラスに同居させるが、本リポジトリでは関心ごとに 3 か所へ分けている（下表）。**zod と Validator の「間」に FormRequest 相当の段があるのではなく、FormRequest 1 つが分解されている**。切り分けは「**HTTP でなくても成り立つ制約か**」で判断する |
+| `models/` `schemas/` | 契約の真実は `packages/api-spec/main.tsp`（→ `@app/api-client`）にあり、別に型やスキーマの一覧を持つと二重管理になる |
+| `resolves/` | GraphQL 専用の概念で、REST では出番がない |
+| `interceptors/` `middlewares/` | 現状は `AllExceptionsFilter`（例外→`ApiError`）と `FileInterceptor`（multipart）で足りている。必要になった時点で作る |
+
+FormRequest の責務がどこへ行ったか（`POST /tasks` の場合）:
+
+| FormRequest の責務 | 本リポジトリでの担当 | 実行タイミング |
+|---|---|---|
+| `authorize()` | `presentation/guards/` の Guard ＋ 所有権チェック（`loadOwnedTask` / `TaskAccessService`） | ハンドラ本体の前 |
+| `rules()` の形式部分（`required\|max:120`） | `presentation/dto/` の zod スキーマ ＋ `ZodValidationPipe`。422 と `ApiError.errors` の組み立てもここ | ハンドラ本体の前 |
+| `rules()` の DB 部分（`unique:users`） | `application/validators/` の Validator（clean / onion） | ハンドラ本体の中 |
+
+> 保存せず検証だけ行う DryRun エンドポイント（`*/validate`）は「FormRequest を単体で呼べるようにしたもの」に相当したが、同じルールの入口が二重になるため廃止した（フェーズ 24）。FormRequest が信頼できるのは「それを通らずハンドラへ入る経路が無い」ためで、各段の入口を 1 つに保つことで同じ性質を担保している。
 - **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、clean では `shared/presentation/pipes/ZodValidationPipe` をルート単位で適用する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `UnprocessableEntityException`（422）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。400 ではなく 422 なのは、構文としては正しい JSON がフィールド単位で意味的に不正、という状態を指すため。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
 - auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion も同様にクリーン化済み（契約は domain 所有）。layered の auth / users のみ従来レイヤードのまま。
 
