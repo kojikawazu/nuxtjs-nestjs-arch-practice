@@ -49,8 +49,8 @@
 - backend-layered: 単体 61 / e2e 30（入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
 - backend-clean: 単体 93 / e2e 30（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
 - backend-onion: 単体 92 / e2e 30（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
-- frontend-spa: 単体 53 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft・サーバ 422 をフィールド別表示・作成は再試行安全）
-- frontend-ssr: 単体 54 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft・サーバ 422 をフィールド別表示・作成は再試行安全）
+- frontend-spa: 単体 54 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft・サーバ 422 をフィールド別表示・作成は再試行安全）
+- frontend-ssr: 単体 55 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft・サーバ 422 をフィールド別表示・作成は再試行安全）
 
 ## CI
 
