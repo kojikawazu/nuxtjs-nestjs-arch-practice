@@ -1,15 +1,11 @@
 <script setup lang="ts">
-const { register, validateRegister } = useAuth();
+const { register } = useAuth();
 
 const email = ref('');
 const password = ref('');
 const displayName = ref('');
 const error = ref<string | null>(null);
 const loading = ref(false);
-
-// 「検証」ボタンによる DryRun の状態
-const validating = ref(false);
-const validationMessage = ref<string | null>(null);
 
 function currentInput() {
   return {
@@ -19,9 +15,9 @@ function currentInput() {
   };
 }
 
+// メール重複（409）などサーバ側の業務ルール違反は、この登録実行時に初めて分かる。
 async function onSubmit() {
   error.value = null;
-  validationMessage.value = null;
   loading.value = true;
   try {
     await register(currentInput());
@@ -30,21 +26,6 @@ async function onSubmit() {
     error.value = getErrorMessage(e, '登録に失敗しました');
   } finally {
     loading.value = false;
-  }
-}
-
-// 保存せずにサーバ側の検証だけ実行する（メール重複・形式などを事前確認）
-async function onValidate() {
-  error.value = null;
-  validationMessage.value = null;
-  validating.value = true;
-  try {
-    await validateRegister(currentInput());
-    validationMessage.value = '✓ この内容で登録できます';
-  } catch (e) {
-    error.value = getErrorMessage(e, '入力内容に問題があります');
-  } finally {
-    validating.value = false;
   }
 }
 </script>
@@ -75,32 +56,14 @@ async function onValidate() {
         class="w-full rounded border border-gray-300 px-3 py-2"
       />
       <p v-if="error" class="text-sm text-red-600" data-testid="register-error">{{ error }}</p>
-      <p
-        v-if="validationMessage"
-        class="text-sm text-green-700"
-        data-testid="register-validation-ok"
+      <button
+        type="submit"
+        :disabled="loading"
+        data-testid="register-submit"
+        class="w-full rounded bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
       >
-        {{ validationMessage }}
-      </p>
-      <div class="flex gap-2">
-        <button
-          type="button"
-          :disabled="loading || validating"
-          data-testid="register-validate"
-          class="w-1/3 rounded border border-indigo-600 px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
-          @click="onValidate"
-        >
-          検証
-        </button>
-        <button
-          type="submit"
-          :disabled="loading || validating"
-          data-testid="register-submit"
-          class="flex-1 rounded bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          登録
-        </button>
-      </div>
+        登録
+      </button>
     </form>
     <p class="mt-4 text-sm text-gray-600">
       既にアカウントがある場合は

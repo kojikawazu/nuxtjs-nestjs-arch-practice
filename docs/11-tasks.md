@@ -37,14 +37,15 @@
 | 21 | clean: shared 境界の明確化 | ✅ | `backend-clean` の feature 非依存な基盤を `src/shared/`（DomainError 基底、共通 HTTP 例外フィルタ、Zod Pipe、形式検証 helper）へ集約。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、再利用されても `src/api/{feature}/` に維持する境界を規約と設計書へ明記。 |
 | 22 | onion: shared 境界の明確化 | ✅ | `backend-onion` の feature / domain 契約に非依存な基盤を `src/shared/`（DomainError 基底、共通 HTTP 例外フィルタ、Zod Pipe、形式検証 helper）へ集約。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、再利用されても `src/modules/{feature}/` に維持する境界を規約と設計書へ明記。 |
 | 23 | 学習用語集の拡張 | ✅ | `docs/10` の用語集を Vue / Nuxt、API / backend 共通、アーキテクチャ比較、テストの4分類へ拡張。各用語に実装ファイルへのリンクを添え、Clean / Onion の Port 所有・`shared/` 境界・CQRS-lite とテストレベルの使い分けをコードリーディングの入口として説明。 |
+| 24 | 検証の集約と DryRun 廃止 | ✅ | clean/onion の業務ルール検証を `application/validators/` の Validator に集約し、UseCase が注入して呼ぶ形に統一（Validator は検証済みドメイン `NewTask` / `Task` を返すため、更新系は DB read 1 回で済む）。あわせて本登録と重複していた **DryRun 用 `*/validate` 3 本を契約ごと廃止**し、FE の確認画面フロー（遷移前検証・登録の「検証」ボタン・更新の `!validated` ガード）を撤去。検証は「FE zod で即時フィードバック → 本登録でサーバ判定」の 2 段に整理された。e2e は 3 版とも `*/validate` が **404** になることを検証する。layered は従来レイヤードの比較軸として Validator 集約の対象外（DryRun 用 UseCase は呼び出し元を失うため削除） |
 
 ## テスト集計
 
-- backend-layered: 単体 52 / e2e 35（入力検証は zod）
-- backend-clean: 単体 76 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod）
-- backend-onion: 単体 69 / e2e 35（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod）
-- frontend-spa: 単体 49 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft）
-- frontend-ssr: 単体 50 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft）
+- backend-layered: 単体 44 / e2e 27（入力検証は zod・DryRun 廃止済み）
+- backend-clean: 単体 76 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod）
+- backend-onion: 単体 69 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod）
+- frontend-spa: 単体 43 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft）
+- frontend-ssr: 単体 44 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft）
 
 ## CI
 

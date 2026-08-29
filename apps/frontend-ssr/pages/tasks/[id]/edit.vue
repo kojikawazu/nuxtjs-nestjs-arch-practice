@@ -3,7 +3,7 @@ import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
 const route = useRoute();
 const id = route.params.id as string;
-const { get, update, validateUpdate, uploadImage, removeImage, imageSrc } = useTasks();
+const { get, update, uploadImage, removeImage, imageSrc } = useTasks();
 
 const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
   getCachedData: () => undefined,
@@ -20,11 +20,6 @@ const loading = ref(false);
 onUnmounted(() => {
   if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
 });
-
-// confirm 進入時のサーバ側 DryRun 検証状態
-const validating = ref(false);
-const validated = ref(false);
-const validationError = ref<string | null>(null);
 
 const STATUS_LABEL: Record<string, string> = {
   todo: '未着手',
@@ -44,25 +39,6 @@ async function onFormSubmit(payload: TaskFormSubmit) {
       ? URL.createObjectURL(payload.imageFile)
       : null;
   step.value = 'confirm';
-  // confirm に進んだ時点でサーバ側の検証（保存はしない・所有権も確認）を実行する
-  validating.value = true;
-  validated.value = false;
-  validationError.value = null;
-  try {
-    await validateUpdate(id, {
-      title: value.title,
-      description: value.description,
-      status: value.status,
-      startDate: value.startDate,
-      endDate: value.endDate,
-      url: value.url,
-    });
-    validated.value = true;
-  } catch (e) {
-    validationError.value = getErrorMessage(e, '入力内容に問題があります');
-  } finally {
-    validating.value = false;
-  }
 }
 
 async function onConfirm() {
@@ -166,15 +142,6 @@ async function onConfirm() {
             </dd>
           </div>
         </dl>
-        <p v-if="validating" class="text-sm text-gray-500" data-testid="validating">
-          サーバ側で検証中…
-        </p>
-        <p v-else-if="validated" class="text-sm text-green-700" data-testid="validation-ok">
-          ✓ 検証に通りました。この内容で更新できます。
-        </p>
-        <p v-else-if="validationError" class="text-sm text-red-600" data-testid="validation-error">
-          {{ validationError }}
-        </p>
         <p v-if="saveError" class="text-sm text-red-600" data-testid="update-error">
           {{ saveError }}
         </p>
@@ -192,7 +159,7 @@ async function onConfirm() {
             type="button"
             data-testid="confirm-update"
             class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            :disabled="loading || validating || !validated"
+            :disabled="loading"
             @click="onConfirm"
           >
             更新する

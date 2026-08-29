@@ -16,7 +16,6 @@ export class CreateTaskUseCase {
 
   /**
    * Validator で検証（開始≤終了）した NewTask を Repository へ保存し、契約 Task に変換して返す。
-   * 検証は DryRun と同じ Validator を通すため、両経路の判定は必ず一致する。
    * @param input - CreateTaskInput（Controller が契約 TaskCreate から変換した Command）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */

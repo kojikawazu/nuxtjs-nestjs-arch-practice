@@ -8,7 +8,7 @@ import {
 import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import { RegisterValidator } from './register.validator';
 
-describe('RegisterValidator（DryRun・保存しない）', () => {
+describe('RegisterValidator（検証のみ・保存しない）', () => {
   let users: UserRepoMock;
   let validator: RegisterValidator;
 

@@ -128,15 +128,6 @@ model AuthTokens {
   user: User;
 }
 
-/**
- * DryRun（検証のみ）の結果。
- * 入力がサーバ側の検証（DTO + 業務ルール）を通れば valid: true を返す。
- * 検証に失敗した場合は ApiError（400/409/403/404 等）を返す。DB への書き込みは行わない。
- */
-model DryRunResult {
-  valid: boolean;
-}
-
 // ───────────────────────── 認証エンドポイント ─────────────────────────
 
 @route("/auth")
@@ -151,11 +142,6 @@ namespace Auth {
         @body tokens: AuthTokens;
       }
     | ApiError;
-
-  /** 新規ユーザー登録の事前検証（DryRun・保存しない） */
-  @route("/register/validate")
-  @post
-  op registerValidate(@body body: RegisterRequest): DryRunResult | ApiError;
 
   /** ログイン */
   @route("/login")
@@ -193,11 +179,6 @@ namespace Tasks {
       }
     | ApiError;
 
-  /** タスク新規作成の事前検証（DryRun・保存しない） */
-  @route("/validate")
-  @post
-  op createValidate(@body body: TaskCreate): DryRunResult | ApiError;
-
   /** タスク詳細 */
   @get
   op get(@path id: string): Task | ApiError;
@@ -206,11 +187,6 @@ namespace Tasks {
   @route("/{id}")
   @patch(#{ implicitOptionality: false })
   op update(@path id: string, @body body: TaskUpdate): Task | ApiError;
-
-  /** タスク更新の事前検証（DryRun・保存しない） */
-  @route("/{id}/validate")
-  @post
-  op updateValidate(@path id: string, @body body: TaskUpdate): DryRunResult | ApiError;
 
   /** タスク削除 */
   @route("/{id}")

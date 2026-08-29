@@ -2,7 +2,6 @@
 import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
 const error = ref<string | null>(null);
-const { accessToken } = useAuthState();
 
 // 画像（File）は Cookie にも JSON にも載せられないため、確認画面まではクライアント側で保持する。
 // SSR で描画されるのはテキスト項目のみで、画像プレビューは確認画面で <ClientOnly> として出す。
@@ -23,13 +22,10 @@ async function onFormSubmit(payload: TaskFormSubmit) {
   error.value = null;
   draftImage.value = payload.imageFile ?? null;
   try {
-    // draft の保存とサーバ側 DryRun 検証を BFF に委ねる。ここを通過した時点で
-    // 確認画面は「検証通過済みの内容」だけを描画すればよくなる。
-    // アクセストークンはメモリ保持で Cookie に無いため、BFF が backend へ中継できるよう明示的に渡す。
+    // draft の保存（httpOnly Cookie）を BFF に委ねる。確認画面はこの Cookie をサーバ描画で読む。
     await $fetch('/api/tasks/draft', {
       method: 'POST',
       body: payload.value,
-      headers: accessToken.value ? { Authorization: `Bearer ${accessToken.value}` } : {},
     });
     await navigateTo('/tasks/new/confirm');
   } catch (e) {

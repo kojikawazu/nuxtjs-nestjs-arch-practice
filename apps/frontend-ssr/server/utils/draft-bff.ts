@@ -66,29 +66,3 @@ export function readDraftCookie(event: H3Event): TaskDraft | null {
 export function clearDraftCookie(event: H3Event): void {
   deleteCookie(event, DRAFT_COOKIE, { path: '/' });
 }
-
-/**
- * backend のタスク検証エンドポイントへ、呼び出し元の Authorization ヘッダを引き継いで転送する。
- * `/tasks/validate` は JwtAuthGuard 配下だが、アクセストークンはメモリ保持で Cookie に無いため、
- * クライアントが付けてきた Bearer をそのまま中継する（BFF はトークンを保存しない）。
- */
-export async function forwardTaskValidate(
-  event: H3Event,
-  body: Record<string, unknown>,
-): Promise<void> {
-  const config = useRuntimeConfig();
-  const authorization = getRequestHeader(event, 'authorization');
-  try {
-    await $fetch(`${config.apiBaseUrl}/tasks/validate`, {
-      method: 'POST',
-      body,
-      headers: authorization ? { authorization } : {},
-    });
-  } catch (e) {
-    const err = e as { status?: number; data?: { message?: string } };
-    throw createError({
-      statusCode: err.status ?? 502,
-      statusMessage: err.data?.message ?? '入力内容に問題があります',
-    });
-  }
-}

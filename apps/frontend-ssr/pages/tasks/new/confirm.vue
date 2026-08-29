@@ -120,10 +120,6 @@ async function onConfirm() {
         </div>
       </dl>
 
-      <!-- draft 保存時にサーバ側 DryRun 検証を通過済みのため、到達＝検証 OK -->
-      <p class="text-sm text-green-700" data-testid="validation-ok">
-        ✓ 検証に通りました。この内容で作成できます。
-      </p>
       <p v-if="error" class="text-sm text-red-600" data-testid="create-error">{{ error }}</p>
 
       <div class="flex gap-2">

@@ -60,19 +60,6 @@ export class AuthService {
   }
 
   /**
-   * 新規登録の DryRun（検証のみ・保存しない）。入力検証は ZodValidationPipe が済ませている前提で、
-   * ここでは業務ルール（メール重複）だけを確認する。ユーザー作成・トークン発行は行わない。
-   * @param dto - RegisterDto（ZodValidationPipe 検証済み。= 契約 RegisterRequest）
-   * @returns Promise<void>（重複時は ConflictException=409 を throw）
-   */
-  async validateRegister(dto: RegisterDto): Promise<void> {
-    const existing = await this.users.findByEmail(dto.email);
-    if (existing) {
-      throw new ConflictException('Email already registered');
-    }
-  }
-
-  /**
    * ログイン（メール照合 → パスワード検証 → トークン発行）。不一致・不在はどちらも 401（列挙防止）。
    * @param dto - LoginDto（ZodValidationPipe 検証済み。= 契約 LoginRequest）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）

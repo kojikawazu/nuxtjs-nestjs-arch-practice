@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3';
-import type { AuthTokens, DryRunResult } from '@app/api-client';
+import type { AuthTokens } from '@app/api-client';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -38,26 +38,6 @@ export async function forwardAuth(
     throw createError({
       statusCode: err.status ?? 502,
       statusMessage: err.data?.message ?? 'Authentication failed',
-    });
-  }
-}
-
-/**
- * backend の検証専用（DryRun）エンドポイントへ転送する。
- * トークンは返らないため Cookie は扱わない。検証エラーはそのまま伝播させる。
- */
-export async function forwardValidate(
-  path: string,
-  body: Record<string, unknown>,
-): Promise<DryRunResult> {
-  const config = useRuntimeConfig();
-  try {
-    return await $fetch<DryRunResult>(`${config.apiBaseUrl}${path}`, { method: 'POST', body });
-  } catch (e) {
-    const err = e as { status?: number; data?: { message?: string } };
-    throw createError({
-      statusCode: err.status ?? 502,
-      statusMessage: err.data?.message ?? 'Validation failed',
     });
   }
 }

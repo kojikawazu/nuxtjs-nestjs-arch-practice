@@ -7,8 +7,6 @@ import { ListTasksUseCase } from './application/usecases/list.usecase';
 import { RemoveTaskImageUseCase } from './application/usecases/remove-image.usecase';
 import { SetTaskImageUseCase } from './application/usecases/set-image.usecase';
 import { UpdateTaskUseCase } from './application/usecases/update.usecase';
-import { ValidateCreateTaskUseCase } from './application/usecases/validate-create.usecase';
-import { ValidateUpdateTaskUseCase } from './application/usecases/validate-update.usecase';
 import { TaskEntity } from './infrastructure/task.entity';
 import { TasksController } from './presentation/tasks.controller';
 
@@ -24,10 +22,8 @@ import { TasksController } from './presentation/tasks.controller';
   providers: [
     ListTasksUseCase,
     CreateTaskUseCase,
-    ValidateCreateTaskUseCase,
     GetTaskUseCase,
     UpdateTaskUseCase,
-    ValidateUpdateTaskUseCase,
     DeleteTaskUseCase,
     SetTaskImageUseCase,
     RemoveTaskImageUseCase,

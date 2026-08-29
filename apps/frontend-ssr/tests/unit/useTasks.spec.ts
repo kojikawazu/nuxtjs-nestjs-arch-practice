@@ -112,37 +112,6 @@ describe('useTasks', () => {
     await expect(get('bad')).rejects.toMatchObject({ statusCode: 500 });
   });
 
-  describe('validateCreate（DryRun・保存しない）', () => {
-    it('正常系: 200 が返れば解決する（POST /tasks/validate）', async () => {
-      let called = false;
-      server.use(
-        http.post(`${BASE}/tasks/validate`, () => {
-          called = true;
-          return HttpResponse.json({ valid: true }, { status: 200 });
-        }),
-      );
-
-      const { validateCreate } = useTasks();
-      await expect(
-        validateCreate({ title: '買い物', startDate: '2026-06-10T00:00:00.000Z' }),
-      ).resolves.toBeUndefined();
-      expect(called).toBe(true);
-    });
-
-    it('異常系: 400 のとき statusCode 付きエラーを投げる', async () => {
-      server.use(
-        http.post(`${BASE}/tasks/validate`, () =>
-          HttpResponse.json({ statusCode: 400, message: 'title must be longer' }, { status: 400 }),
-        ),
-      );
-
-      const { validateCreate } = useTasks();
-      await expect(
-        validateCreate({ title: '', startDate: '2026-06-10T00:00:00.000Z' }),
-      ).rejects.toMatchObject({ statusCode: 400 });
-    });
-  });
-
   describe('uploadImage / removeImage（画像）', () => {
     it('正常系: uploadImage は Bearer 付きで POST し、更新後 Task を返す', async () => {
       const { accessToken } = useAuthState();
@@ -197,32 +166,6 @@ describe('useTasks', () => {
       const { removeImage } = useTasks();
       const result = await removeImage('t1');
       expect(result.imageUrl).toBeUndefined();
-    });
-  });
-
-  describe('validateUpdate（DryRun・保存しない）', () => {
-    it('正常系: 200 が返れば解決する（POST /tasks/{id}/validate）', async () => {
-      server.use(
-        http.post(`${BASE}/tasks/t1/validate`, () =>
-          HttpResponse.json({ valid: true }, { status: 200 }),
-        ),
-      );
-
-      const { validateUpdate } = useTasks();
-      await expect(validateUpdate('t1', { status: 'done' })).resolves.toBeUndefined();
-    });
-
-    it('準正常系: 他人のタスク(403)はエラーを投げる', async () => {
-      server.use(
-        http.post(`${BASE}/tasks/foreign/validate`, () =>
-          HttpResponse.json({ statusCode: 403, message: 'forbidden' }, { status: 403 }),
-        ),
-      );
-
-      const { validateUpdate } = useTasks();
-      await expect(validateUpdate('foreign', { title: 'x' })).rejects.toMatchObject({
-        statusCode: 403,
-      });
     });
   });
 });

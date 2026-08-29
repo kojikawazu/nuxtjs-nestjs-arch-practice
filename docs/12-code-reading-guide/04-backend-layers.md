@@ -26,7 +26,7 @@ apps/backend-layered/src/config/static-assets.ts                  # /uploads 静
 - **依存性逆転はしない**: UseCase は `@InjectRepository(TaskEntity)` で TypeORM Repository を直接注入し、`NotFoundException` 等の NestJS 例外を直接投げる（ポート interface は無い）。
 - 認可: `task.util.ts` の `findOwnedTask` が「存在しない=404 / 非所有=403」を区別。各 UseCase はこれを呼ぶ。
 - 日付: `startDate` 必須・`endDate` 任意・`startDate ≤ endDate`（`assertDateOrder`）。
-- DryRun: `validate-create` / `validate-update` ユースケースは検証だけして **`save` を呼ばない**（保存しないことがテストで保証される）。
+- 検証: `create.validator` / `update.validator` は検証して**検証済みドメインを返すだけ**で `save` を呼ばない。UseCase がそれを受け取って保存する（検証実体が 1 か所に集まる）。
 - 画像: `set-task-image` ユースケースが `saveImageFile`（サーバ生成 uuid 名）で保存し旧ファイルを掃除。MIME/サイズの一次検証は Controller の `ParseFilePipe`。
 - DTO は `implements TaskCreate`（`@app/api-client`）で契約とのズレを型で検出する。Entity→契約への変換は `toContractTask`。
 

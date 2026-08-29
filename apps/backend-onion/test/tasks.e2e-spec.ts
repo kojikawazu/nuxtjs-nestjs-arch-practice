@@ -114,107 +114,6 @@ describe('Tasks (e2e)', () => {
     await http.post('/tasks').send({ title: 'x', startDate: START }).expect(401);
   });
 
-  describe('POST /tasks/validate（作成 DryRun・保存しない）', () => {
-    it('正常系: 有効な入力は 200 { valid: true } を返し、一覧に追加されない', async () => {
-      const before = await http.get('/tasks').set(auth(token)).expect(200);
-
-      const res = await http
-        .post('/tasks/validate')
-        .set(auth(token))
-        .send({ title: '検証だけのタスク', startDate: START, endDate: END })
-        .expect(200);
-      expect(res.body).toEqual({ valid: true });
-
-      // DryRun なので件数は増えない
-      const after = await http.get('/tasks').set(auth(token)).expect(200);
-      expect(after.body).toHaveLength(before.body.length);
-    });
-
-    it('異常系: タイトル空はバリデーションで 400', async () => {
-      await http
-        .post('/tasks/validate')
-        .set(auth(token))
-        .send({ title: '', startDate: START })
-        .expect(400);
-    });
-
-    it('異常系: 終了が開始より前は 400', async () => {
-      await http
-        .post('/tasks/validate')
-        .set(auth(token))
-        .send({ title: '逆転', startDate: END, endDate: START })
-        .expect(400);
-    });
-
-    it('異常系: トークンなしは 401', async () => {
-      await http.post('/tasks/validate').send({ title: 'x', startDate: START }).expect(401);
-    });
-  });
-
-  describe('POST /tasks/:id/validate（更新 DryRun・保存しない）', () => {
-    it('正常系: 自分のタスクは 200 を返し、内容は変更されない', async () => {
-      const created = await http
-        .post('/tasks')
-        .set(auth(token))
-        .send({ title: '元のタイトル', status: 'todo', startDate: START })
-        .expect(201);
-      const id = created.body.id as string;
-
-      const res = await http
-        .post(`/tasks/${id}/validate`)
-        .set(auth(token))
-        .send({ title: '変更案', status: 'done' })
-        .expect(200);
-      expect(res.body).toEqual({ valid: true });
-
-      // DryRun なので保存されていない（元のまま）
-      const detail = await http.get(`/tasks/${id}`).set(auth(token)).expect(200);
-      expect(detail.body.title).toBe('元のタイトル');
-      expect(detail.body.status).toBe('todo');
-    });
-
-    it('異常系: マージ後に終了が開始より前なら 400', async () => {
-      const created = await http
-        .post('/tasks')
-        .set(auth(token))
-        .send({ title: '期間タスク', startDate: END })
-        .expect(201);
-      const id = created.body.id as string;
-
-      // 既存 startDate(END) より前の endDate(START) を指定すると逆転する
-      await http
-        .post(`/tasks/${id}/validate`)
-        .set(auth(token))
-        .send({ endDate: START })
-        .expect(400);
-    });
-
-    it('異常系: 存在しないタスクは 404', async () => {
-      await http
-        .post('/tasks/nonexistent-id/validate')
-        .set(auth(token))
-        .send({ title: 'x' })
-        .expect(404);
-    });
-
-    it('準正常系: 他人のタスクは 403', async () => {
-      const created = await http
-        .post('/tasks')
-        .set(auth(token))
-        .send({ title: 'owner のタスク', startDate: START })
-        .expect(201);
-      const id = created.body.id as string;
-
-      const otherToken = await register('validate-other@example.com');
-
-      await http
-        .post(`/tasks/${id}/validate`)
-        .set(auth(otherToken))
-        .send({ title: 'のっとり' })
-        .expect(403);
-    });
-  });
-
   describe('url フィールド（http/https のみ許可）', () => {
     it('正常系: https URL を付けて作成→詳細に反映される', async () => {
       const created = await http
@@ -332,6 +231,19 @@ describe('Tasks (e2e)', () => {
         .post(`/tasks/${id}/image`)
         .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
         .expect(401);
+    });
+  });
+  describe('廃止された DryRun エンドポイント', () => {
+    it('異常系: POST /tasks/validate は 404（廃止済み。検証は本登録 POST /tasks が担う）', async () => {
+      await http
+        .post('/tasks/validate')
+        .set(auth(token))
+        .send({ title: 'x', startDate: START })
+        .expect(404);
+    });
+
+    it('異常系: POST /tasks/:id/validate は 404（廃止済み。検証は PATCH /tasks/:id が担う）', async () => {
+      await http.post('/tasks/some-id/validate').set(auth(token)).send({ title: 'x' }).expect(404);
     });
   });
 });

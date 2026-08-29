@@ -104,37 +104,6 @@ describe('AuthService', () => {
     });
   });
 
-  describe('validateRegister（DryRun・保存しない）', () => {
-    it('正常系: 未登録メールは検証を通り、ユーザー作成・トークン保存をしない', async () => {
-      users.findByEmail.mockResolvedValue(null);
-
-      await expect(
-        service.validateRegister({
-          email: 'new@example.com',
-          password: 'password123',
-          displayName: 'new',
-        }),
-      ).resolves.toBeUndefined();
-
-      // DryRun なので一切書き込まない
-      expect(users.create).not.toHaveBeenCalled();
-      expect(refreshRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('準正常系: 既に登録済みのメールは ConflictException（作成はしない）', async () => {
-      users.findByEmail.mockResolvedValue(await buildUser());
-
-      await expect(
-        service.validateRegister({
-          email: 'taro@example.com',
-          password: 'password123',
-          displayName: 'taro',
-        }),
-      ).rejects.toBeInstanceOf(ConflictException);
-      expect(users.create).not.toHaveBeenCalled();
-    });
-  });
-
   describe('login', () => {
     it('正常系: 正しいパスワードでトークンを発行する', async () => {
       users.findByEmail.mockResolvedValue(await buildUser());
