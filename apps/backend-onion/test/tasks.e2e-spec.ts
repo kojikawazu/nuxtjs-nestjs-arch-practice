@@ -102,6 +102,18 @@ describe('Tasks (e2e)', () => {
     expect(res.body.errors[0].messages).toEqual(['endDate must be on or after startDate']);
   });
 
+  // グローバル ValidationPipe（テスト専用）を外したため、未知キーを弾いているのは
+  // ルート単位の ZodValidationPipe（.strict()）だけ。本番と同じ経路であることをここで固定する。
+  it('異常系: 未知キーは .strict() で 422（errors のフィールドはそのキー名）', async () => {
+    const res = await http
+      .post('/tasks')
+      .set(auth(token))
+      .send({ title: '未知キー', startDate: START, isAdmin: true })
+      .expect(422);
+
+    expect(errorFields(res.body)).toEqual(['isAdmin']);
+  });
+
   it('異常系: タイトル空はバリデーションで 422（errors に title）', async () => {
     const res = await http
       .post('/tasks')
