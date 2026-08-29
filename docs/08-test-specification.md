@@ -82,6 +82,8 @@
   - BE e2e: `POST /tasks/{id}/image` を supertest `.attach` で検証。正常(添付→`GET /uploads/<file>` 200→削除で 404)、不正MIME/ファイル無し(422・`errors[].field` は `file`)、**サイズ超過(413)** は保存へ到達しないこと（添付後も `imageUrl` が未設定のまま）まで確認。404/403/401。`UPLOAD_DIR` は OS 一時ディレクトリに隔離（外部依存なし）。
   - FE 単体: `useTasks.uploadImage/removeImage`（MSW で multipart を横取り、Bearer 付与を確認）、TaskForm のファイル選択（imageFile emit・非対応MIMEのクライアント検証）。
   - E2E: 画像添付で作成→詳細で表示・実ロード（`naturalWidth>0`）まで確認。
+  - BE 単体（削除経路・3 版）: 画像ありなら storage の削除が呼ばれること、画像なしなら呼ばれない（layered は `unlink` しない）こと、**実ファイルが既に無くても削除は成功する**こと、404/403 では DB 削除も storage 削除も起きないこと。
+  - BE e2e（3 版）: `upload → DELETE /tasks/{id}` の後に**画像 URL が 404** になること（孤立ファイルが残らない）、画像の無いタスクの削除も成功すること。
 - タスク作成の部分成功（本体は作成できたが画像だけ失敗）:
   - **再実行してもタスクが 1 件のままであること**を仕様として固定する。作成（`POST`）と画像添付は別 API のため、両者の間で失敗しうる。
   - FE 単体（spa / ssr 双方・`newTaskConfirm.spec.ts`）: MSW で `POST /tasks` を 201・`POST /tasks/{id}/image` を 500 にして部分成功を注入し、(1) 部分成功の表示が出て**再作成ボタンが画面から消える**こと、(2) 作成が通った時点で draft が破棄されること（spa=sessionStorage が空／ssr=BFF の DELETE が 1 回到達）、(3) 画像を再送しても・画像を諦めても `POST /tasks` が **1 回しか呼ばれない**ことを検証する。

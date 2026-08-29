@@ -44,12 +44,13 @@
 | 28 | 画像アップロードを受信段階で制限し設定と同期する | ✅ | `FileInterceptor` に Multer の `limits` が無く、上限超過のファイルも**一度メモリへ載ってから** `ParseFilePipe` で弾いていた（#66）。また `MAX_UPLOAD_BYTES` は読み込まれるだけで controller が 2MB をハードコードしていた。`MulterModule.registerAsync` で設定値を `limits.fileSize` に渡し受信段階で停止（超過は **413**）。デコレータ評価時に `ConfigService` を使えない制約は、`ParseFilePipeBuilder` をやめて **DI 可能な `ImageFilePipe`** に置き換えて解決（MIME 違反・欠落は 422 + `errors[].field=file`、サイズは多層防御で 413）。frontend の事前チェックも `NUXT_PUBLIC_MAX_UPLOAD_BYTES` で同期し、TypeSpec の doc・`.env.example`・compose も揃えた。単体は 3 版とも +6（設定値を変えると境界が動くことまで固定）|
 | 29 | パスワード上限を UTF-8 72 バイトで検証する | ✅ | 登録の上限が `.max(72)`（**文字数**）で、bcrypt の 72 **バイト**制約と一致していなかった（#63）。「あ」24 文字＝72 バイトで登録したあと、25 文字目を足した別パスワードでも `bcrypt.compare` が成功する（実測で確認）。`isWithinUtf8Bytes` を `zod-helpers` に追加し、**登録とログインの両方**に UTF-8 72 バイト上限を課した（ログインを開けたままだと抜け道が塞がらない）。契約・docs も「文字」から「UTF-8 72 バイト」へ修正。e2e は 3 版とも「先頭 72 バイトが同じ別パスワードではログインできない」ことを検証する（単体 +9 / e2e 27→30）|
 | 30 | e2e の検証構成を本番と揃える | ✅ | 本番はルート単位の `ZodValidationPipe` のみでグローバル `ValidationPipe` を使わないのに、e2e のテスト用アプリ生成だけが `ValidationPipe({ whitelist, forbidNonWhitelisted, transform })` を入れていた（#60）。テスト専用パイプが未知キーや型変換を肩代わりすると、**本番では通らない入力が e2e だけ通る**。3 版から除去し、外した状態で既存 30 件が全通過することを確認（＝実際に効いていたのはルート単位のパイプ）。あわせて未知キーの拒否（`.strict()` → 422）を tasks / auth の e2e に追加し、本番と同じ経路であることを固定した（e2e 30→32）|
+| 31 | タスク削除時に添付画像の実体も削除する | ✅ | 削除ユースケースが DB レコードだけを消し、`/uploads/...` の画像が残っていた（#67）。公開 URL から参照可能なまま運用期間に比例して孤立ファイルが増える状態。画像単体削除（`RemoveTaskImageUseCase`）には既に storage 削除があり、削除経路だけが非対称だったため、そちらに揃えた。順序は **DB → ストレージ**（逆順だと DB 削除の失敗で「レコードはあるのに実体が無い」リンク切れになる。この順なら最悪でも参照されない孤立ファイルが残るだけ）。ストレージ削除の失敗は本処理を巻き戻さない。e2e は 3 版とも `upload → DELETE task → 画像 URL が 404` を検証（単体 +3 / e2e 32→34）|
 
 ## テスト集計
 
-- backend-layered: 単体 61 / e2e 32（入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
-- backend-clean: 単体 93 / e2e 32（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
-- backend-onion: 単体 92 / e2e 32（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
+- backend-layered: 単体 64 / e2e 34（入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
+- backend-clean: 単体 95 / e2e 34（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
+- backend-onion: 単体 95 / e2e 34（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
 - frontend-spa: 単体 54 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft・サーバ 422 をフィールド別表示・作成は再試行安全）
 - frontend-ssr: 単体 55 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft・サーバ 422 をフィールド別表示・作成は再試行安全）
 
