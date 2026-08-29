@@ -21,7 +21,10 @@ export interface TaskFormSubmit {
 }
 
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+// 画像の上限は backend の MAX_UPLOAD_BYTES と同じ値を runtimeConfig から読む。
+// ここを固定値にすると、運用で上限を上げてもフォームだけ古い値で弾いてしまう。
+const maxImageBytes = useRuntimeConfig().public.maxUploadBytes;
 
 const props = withDefaults(
   defineProps<{
@@ -102,8 +105,8 @@ function onFileChange(event: Event) {
       objectUrl.value = null;
       return;
     }
-    if (file.size > MAX_IMAGE_BYTES) {
-      errors.image = '画像は2MB以内にしてください';
+    if (file.size > maxImageBytes) {
+      errors.image = `画像は${Math.floor(maxImageBytes / 1024 / 1024)}MB以内にしてください`;
       imageFile.value = null;
       objectUrl.value = null;
       return;

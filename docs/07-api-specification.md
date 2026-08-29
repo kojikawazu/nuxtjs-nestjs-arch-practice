@@ -40,7 +40,10 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 
 ### 画像アップロード（タスク添付）
 
-- `POST /tasks/{id}/image` は **multipart/form-data**（フィールド名 `file`）で 1 枚を受け取り、保存後の `Task`（`imageUrl` 入り）を返す。MIME（png/jpeg/webp）・サイズ（≤2MB）違反・ファイル無しは **422**（`errors[].field` は `file`）、非所有 403、不存在 404、未認証 401。
+- `POST /tasks/{id}/image` は **multipart/form-data**（フィールド名 `file`）で 1 枚を受け取り、保存後の `Task`（`imageUrl` 入り）を返す。
+  - MIME（png/jpeg/webp）違反・ファイル無しは **422**（`errors[].field` は `file`）。
+  - **サイズ超過は 413**（Multer が受信段階で止める）。上限はサーバ設定 `MAX_UPLOAD_BYTES`（既定 2MB）で、ハードコードではない。
+  - 非所有 403、不存在 404、未認証 401。
 - `DELETE /tasks/{id}/image` は添付を外し、`imageUrl` の消えた `Task` を返す。
 - 画像は `imageUrl`（例: `/uploads/<file>`）で参照し、`GET /uploads/<file>`（静的配信）で取得する。
 - multipart は型安全クライアント（openapi-fetch）に不向きなため、フロントはこの 2 本のみ素の `fetch` + `FormData` で呼ぶ（Bearer は付与）。
@@ -70,8 +73,8 @@ backend の契約とは別に、Nuxt の Nitro が持つ内部 API。ブラウ�
 ## エラーハンドリング
 
 - 形式: `ApiError { statusCode, message, error?, errors? }`。
-- 主なコード: **422(検証失敗)** / 401(認証) / 403(認可) / 404(不存在) / 409(重複登録) / 413(draft Cookie 上限・BFF のみ)。
-- **400 と 422 の使い分け**: 400 は「構文が壊れている」（JSON として読めない等）、422 は「構文は正しいが意味的に処理できない」。zod の形式検証・業務ルール違反（開始 > 終了）・画像の MIME/サイズ違反はいずれも後者なので **422** を返す。
+- 主なコード: **422(検証失敗)** / 401(認証) / 403(認可) / 404(不存在) / 409(重複登録) / **413(受け取れないほど大きい: 画像の上限超過・draft Cookie 上限)**。
+- **400 / 413 / 422 の使い分け**: 400 は「構文が壊れている」（JSON として読めない等）、413 は「大きすぎて受け取れない」、422 は「構文は正しいが意味的に処理できない」。zod の形式検証・業務ルール違反（開始 > 終了）・画像の MIME 違反は 422、画像のサイズ超過だけは受信段階で止めるため **413**。
 - **`errors`（フィールド別の理由）**: 422 のときだけ付く `ValidationError[]`。`message` は全件を連結した人間向けの一文で、`errors` は UI がフィールドへ割り付けるための構造。両者は併存し、`message` は従来どおり必ず入る。
 
 ```jsonc
