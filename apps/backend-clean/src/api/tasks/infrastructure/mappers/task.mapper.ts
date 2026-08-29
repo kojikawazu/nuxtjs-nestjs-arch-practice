@@ -1,4 +1,5 @@
 import { Task } from '../../domain/entities/task';
+import { DateRange } from '../../domain/value-objects/date-range';
 import { TaskOrmEntity } from '../entities/task.orm-entity';
 
 /** ORM エンティティ → ドメイン Task。 */
@@ -9,8 +10,9 @@ export function ormToDomain(orm: TaskOrmEntity): Task {
     title: orm.title,
     description: orm.description,
     status: orm.status,
-    startDate: orm.startDate,
-    endDate: orm.endDate,
+    // 保存時に検証済みなので通常は失敗しない。ここで組み立てることで、
+    // ドメインへ入った時点で「開始 ≤ 終了」が保証された状態になる。
+    period: DateRange.of(orm.startDate, orm.endDate),
     url: orm.url,
     imageUrl: orm.imageUrl,
     createdAt: orm.createdAt,
@@ -27,8 +29,8 @@ export function domainToOrm(task: Task): TaskOrmEntity {
   orm.title = s.title;
   orm.description = s.description;
   orm.status = s.status;
-  orm.startDate = s.startDate;
-  orm.endDate = s.endDate;
+  orm.startDate = s.period.start;
+  orm.endDate = s.period.end;
   orm.url = s.url;
   orm.imageUrl = s.imageUrl;
   orm.createdAt = s.createdAt;

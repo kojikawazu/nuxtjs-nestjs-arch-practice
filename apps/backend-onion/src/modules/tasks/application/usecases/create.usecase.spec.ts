@@ -9,6 +9,7 @@ import {
 import { toCreateTaskInput } from '../inputs/create.input';
 import { CreateTaskValidator } from '../validators/create.validator';
 import { CreateTaskUseCase } from './create.usecase';
+import { DateRange } from '../../domain/value-objects/date-range';
 
 describe('CreateTaskUseCase', () => {
   let repo: TaskRepoMock;
@@ -34,8 +35,7 @@ describe('CreateTaskUseCase', () => {
       title: '新規',
       description: null,
       status: 'todo',
-      startDate: new Date('2026-01-10T00:00:00.000Z'),
-      endDate: null,
+      period: DateRange.of(new Date('2026-01-10T00:00:00.000Z'), null),
       url: null,
     });
     expect(result.status).toBe('todo');
@@ -56,8 +56,8 @@ describe('CreateTaskUseCase', () => {
     );
 
     const created = repo.create.mock.calls[0][0];
-    expect(created.startDate).toEqual(new Date('2026-03-01T00:00:00.000Z'));
-    expect(created.endDate).toEqual(new Date('2026-03-10T00:00:00.000Z'));
+    expect(created.period.start).toEqual(new Date('2026-03-01T00:00:00.000Z'));
+    expect(created.period.end).toEqual(new Date('2026-03-10T00:00:00.000Z'));
     expect(created.status).toBe('in_progress');
     expect(created.url).toBe('https://example.com/docs');
     expect(result.url).toBe('https://example.com/docs');

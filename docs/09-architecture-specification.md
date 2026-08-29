@@ -192,6 +192,11 @@ shared/                            # feature 非依存の共通基盤
 - **「VO 以外は Domain Service」ではない**。この切り分けを字義どおり適用すると Entity まで Domain Service になり、状態を持たない**貧血ドメイン**になる。Domain Service は**置き場所が無いときの最後の手段**で、既定の受け皿ではない。
 - **VO の要件**: ①**不変**（`readonly`。変更は新インスタンス）②**同一性を持たない**（等価性は属性で決まる）③**不正な状態のインスタンスを作れない**（生成時に検証し、通ったあとは常に妥当）。③が要点で、「検証関数を呼び忘れる」経路そのものを型で消せる。
 - **VO と zod の責務分担**: VO が担うのは **zod では表現しにくいフィールド間の関係**だけ（開始 ≤ 終了）。単一フィールドの長さ・形式・列挙は `presentation/dto/` の zod に残す。
+- **導入例: `DateRange`（clean / onion）**: `TaskState` / `NewTask` が `startDate` / `endDate` の 2 フィールドではなく `period: DateRange` を持つ。
+  - 以前は自由関数 `assertDateOrder(start, end)` を `Task.draft` / `applyUpdate` が**呼ぶことを覚えている**前提だった。VO 化により `DateRange` 型の値は常に「開始 ≤ 終了」を満たすため、**呼び忘れる経路が型として消えた**。
+  - `applyUpdate` は**期間を先に組み立ててから**他フィールドを書き換える。以前は「書き換えてから検証」だったため、検証に失敗すると部分的に壊れた状態の Task が残っていた。
+  - 不変性は getter が `Date` の複製を返すことで担保する。`readonly` だけでは `range.start.setFullYear(...)` を防げない（`Date` 自体が可変なため）。
+  - **layered は VO 化しない**（比較軸の baseline。`task.util.ts` の `assertDateOrder` をそのまま残す）。HTTP 契約・e2e は 3 版で不変。
   - zod は `z.string().max(120)` のような単一フィールドの制約は得意だが、「開始 ≤ 終了」は `.refine()` でオブジェクト全体を見るしかなく、しかも PATCH では**既存値とマージした後**でないと判定できない。ここが zod の手の届かない領域で、VO の担当範囲になる。
   - 逆に長さや形式まで VO に持たせると、同じルールの入口が zod と VO の 2 つになり、片方だけ変えたときに気づけない（DryRun を廃止した理由と同じ形の問題）。
 

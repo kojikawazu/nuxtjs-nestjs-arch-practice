@@ -2,6 +2,7 @@ import { InvalidDateRangeError } from '../../domain/errors/task.errors';
 import { USER } from '../../../../../test/fakes/task-fakes';
 import { toCreateTaskInput } from '../inputs/create.input';
 import { CreateTaskValidator } from './create.validator';
+import { DateRange } from '../../domain/value-objects/date-range';
 
 describe('CreateTaskValidator（検証のみ・保存しない）', () => {
   let validator: CreateTaskValidator;
@@ -23,10 +24,12 @@ describe('CreateTaskValidator（検証のみ・保存しない）', () => {
       title: '新規',
       description: null,
       status: 'todo',
-      startDate: new Date('2026-01-10T00:00:00.000Z'),
-      endDate: null,
+      period: DateRange.of(new Date('2026-01-10T00:00:00.000Z'), null),
       url: null,
     });
+    // 期間は VO なので、値そのものでも確認しておく
+    expect(draft.period.start).toEqual(new Date('2026-01-10T00:00:00.000Z'));
+    expect(draft.period.end).toBeNull();
   });
 
   it('異常系: 終了が開始より前なら InvalidDateRangeError', () => {

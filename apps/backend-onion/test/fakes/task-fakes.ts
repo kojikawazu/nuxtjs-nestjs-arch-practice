@@ -4,6 +4,7 @@ import type { TaskRepository } from '../../src/modules/tasks/domain/repositories
 import type { ImageStorage } from '../../src/modules/tasks/domain/services/image-storage';
 import type { TaskAccessService } from '../../src/modules/tasks/domain/services/task-access.service';
 import { Task, type TaskState } from '../../src/modules/tasks/domain/entities/task';
+import { DateRange } from '../../src/modules/tasks/domain/value-objects/date-range';
 
 /**
  * tasks 単体テスト用の共有ヘルパー（オニオン版）。
@@ -106,8 +107,7 @@ export function buildState(overrides: Partial<TaskState> = {}): TaskState {
     title: '買い物',
     description: '牛乳を買う',
     status: 'todo',
-    startDate: new Date('2026-01-10T00:00:00.000Z'),
-    endDate: null,
+    period: DateRange.of(new Date('2026-01-10T00:00:00.000Z'), null),
     url: null,
     imageUrl: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),

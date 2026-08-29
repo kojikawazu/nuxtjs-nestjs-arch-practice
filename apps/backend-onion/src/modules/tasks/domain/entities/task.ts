@@ -1,5 +1,6 @@
 import type { TaskStatus } from '@app/api-client';
-import { InvalidDateRangeError, TaskAccessDeniedError } from '../errors/task.errors';
+import { TaskAccessDeniedError } from '../errors/task.errors';
+import { DateRange } from '../value-objects/date-range';
 
 /** 永続化済みタスクの全状態。infrastructure のマッパーと domain だけが扱う内部表現。 */
 export interface TaskState {
@@ -8,8 +9,8 @@ export interface TaskState {
   title: string;
   description: string | null;
   status: TaskStatus;
-  startDate: Date;
-  endDate: Date | null;
+  /** 開始・終了は対で 1 つの不変条件（開始 ≤ 終了）を持つため VO にまとめる。 */
+  period: DateRange;
   url: string | null;
   imageUrl: string | null;
   createdAt: Date;
@@ -22,8 +23,7 @@ export interface NewTask {
   title: string;
   description: string | null;
   status: TaskStatus;
-  startDate: Date;
-  endDate: Date | null;
+  period: DateRange;
   url: string | null;
 }
 
@@ -35,13 +35,6 @@ export interface TaskUpdate {
   startDate?: Date;
   endDate?: Date | null;
   url?: string | null;
-}
-
-/** 開始 ≤ 終了 の不変条件。両方そろっているときのみ検査する。 */
-export function assertDateOrder(start: Date, end: Date | null): void {
-  if (end && end.getTime() < start.getTime()) {
-    throw new InvalidDateRangeError();
-  }
 }
 
 /**
@@ -71,14 +64,13 @@ export class Task {
     endDate: Date | null;
     url?: string | null;
   }): NewTask {
-    assertDateOrder(input.startDate, input.endDate);
     return {
       userId: input.userId,
       title: input.title,
       description: input.description ?? null,
       status: input.status ?? 'todo',
-      startDate: input.startDate,
-      endDate: input.endDate,
+      // 開始 ≤ 終了は DateRange の生成時に検査される（検証呼び出しを覚えておく必要がない）
+      period: DateRange.of(input.startDate, input.endDate),
       url: input.url ?? null,
     };
   }
@@ -98,15 +90,23 @@ export class Task {
     }
   }
 
-  /** 指定フィールドのみ反映し、反映後の値で開始≤終了を再検証する。 */
+  /** 指定フィールドのみ反映する。期間はマージ後の値で不変条件が検査される。 */
   applyUpdate(patch: TaskUpdate): void {
+    // 期間を先に組み立てる。VO の生成時点で検査されるため、不正な更新では
+    // state を一切書き換えないまま例外になる（部分的に壊れた状態を作らない）。
+    const period = this.mergePeriod(patch);
     if (patch.title !== undefined) this.state.title = patch.title;
     if (patch.description !== undefined) this.state.description = patch.description ?? null;
     if (patch.status !== undefined) this.state.status = patch.status;
-    if (patch.startDate !== undefined) this.state.startDate = patch.startDate;
-    if (patch.endDate !== undefined) this.state.endDate = patch.endDate ?? null;
     if (patch.url !== undefined) this.state.url = patch.url ?? null;
-    assertDateOrder(this.state.startDate, this.state.endDate);
+    this.state.period = period;
+  }
+
+  /** 未指定のフィールドは現在値を引き継いで、更新後に確定する期間を組み立てる。 */
+  private mergePeriod(patch: TaskUpdate): DateRange {
+    const start = patch.startDate ?? this.state.period.start;
+    const end = patch.endDate !== undefined ? (patch.endDate ?? null) : this.state.period.end;
+    return DateRange.of(start, end);
   }
 
   /** 画像パスを差し替え、差し替え前のパスを返す（呼び出し側が旧ファイル掃除に使う）。 */
