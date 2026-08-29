@@ -8,7 +8,7 @@ import type { CreateTaskDto } from '../../presentation/dto/create-task.dto';
  * リポジトリには一切触れない。
  */
 @Injectable()
-export class ValidateCreateTaskUseCase {
+export class CreateTaskValidator {
   /**
    * `Task.draft` で開始≤終了などの不変条件のみ検証する（Repository には触れない＝保存しない）。
    * @param _userId - string（@CurrentUser 由来の所有者 ID・検証では未使用）

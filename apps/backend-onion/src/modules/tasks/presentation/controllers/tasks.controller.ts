@@ -26,8 +26,8 @@ import { DeleteTaskUseCase } from '../../application/usecases/delete-task.usecas
 import { RemoveTaskImageUseCase } from '../../application/usecases/remove-task-image.usecase';
 import { SetTaskImageUseCase } from '../../application/usecases/set-task-image.usecase';
 import { UpdateTaskUseCase } from '../../application/usecases/update-task.usecase';
-import { ValidateCreateTaskUseCase } from '../../application/usecases/validate-create-task.usecase';
-import { ValidateUpdateTaskUseCase } from '../../application/usecases/validate-update-task.usecase';
+import { CreateTaskValidator } from '../../application/validators/create-task.validator';
+import { UpdateTaskValidator } from '../../application/validators/update-task.validator';
 import { createTaskSchema } from '../dto/create-task.dto';
 import { updateTaskSchema } from '../dto/update-task.dto';
 
@@ -41,10 +41,10 @@ export class TasksController {
   constructor(
     private readonly listTasks: ListTasksQuery,
     private readonly createTask: CreateTaskUseCase,
-    private readonly validateCreateTask: ValidateCreateTaskUseCase,
+    private readonly validateCreateTask: CreateTaskValidator,
     private readonly getTask: GetTaskQuery,
     private readonly updateTask: UpdateTaskUseCase,
-    private readonly validateUpdateTask: ValidateUpdateTaskUseCase,
+    private readonly validateUpdateTask: UpdateTaskValidator,
     private readonly deleteTask: DeleteTaskUseCase,
     private readonly setTaskImage: SetTaskImageUseCase,
     private readonly removeTaskImage: RemoveTaskImageUseCase,
@@ -83,7 +83,7 @@ export class TasksController {
   /**
    * タスク作成の事前検証（DryRun・DB に保存しない）
    * 実API: POST /tasks/validate（成功時 200 OK）
-   * 処理の実体: ValidateCreateTaskUseCase.execute（application/usecases/validate-create-task.usecase.ts）
+   * 処理の実体: CreateTaskValidator.execute（application/validators/create-task.validator.ts）
    *   ※ 開始 ≤ 終了などドメイン不変条件を検証（保存はしない）
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param dto - TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
@@ -135,7 +135,7 @@ export class TasksController {
   /**
    * タスク更新の事前検証（DryRun・DB に保存しない）
    * 実API: POST /tasks/{id}/validate（成功時 200 OK）
-   * 処理の実体: ValidateUpdateTaskUseCase.execute（application/usecases/validate-update-task.usecase.ts）
+   * 処理の実体: UpdateTaskValidator.execute（application/validators/update-task.validator.ts）
    *   ※ マージ後の値で開始 ≤ 終了などを検証。不存在=404 / 非所有=403 も区別
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）

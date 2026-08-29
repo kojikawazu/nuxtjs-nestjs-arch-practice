@@ -8,7 +8,7 @@ import type { UpdateTaskDto } from '../../presentation/dto/update-task.dto';
  * domain の applyUpdate でマージ後の不変条件を検査するが、update（保存）は呼ばない。
  */
 @Injectable()
-export class ValidateUpdateTaskUseCase {
+export class UpdateTaskValidator {
   constructor(private readonly access: TaskAccessService) {}
 
   /**

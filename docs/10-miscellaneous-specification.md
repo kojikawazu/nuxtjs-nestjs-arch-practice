@@ -37,7 +37,7 @@
 | Guard | Controller 到達前に認証・認可を判定する NestJS の仕組み。 | [`jwt-auth.guard.ts`](../apps/backend-clean/src/api/auth/presentation/guards/jwt-auth.guard.ts) |
 | Pipe | HTTP 入力を変換・検証する NestJS の仕組み。このプロジェクトでは Zod schema をルート単位で実行する。 | [`zod-validation.pipe.ts`](../apps/backend-clean/src/shared/presentation/pipes/zod-validation.pipe.ts) |
 | Zod schema | 実行時に値を検証できる schema。frontend の検証は UX 用であり、信頼できない入力の最終検証は backend が担う。 | [`create-task.dto.ts`](../apps/backend-clean/src/api/tasks/presentation/dto/create-task.dto.ts) |
-| DryRun | 永続化せずに入力を検証する `*/validate` エンドポイント。本保存でも同じ業務ルールを再検証する。 | [`validate-create-task.usecase.ts`](../apps/backend-onion/src/modules/tasks/application/usecases/validate-create-task.usecase.ts) |
+| DryRun | 永続化せずに入力を検証する `*/validate` エンドポイント。本保存でも同じ業務ルールを再検証する。 | [`create-task.validator.ts`](../apps/backend-onion/src/modules/tasks/application/validators/create-task.validator.ts) |
 | DomainError | HTTP に依存しない業務エラーの基底。presentation の例外フィルタが `kind` を HTTP ステータスと `ApiError` へ翻訳する。 | [`domain-error.ts`](../apps/backend-clean/src/shared/domain/errors/domain-error.ts)、[`http-exception.filter.ts`](../apps/backend-clean/src/shared/presentation/filters/http-exception.filter.ts) |
 | 所有者認可 | タスクは作成者だけが操作できるという業務ルール。不存在は 404、他者所有は 403 を返す。 | [`task-access.service.ts`](../apps/backend-onion/src/modules/tasks/domain/services/task-access.service.ts) |
 | アクセストークン / リフレッシュトークン | 短命の access token は frontend のメモリ、長命の refresh token は httpOnly Cookie で扱い、refresh 時はローテーションする。 | [`auth-bff.ts`](../apps/frontend-spa/server/utils/auth-bff.ts)、[`auth.service.ts`](../apps/backend-layered/src/modules/auth/auth.service.ts) |
