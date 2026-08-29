@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Task } from '../task';
-import { TaskNotFoundError } from '../task.errors';
+import type { Task } from '../entities/task';
+import { TaskNotFoundError } from '../errors/task.errors';
 import { TASK_REPOSITORY, type TaskRepository } from '../repositories/task.repository';
 
 /**

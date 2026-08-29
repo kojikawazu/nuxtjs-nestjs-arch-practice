@@ -13,11 +13,11 @@ import { SetTaskImageUseCase } from './application/usecases/set-task-image.useca
 import { UpdateTaskUseCase } from './application/usecases/update-task.usecase';
 import { ValidateCreateTaskUseCase } from './application/usecases/validate-create-task.usecase';
 import { ValidateUpdateTaskUseCase } from './application/usecases/validate-update-task.usecase';
-import { LocalImageStorage } from './infrastructure/local-image-storage';
-import { TaskOrmEntity } from './infrastructure/task.orm-entity';
-import { TypeOrmTaskQuery } from './infrastructure/typeorm-task.query';
-import { TypeOrmTaskRepository } from './infrastructure/typeorm-task.repository';
-import { TasksController } from './presentation/tasks.controller';
+import { LocalImageStorage } from './infrastructure/services/local-image-storage';
+import { TaskOrmEntity } from './infrastructure/entities/task.orm-entity';
+import { TypeOrmTaskQuery } from './infrastructure/repositories/typeorm-task.query';
+import { TypeOrmTaskRepository } from './infrastructure/repositories/typeorm-task.repository';
+import { TasksController } from './presentation/controllers/tasks.controller';
 
 /**
  * tasks モジュールの DI 配線（オニオンアーキテクチャ）。

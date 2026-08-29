@@ -5,7 +5,7 @@ import {
 } from '../../src/api/tasks/application/ports/image-storage.port';
 import type { TaskQuery } from '../../src/api/tasks/application/ports/task-query.port';
 import type { TaskRepository } from '../../src/api/tasks/application/ports/task-repository.port';
-import { Task, type TaskState } from '../../src/api/tasks/domain/task';
+import { Task, type TaskState } from '../../src/api/tasks/domain/entities/task';
 
 /**
  * tasks UseCase 単体テスト用の共有ヘルパー（クリーンアーキテクチャ版）。

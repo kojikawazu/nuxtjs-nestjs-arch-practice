@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
-import { TypeOrmUserRepository } from './infrastructure/typeorm-user.repository';
-import { UserOrmEntity } from './infrastructure/user.orm-entity';
+import { TypeOrmUserRepository } from './infrastructure/repositories/typeorm-user.repository';
+import { UserOrmEntity } from './infrastructure/entities/user.orm-entity';
 
 /**
  * users モジュールの DI 配線（オニオンアーキテクチャ）。

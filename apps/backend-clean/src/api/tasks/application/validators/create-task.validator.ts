@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Task } from '../../domain/task';
+import { Task } from '../../domain/entities/task';
 import type { CreateTaskInput } from '../inputs/create-task.input';
 
 /**

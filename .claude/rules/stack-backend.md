@@ -24,6 +24,14 @@ globs: apps/backend-*/**
   - 依存は常に内向き（presentation → application → domain）。infrastructure が domain の契約を実装する。
   - DomainError・例外フィルタは clean と同じ。auth / users も clean 同様にクリーン化済み（usecase 分解＋ Port）。ただし契約（interface + DI トークン）は onion 流に `domain/`（`repositories/` `services/`）が所有する。
   - **共有境界**: `src/shared/` には、feature 名・feature 固有の型・domain 契約に依存しない共通基盤だけを置く（例: `DomainError` の基底、汎用 NestJS Pipe / Filter、形式検証 helper）。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、複数箇所から利用されても `src/modules/{feature}/` に置く。`shared/` は domain 契約を集める場所ではない。
+- **層内のフォルダ分割（clean / onion 共通）**: 層（`presentation` / `application` / `domain` / `infrastructure`）を切ったら、**その中も役割別サブフォルダまで分ける**。層ディレクトリ直下にファイルを裸で置かない（`*.module.ts` / `*.types.ts` のみ feature 直下＝層の外に置く）。`*.spec.ts` は対象ファイルと同じサブフォルダへ置く。
+  - `presentation/` — `controllers/` `dto/` `guards/` `decorators/` `strategies/`
+  - `application/` — `usecases/` `validators/` `mappers/` `services/`（＋ clean のみ `ports/` `inputs/` `read-models/` `query-services/`、onion は読み取りが `queries/`）
+  - `domain/` — `entities/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`）
+  - `infrastructure/` — `repositories/` `services/` `entities/`（ORM Entity）`mappers/`
+  - **domain と infrastructure は同じ語彙で対称に保つ**（`domain/repositories/` の契約 ↔ `infrastructure/repositories/` の実装、`domain/services/ImageStorage` ↔ `infrastructure/services/LocalImageStorage`）。どの実装がどの契約を満たすかをフォルダ位置だけで辿れるようにするため。
+  - **空フォルダは作らない**（`forms` / `models` 等の未使用概念は置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。
+  - layered は対象外（tasks のみ層分離し、auth / users は従来レイヤードのまま＝比較軸として維持する）。
 - **DTO / 入力検証**: **全 backend 版（layered / clean / onion）が zod を採用**する。`presentation/dto/` に zod スキーマを置き、ルート単位の `ZodValidationPipe`（layered は `common/pipes/`、clean / onion は `shared/presentation/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` で未知キーを弾き（旧 `forbidNonWhitelisted` 相当）、`satisfies z.ZodType<契約型>` で契約とのズレを型検出する（旧 `implements 契約型` 相当）。検証失敗は `BadRequestException`（400）で、`AllExceptionsFilter` が `ApiError` へ翻訳する（e2e 契約は 3 版で不変）。
   - 当初は `backend-clean` のみ zod（他は class-validator）だったが、検証手法を layered / onion へ横展開し zod に統一した（class-validator / class-transformer / @nestjs/mapped-types は 3 版とも除去）。ISO 日付・http/https URL の判定は layered では `common/validation/zod-helpers.ts`、clean / onion では `shared/validation/zod-helpers.ts` の `isIso8601` / `isHttpUrl` を共有する。
 - **型の共有**: レスポンス型・ドメイン型は `@app/api-client` を `import type` で参照する（実行時依存にしない）。

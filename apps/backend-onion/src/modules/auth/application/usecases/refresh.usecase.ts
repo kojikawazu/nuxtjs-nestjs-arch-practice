@@ -8,9 +8,9 @@ import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepository,
 } from '../../domain/repositories/refresh-token.repository';
-import { InvalidRefreshTokenError } from '../../domain/auth.errors';
+import { InvalidRefreshTokenError } from '../../domain/errors/auth.errors';
 import { TOKEN_ISSUER, type TokenIssuer } from '../../domain/services/token-issuer';
-import { issueAuthTokens } from '../issue-auth-tokens';
+import { issueAuthTokens } from '../services/issue-auth-tokens';
 
 /**
  * リフレッシュ（ローテーション）。

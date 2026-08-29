@@ -1,4 +1,4 @@
-import { TaskAccessDeniedError, TaskNotFoundError } from '../../domain/task.errors';
+import { TaskAccessDeniedError, TaskNotFoundError } from '../../domain/errors/task.errors';
 import type { ImageFile } from '../../domain/services/image-storage';
 import {
   USER,

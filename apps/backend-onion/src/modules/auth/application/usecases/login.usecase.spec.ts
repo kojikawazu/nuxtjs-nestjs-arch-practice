@@ -14,7 +14,7 @@ import {
   type TokenIssuerMock,
   type UserRepoMock,
 } from '../../../../../test/fakes/auth-fakes';
-import { InvalidCredentialsError } from '../../domain/auth.errors';
+import { InvalidCredentialsError } from '../../domain/errors/auth.errors';
 import { LoginUseCase } from './login.usecase';
 
 describe('LoginUseCase', () => {

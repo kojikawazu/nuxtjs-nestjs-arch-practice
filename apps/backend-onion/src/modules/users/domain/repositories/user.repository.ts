@@ -1,4 +1,4 @@
-import type { NewUser, User } from '../user';
+import type { NewUser, User } from '../entities/user';
 
 /** DI トークン（interface は実行時に消えるため Symbol で provide/inject する）。 */
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');

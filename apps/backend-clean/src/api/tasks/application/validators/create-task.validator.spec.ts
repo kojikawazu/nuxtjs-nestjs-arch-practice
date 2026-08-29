@@ -1,4 +1,4 @@
-import { InvalidDateRangeError } from '../../domain/task.errors';
+import { InvalidDateRangeError } from '../../domain/errors/task.errors';
 import { USER } from '../../../../../test/fakes/task-fakes';
 import { CreateTaskValidator } from './create-task.validator';
 

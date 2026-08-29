@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
-import { Task } from '../../domain/task';
+import { Task } from '../../domain/entities/task';
 import { TASK_REPOSITORY, type TaskRepository } from '../../domain/repositories/task.repository';
 import type { CreateTaskDto } from '../../presentation/dto/create-task.dto';
-import { toContractTask } from '../task.mapper';
+import { toContractTask } from '../mappers/task.mapper';
 
 /** タスクを新規作成する（アプリケーションサービス。ドメインの契約にのみ依存）。 */
 @Injectable()

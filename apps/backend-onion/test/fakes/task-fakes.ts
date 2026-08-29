@@ -3,7 +3,7 @@ import type { TaskQuery } from '../../src/modules/tasks/domain/repositories/task
 import type { TaskRepository } from '../../src/modules/tasks/domain/repositories/task.repository';
 import type { ImageStorage } from '../../src/modules/tasks/domain/services/image-storage';
 import type { TaskAccessService } from '../../src/modules/tasks/domain/services/task-access.service';
-import { Task, type TaskState } from '../../src/modules/tasks/domain/task';
+import { Task, type TaskState } from '../../src/modules/tasks/domain/entities/task';
 
 /**
  * tasks 単体テスト用の共有ヘルパー（オニオン版）。

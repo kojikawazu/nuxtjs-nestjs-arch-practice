@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { UpdateTaskInput } from '../inputs/update-task.input';
 import { TASK_REPOSITORY, type TaskRepository } from '../ports/task-repository.port';
-import { loadOwnedTask } from '../task-access';
+import { loadOwnedTask } from '../services/task-access';
 
 /**
  * タスク更新の DryRun（検証のみ・保存しない）。

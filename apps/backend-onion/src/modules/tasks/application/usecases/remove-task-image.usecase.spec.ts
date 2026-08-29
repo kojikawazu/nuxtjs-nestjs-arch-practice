@@ -1,4 +1,4 @@
-import { TaskAccessDeniedError } from '../../domain/task.errors';
+import { TaskAccessDeniedError } from '../../domain/errors/task.errors';
 import {
   USER,
   asImageStorage,

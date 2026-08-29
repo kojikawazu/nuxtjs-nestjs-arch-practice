@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { TaskAccessDeniedError, TaskNotFoundError } from '../../domain/task.errors';
+import { TaskAccessDeniedError, TaskNotFoundError } from '../../domain/errors/task.errors';
 import { TASK_QUERY, type TaskQuery } from '../ports/task-query.port';
 import type { TaskReadModel } from '../read-models/task.read-model';
 

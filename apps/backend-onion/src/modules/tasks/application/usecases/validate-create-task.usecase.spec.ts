@@ -1,4 +1,4 @@
-import { InvalidDateRangeError } from '../../domain/task.errors';
+import { InvalidDateRangeError } from '../../domain/errors/task.errors';
 import { USER, createTaskRepoMock, type TaskRepoMock } from '../../../../../test/fakes/task-fakes';
 import { ValidateCreateTaskUseCase } from './validate-create-task.usecase';
 

@@ -1,4 +1,4 @@
-import type { NewTask, Task } from '../task';
+import type { NewTask, Task } from '../entities/task';
 
 /** DI トークン（interface は実行時に消えるため Symbol で provide/inject する）。 */
 export const TASK_REPOSITORY = Symbol('TASK_REPOSITORY');

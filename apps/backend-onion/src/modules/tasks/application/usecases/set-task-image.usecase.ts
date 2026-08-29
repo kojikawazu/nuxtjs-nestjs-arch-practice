@@ -7,7 +7,7 @@ import {
   type ImageStorage,
 } from '../../domain/services/image-storage';
 import { TaskAccessService } from '../../domain/services/task-access.service';
-import { toContractTask } from '../task.mapper';
+import { toContractTask } from '../mappers/task.mapper';
 
 /**
  * タスクに画像を添付（1 枚・差し替え）する。

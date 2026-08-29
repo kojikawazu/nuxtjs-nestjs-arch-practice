@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { loadOwnedTask } from '../task-access';
+import { loadOwnedTask } from '../services/task-access';
 import { TASK_REPOSITORY, type TaskRepository } from '../ports/task-repository.port';
 
 /** 自分のタスクを削除する（存在しない=404 / 非所有=403）。 */

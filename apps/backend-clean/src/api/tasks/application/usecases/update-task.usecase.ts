@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
 import type { UpdateTaskInput } from '../inputs/update-task.input';
 import { TASK_REPOSITORY, type TaskRepository } from '../ports/task-repository.port';
-import { loadOwnedTask } from '../task-access';
-import { toContractTask } from '../task.mapper';
+import { loadOwnedTask } from '../services/task-access';
+import { toContractTask } from '../mappers/task.mapper';
 
 /** 自分のタスクを部分更新する（指定フィールドのみ反映し、開始≤終了を再検証）。 */
 @Injectable()

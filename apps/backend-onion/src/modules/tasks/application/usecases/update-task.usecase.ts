@@ -3,7 +3,7 @@ import type { Task as TaskContract } from '@app/api-client';
 import { TASK_REPOSITORY, type TaskRepository } from '../../domain/repositories/task.repository';
 import { TaskAccessService } from '../../domain/services/task-access.service';
 import type { UpdateTaskDto } from '../../presentation/dto/update-task.dto';
-import { toContractTask } from '../task.mapper';
+import { toContractTask } from '../mappers/task.mapper';
 
 /** 自分のタスクを部分更新する（指定フィールドのみ反映し、開始≤終了を再検証）。 */
 @Injectable()

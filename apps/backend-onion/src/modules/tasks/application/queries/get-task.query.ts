@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
-import { TaskAccessDeniedError, TaskNotFoundError } from '../../domain/task.errors';
+import { TaskAccessDeniedError, TaskNotFoundError } from '../../domain/errors/task.errors';
 import { TASK_QUERY, type TaskQuery } from '../../domain/repositories/task-query';
 
 /**

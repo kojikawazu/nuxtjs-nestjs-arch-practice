@@ -33,12 +33,12 @@
 |------|------|------|
 | 契約 (Contract) | API の入出力・HTTP ステータスを表す単一の真実。ここでは TypeSpec から OpenAPI と型安全な client を生成する。 | [`packages/api-spec/main.tsp`](../packages/api-spec/main.tsp)、[`packages/api-client/`](../packages/api-client/) |
 | TypeSpec / OpenAPI | TypeSpec は API 契約を記述する言語、OpenAPI はその生成結果で、Swagger UI・型生成の入力になる。 | [`main.tsp`](../packages/api-spec/main.tsp) → `tsp-output/openapi.yaml` |
-| Controller | HTTP メソッド・パス・入力を受け、Application 層へ処理を委譲する入口。DB 操作・業務判断は置かない。 | [`tasks.controller.ts`](../apps/backend-clean/src/api/tasks/presentation/tasks.controller.ts) |
+| Controller | HTTP メソッド・パス・入力を受け、Application 層へ処理を委譲する入口。DB 操作・業務判断は置かない。 | [`tasks.controller.ts`](../apps/backend-clean/src/api/tasks/presentation/controllers/tasks.controller.ts) |
 | Guard | Controller 到達前に認証・認可を判定する NestJS の仕組み。 | [`jwt-auth.guard.ts`](../apps/backend-clean/src/api/auth/presentation/guards/jwt-auth.guard.ts) |
 | Pipe | HTTP 入力を変換・検証する NestJS の仕組み。このプロジェクトでは Zod schema をルート単位で実行する。 | [`zod-validation.pipe.ts`](../apps/backend-clean/src/shared/presentation/pipes/zod-validation.pipe.ts) |
 | Zod schema | 実行時に値を検証できる schema。frontend の検証は UX 用であり、信頼できない入力の最終検証は backend が担う。 | [`create-task.dto.ts`](../apps/backend-clean/src/api/tasks/presentation/dto/create-task.dto.ts) |
 | DryRun | 永続化せずに入力を検証する `*/validate` エンドポイント。本保存でも同じ業務ルールを再検証する。 | [`validate-create-task.usecase.ts`](../apps/backend-onion/src/modules/tasks/application/usecases/validate-create-task.usecase.ts) |
-| DomainError | HTTP に依存しない業務エラーの基底。presentation の例外フィルタが `kind` を HTTP ステータスと `ApiError` へ翻訳する。 | [`domain-error.ts`](../apps/backend-clean/src/shared/domain/domain-error.ts)、[`http-exception.filter.ts`](../apps/backend-clean/src/shared/presentation/filters/http-exception.filter.ts) |
+| DomainError | HTTP に依存しない業務エラーの基底。presentation の例外フィルタが `kind` を HTTP ステータスと `ApiError` へ翻訳する。 | [`domain-error.ts`](../apps/backend-clean/src/shared/domain/errors/domain-error.ts)、[`http-exception.filter.ts`](../apps/backend-clean/src/shared/presentation/filters/http-exception.filter.ts) |
 | 所有者認可 | タスクは作成者だけが操作できるという業務ルール。不存在は 404、他者所有は 403 を返す。 | [`task-access.service.ts`](../apps/backend-onion/src/modules/tasks/domain/services/task-access.service.ts) |
 | アクセストークン / リフレッシュトークン | 短命の access token は frontend のメモリ、長命の refresh token は httpOnly Cookie で扱い、refresh 時はローテーションする。 | [`auth-bff.ts`](../apps/frontend-spa/server/utils/auth-bff.ts)、[`auth.service.ts`](../apps/backend-layered/src/modules/auth/auth.service.ts) |
 | ポータブル型 | MySQL / SQLite 双方で動く DB カラム型。DB 固有 enum は使わず `varchar` と検証で表現する。 | [`task.entity.ts`](../apps/backend-layered/src/modules/tasks/infrastructure/task.entity.ts) |
@@ -49,9 +49,9 @@
 | 用語 | 意味 | このプロジェクトでの例 |
 |------|------|------|
 | レイヤードアーキテクチャ | presentation / application / infrastructure を役割で分ける構成。tasks の UseCase は TypeORM Repository を直接利用する比較用の基準実装。 | [`backend-layered/src/modules/tasks/`](../apps/backend-layered/src/modules/tasks/) |
-| クリーンアーキテクチャ | Application が Port に依存し、Infrastructure がその Port を実装することで外部技術への依存を反転する構成。 | [`task-repository.port.ts`](../apps/backend-clean/src/api/tasks/application/ports/task-repository.port.ts)、[`typeorm-task.repository.ts`](../apps/backend-clean/src/api/tasks/infrastructure/typeorm-task.repository.ts) |
+| クリーンアーキテクチャ | Application が Port に依存し、Infrastructure がその Port を実装することで外部技術への依存を反転する構成。 | [`task-repository.port.ts`](../apps/backend-clean/src/api/tasks/application/ports/task-repository.port.ts)、[`typeorm-task.repository.ts`](../apps/backend-clean/src/api/tasks/infrastructure/repositories/typeorm-task.repository.ts) |
 | オニオンアーキテクチャ | 依存を常に内向きに保ち、Domain が必要な契約を所有する構成。Clean との主な差は Port の配置にある。 | [`task.repository.ts`](../apps/backend-onion/src/modules/tasks/domain/repositories/task.repository.ts) |
-| Port / Adapter | Port は内側が定義する必要な能力の interface、Adapter は DB・FS・JWT など外部技術でそれを実装する部品。 | [`image-storage.ts`](../apps/backend-onion/src/modules/tasks/domain/services/image-storage.ts) と [`local-image-storage.ts`](../apps/backend-onion/src/modules/tasks/infrastructure/local-image-storage.ts) |
+| Port / Adapter | Port は内側が定義する必要な能力の interface、Adapter は DB・FS・JWT など外部技術でそれを実装する部品。 | [`image-storage.ts`](../apps/backend-onion/src/modules/tasks/domain/services/image-storage.ts) と [`local-image-storage.ts`](../apps/backend-onion/src/modules/tasks/infrastructure/services/local-image-storage.ts) |
 | Domain Service | 単一 Entity に属さない業務ルールを、Domain 内で表すサービス。 | [`task-access.service.ts`](../apps/backend-onion/src/modules/tasks/domain/services/task-access.service.ts) |
 | `shared/` | feature 名・feature 固有の型・Port / domain 契約を知らない共通基盤だけを置く領域。便利な雑多フォルダにはしない。 | [Clean の `shared/`](../apps/backend-clean/src/shared/)、[Onion の `shared/`](../apps/backend-onion/src/shared/) |
 | feature 境界 | Task / Auth / User などの業務機能ごとに、固有の Domain・Application・Infrastructure を閉じる考え方。複数箇所から使っても業務用語を知るものは feature 内に残す。 | [`backend-clean/src/api/tasks/`](../apps/backend-clean/src/api/tasks/)、[`backend-onion/src/modules/tasks/`](../apps/backend-onion/src/modules/tasks/) |
