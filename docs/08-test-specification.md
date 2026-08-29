@@ -77,6 +77,10 @@
   - BE e2e: `POST /tasks/{id}/image` を supertest `.attach` で検証。正常(添付→`GET /uploads/<file>` 200→削除で 404)、不正MIME/超過/ファイル無し(422・`errors[].field` は `file`)、404/403/401。`UPLOAD_DIR` は OS 一時ディレクトリに隔離（外部依存なし）。
   - FE 単体: `useTasks.uploadImage/removeImage`（MSW で multipart を横取り、Bearer 付与を確認）、TaskForm のファイル選択（imageFile emit・非対応MIMEのクライアント検証）。
   - E2E: 画像添付で作成→詳細で表示・実ロード（`naturalWidth>0`）まで確認。
+- タスク作成の部分成功（本体は作成できたが画像だけ失敗）:
+  - **再実行してもタスクが 1 件のままであること**を仕様として固定する。作成（`POST`）と画像添付は別 API のため、両者の間で失敗しうる。
+  - FE 単体（spa / ssr 双方・`newTaskConfirm.spec.ts`）: MSW で `POST /tasks` を 201・`POST /tasks/{id}/image` を 500 にして部分成功を注入し、(1) 部分成功の表示が出て**再作成ボタンが画面から消える**こと、(2) 作成が通った時点で draft が破棄されること（spa=sessionStorage が空／ssr=BFF の DELETE が 1 回到達）、(3) 画像を再送しても・画像を諦めても `POST /tasks` が **1 回しか呼ばれない**ことを検証する。
+  - MSW と `$fetch` は実 I/O なので `flushPromises` 1 回では非同期の鎖が進みきらない。回数ではなく到達状態で待つ（`flushUntil`）。
 - CSR 確認画面（`frontend-spa`・`tests/e2e/csr-confirm.spec.ts`）:
   - SSR 版との**対**をなす検証。素の GET で取得した HTML に確認内容が**含まれないこと**を assert する（SSR 版は含まれることを assert する）。同じ観点を逆向きに固定することで、両方式の差が回帰で壊れない。
   - **別タブで `/tasks/new/confirm` を開くと入力画面へ戻される**ことを検証（`context.newPage()`）。sessionStorage がタブ単位であることの帰結で、Cookie 版との決定的な差。

@@ -40,14 +40,15 @@
 | 24 | 検証の集約と DryRun 廃止 | ✅ | clean/onion の業務ルール検証を `application/validators/` の Validator に集約し、UseCase が注入して呼ぶ形に統一（Validator は検証済みドメイン `NewTask` / `Task` を返すため、更新系は DB read 1 回で済む）。あわせて本登録と重複していた **DryRun 用 `*/validate` 3 本を契約ごと廃止**し、FE の確認画面フロー（遷移前検証・登録の「検証」ボタン・更新の `!validated` ガード）を撤去。検証は「FE zod で即時フィードバック → 本登録でサーバ判定」の 2 段に整理された。e2e は 3 版とも `*/validate` が **404** になることを検証する。layered は従来レイヤードの比較軸として Validator 集約の対象外（DryRun 用 UseCase は呼び出し元を失うため削除） |
 | 25 | 検証失敗を 422 + フィールド別エラーで返す | ✅ | 入力検証の失敗を 400 → **422** に変更し、契約 `ApiError` に `errors`（`{ field, messages }[]`）を追加。zod の形式検証・業務ルール違反（開始 > 終了）・画像の MIME/サイズ/欠落をすべて 422 に揃え、どのフィールドが何の理由で弾かれたかを構造で返す。clean / onion は `DomainError.fields` を例外フィルタが展開（`endDate` 等はドメインエンティティ自身の属性名なので依存は内向きのまま）、layered は例外に直接載せる。FE は `utils/fieldErrors.ts` の `getFieldErrors()` で取り出し、`TaskForm` の既存のインライン表示へ流す（作成フローは確認画面に入力欄が無いため、422 を受けたら入力画面へ差し戻す）。`errors` をマップでなく配列にしたのは、TypeSpec の OpenAPI 3.1 出力が動的キーを `unevaluatedProperties` で表現し `openapi-typescript` が解釈できない（`Record<string, never>` に落ちる）ため。409 / 404 / 403 / 401 は不変 |
 | 26 | onion: application の presentation 依存を解消 | ✅ | onion tasks の `application/` が `presentation/dto/` を import していた 4 箇所（usecase 2 + validator 2）を、`application/inputs/`（`CreateTaskInput` / `UpdateTaskInput` ＋ 契約→Input 変換）を挟んで解消。変換関数の引数は DTO 型ではなく**契約型**（`TaskCreate` / `TaskUpdate`）にすることで、presentation・application のどちらからも等距離な `@app/api-client` を共通語彙にし、依存を内向きに揃えた。ISO 文字列 → `Date` の正規化も境界に移動。clean tasks・onion auth と同じ形になり、**3 版とも application → presentation の import は 0 件**。HTTP 契約・e2e シナリオは不変（単体 71→77） |
+| 27 | 画像付きタスク作成を再試行安全にする | ✅ | 作成（`POST /tasks`）と画像添付（`POST /tasks/{id}/image`）が別 API のため、本体成功・画像失敗の部分成功で押し直すとタスクが二重作成された（#64）。**作成が通った時点で draft を破棄する**方式で解消。draft は「もう一度作成する」ための唯一の入力源なので、消せば押し直し・リロードのどちらからも再作成できない（フラグでボタンを塞ぐ方式と違い、リロードで復活しない）。部分成功時は確認画面に留まり、再作成ボタンを出さずに「画像を再送する」「画像なしで完了する」の 2 択を提示する。編集フローは `PATCH`（冪等）なので対象外。FE 単体で MSW により部分成功を注入し、再試行後も `POST /tasks` が 1 回だけであることを 2 版とも検証（spa 49→53 / ssr 50→54） |
 
 ## テスト集計
 
 - backend-layered: 単体 46 / e2e 27（入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
 - backend-clean: 単体 78 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
 - backend-onion: 単体 77 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
-- frontend-spa: 単体 49 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft・サーバ 422 をフィールド別表示）
-- frontend-ssr: 単体 50 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft・サーバ 422 をフィールド別表示）
+- frontend-spa: 単体 53 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft・サーバ 422 をフィールド別表示・作成は再試行安全）
+- frontend-ssr: 単体 54 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft・サーバ 422 をフィールド別表示・作成は再試行安全）
 
 ## CI
 
