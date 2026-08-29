@@ -15,10 +15,24 @@ describe('ConfirmDialog', () => {
     expect(wrapper.emitted('cancel')).toHaveLength(1);
   });
 
-  it('準正常系: loading 中は OK ボタンが disabled になる', async () => {
+  it('準正常系: loading 中は OK ボタンが実際に押せない（disabled = true・confirm が飛ばない）', async () => {
     const wrapper = await mountSuspended(ConfirmDialog, { props: { loading: true } });
 
-    expect(wrapper.find('[data-testid="confirm-ok"]').attributes('disabled')).toBeDefined();
+    // 属性の「存在」ではなく DOM の実状態を見る。
+    // attributes('disabled') は値が空文字でも "false" でも存在するため、押せるかどうかを保証しない。
+    const ok = wrapper.find<HTMLButtonElement>('[data-testid="confirm-ok"]');
+    expect(ok.element.disabled).toBe(true);
+
+    await ok.trigger('click');
+    expect(wrapper.emitted('confirm')).toBeUndefined();
+  });
+
+  it('正常系: loading でなければ OK ボタンは押せる（disabled = false）', async () => {
+    const wrapper = await mountSuspended(ConfirmDialog, { props: { loading: false } });
+
+    expect(wrapper.find<HTMLButtonElement>('[data-testid="confirm-ok"]').element.disabled).toBe(
+      false,
+    );
   });
 
   it('正常系: title/message が描画される', async () => {
