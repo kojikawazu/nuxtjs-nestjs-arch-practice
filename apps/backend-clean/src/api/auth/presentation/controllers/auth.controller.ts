@@ -1,11 +1,5 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
-import type {
-  AuthTokens,
-  DryRunResult,
-  LoginRequest,
-  RefreshRequest,
-  RegisterRequest,
-} from '@app/api-client';
+import type { AuthTokens, LoginRequest, RefreshRequest, RegisterRequest } from '@app/api-client';
 import { ZodValidationPipe } from '../../../../shared/presentation/pipes/zod-validation.pipe';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { toLoginInput } from '../../application/inputs/login.input';
@@ -14,7 +8,6 @@ import { LoginUseCase } from '../../application/usecases/login.usecase';
 import { LogoutUseCase } from '../../application/usecases/logout.usecase';
 import { RefreshUseCase } from '../../application/usecases/refresh.usecase';
 import { RegisterUseCase } from '../../application/usecases/register.usecase';
-import { RegisterValidator } from '../../application/validators/register.validator';
 import type { AuthenticatedUser } from '../../auth.types';
 import { loginSchema } from '../dto/login.dto';
 import { refreshSchema } from '../dto/refresh.dto';
@@ -30,7 +23,6 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 export class AuthController {
   constructor(
     private readonly registerUser: RegisterUseCase,
-    private readonly registerValidator: RegisterValidator,
     private readonly loginUser: LoginUseCase,
     private readonly refreshSession: RefreshUseCase,
     private readonly logoutUser: LogoutUseCase,
@@ -50,23 +42,6 @@ export class AuthController {
     @Body(new ZodValidationPipe(registerSchema)) body: RegisterRequest,
   ): Promise<AuthTokens> {
     return this.registerUser.execute(toRegisterInput(body));
-  }
-
-  /**
-   * 登録の事前検証（DryRun・ユーザー作成やトークン発行はしない）
-   * 実API: POST /auth/register/validate（成功時 200 OK）
-   * 処理の実体: RegisterValidator.execute（application/validators/register.validator.ts）
-   *   ※ DTO 検証に加えメール重複だけを確認（重複 → 409）
-   * @param body - RegisterRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
-   * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
-   */
-  @Post('register/validate')
-  @HttpCode(200)
-  async registerValidate(
-    @Body(new ZodValidationPipe(registerSchema)) body: RegisterRequest,
-  ): Promise<DryRunResult> {
-    await this.registerValidator.execute(toRegisterInput(body));
-    return { valid: true };
   }
 
   /**

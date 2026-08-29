@@ -38,7 +38,6 @@ describe('pages/tasks/new/confirm', () => {
 
     const wrapper = await mountSuspended(ConfirmPage);
 
-    expect(wrapper.find('[data-testid="validation-ok"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="confirm-create"]').attributes('disabled')).toBeUndefined();
   });
 

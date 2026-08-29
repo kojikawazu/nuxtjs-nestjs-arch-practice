@@ -6,7 +6,6 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 ## 目次
 
 - [エンドポイント一覧](#エンドポイント一覧)
-  - [DryRun（検証のみ）エンドポイント](#dryrun検証のみエンドポイント)
   - [画像アップロード（タスク添付）](#画像アップロードタスク添付)
 - [リクエスト / レスポンス形式](#リクエスト--レスポンス形式)
 - [認証](#認証)
@@ -21,30 +20,23 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 | メソッド | パス | 概要 | 認証 |
 |----------|------|------|------|
 | POST | /auth/register | 新規登録 → AuthTokens(201) | 不要 |
-| POST | /auth/register/validate | 登録の事前検証（DryRun）→ DryRunResult(200) | 不要 |
 | POST | /auth/login | ログイン → AuthTokens | 不要 |
 | POST | /auth/refresh | リフレッシュ → AuthTokens | リフレッシュトークン |
 | POST | /auth/logout | ログアウト(204) | アクセストークン |
 | GET | /tasks | 自分のタスク一覧 | アクセストークン |
 | POST | /tasks | 作成 → Task(201) | アクセストークン |
-| POST | /tasks/validate | 作成の事前検証（DryRun）→ DryRunResult(200) | アクセストークン |
 | GET | /tasks/{id} | 詳細 | アクセストークン |
 | PATCH | /tasks/{id} | 更新 | アクセストークン |
-| POST | /tasks/{id}/validate | 更新の事前検証（DryRun）→ DryRunResult(200) | アクセストークン |
 | DELETE | /tasks/{id} | 削除(204) | アクセストークン |
 | POST | /tasks/{id}/image | 画像添付（multipart, field `file`）→ Task | アクセストークン |
 | DELETE | /tasks/{id}/image | 添付画像の削除 → Task | アクセストークン |
 | GET | /uploads/{file} | 添付画像の静的配信 | 不要 |
 | GET | /health | 死活監視 | 不要 |
 
-### DryRun（検証のみ）エンドポイント
-
-`*/validate` は「保存する前に、入力がサーバ側の検証を通るか」を **DB に書き込まずに**確認する。
-
-- 成功時: `200 DryRunResult { valid: true }`。
-- 失敗時: 通常と同じ `ApiError`（400 バリデーション / 409 メール重複 / 403 非所有 / 404 不存在 / 401 未認証）。
-- 実行する検証: 入力スキーマ検証（zod `ZodValidationPipe`）に加え、`register/validate` はメール重複、`tasks/{id}/validate` は所有権（404/403）。`tasks/validate`（作成）はスキーマ検証のみ。
-- ユーザー作成・トークン発行・タスク保存は一切行わない（後方互換: 既存エンドポイントは変更なし）。
+> **DryRun（`*/validate`）は廃止した**。保存せず事前検証する専用エンドポイントを 3 本持っていたが、
+> 本登録（`POST` / `PATCH`）が同じ検証を通しており重複していたため削除した。
+> 業務ルール違反はいずれも本登録の実行時に返る（開始 > 終了は 400、メール重複は 409、非所有は 403、不存在は 404）。
+> サーバ側の検証実体は `application/validators/` の Validator に集約されている（[docs/09](./09-architecture-specification.md)）。
 
 ### 画像アップロード（タスク添付）
 
@@ -67,11 +59,9 @@ backend の契約とは別に、Nuxt の Nitro が持つ内部 API。ブラウ�
 | エンドポイント | 実装 | 用途 |
 |---|---|---|
 | `POST /api/auth/*` | 両 frontend | ログイン・登録・リフレッシュ・ログアウト。refresh を httpOnly Cookie 化 |
-| `POST /api/tasks/draft` | `frontend-ssr` のみ | タスク新規作成の入力内容を httpOnly Cookie `task_draft` に保存。保存前に backend `POST /tasks/validate`（DryRun）へ **Authorization ヘッダを中継**して検証する。形式不正は 400、Cookie 上限超過は **413** |
+| `POST /api/tasks/draft` | `frontend-ssr` のみ | タスク新規作成の入力内容を httpOnly Cookie `task_draft` に保存。形式不正は 400、Cookie 上限超過は **413**。業務ルールの検証は本登録（`POST /tasks`）が担うため backend へは中継しない |
 | `GET /api/tasks/draft` | `frontend-ssr` のみ | 保存済み draft を返す（`{ draft: TaskDraft \| null }`）。httpOnly のためクライアント JS からは直接読めず、確認画面が SSR 中に `useRequestFetch()` で呼ぶ |
 | `DELETE /api/tasks/draft` | `frontend-ssr` のみ | draft を破棄（タスク作成完了時） |
-
-> `/tasks/validate` は `JwtAuthGuard` 配下だが、アクセストークンはメモリ保持で Cookie に無い。そのためクライアントが `POST /api/tasks/draft` に付けた Bearer を BFF がそのまま中継する（BFF はトークンを保存しない）。
 
 ## 認証
 

@@ -6,8 +6,7 @@ import type { CreateTaskDto } from '../../presentation/dto/create.dto';
  * タスク作成の業務ルール検証（保存はしない）。
  * 新規作成には所有権などの追加ルールが無いため、ドメインの draft（開始≤終了）だけ確認する。
  * リポジトリには一切触れない。
- * DryRun（`POST /tasks/validate`）と本登録（`POST /tasks`）の双方がここを通る**唯一の検証実体**で、
- * 両経路の判定が食い違わないことを構造的に保証する。
+ * UseCase はこの Validator を通してから保存するため、検証の実体はここ 1 か所に集まる。
  */
 @Injectable()
 export class CreateTaskValidator {

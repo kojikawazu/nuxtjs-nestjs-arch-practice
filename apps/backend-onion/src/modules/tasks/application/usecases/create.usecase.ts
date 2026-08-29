@@ -16,7 +16,6 @@ export class CreateTaskUseCase {
 
   /**
    * Validator で検証（開始≤終了）した NewTask を Repository へ保存し、契約 Task を返す。
-   * 検証は DryRun と同じ Validator を通すため、両経路の判定は必ず一致する。
    * @param userId - string（@CurrentUser 由来の所有者 ID）
    * @param dto - CreateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskCreate）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）

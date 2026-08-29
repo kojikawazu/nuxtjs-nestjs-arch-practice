@@ -32,7 +32,7 @@ globs: apps/backend-*/**
   - **domain と infrastructure は同じ語彙で対称に保つ**（`domain/repositories/` の契約 ↔ `infrastructure/repositories/` の実装、`domain/services/ImageStorage` ↔ `infrastructure/services/LocalImageStorage`）。どの実装がどの契約を満たすかをフォルダ位置だけで辿れるようにするため。
   - **空フォルダは作らない**（`forms` / `models` 等の未使用概念は置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。
   - layered は対象外（tasks のみ層分離し、auth / users は従来レイヤードのまま＝比較軸として維持する）。
-- **業務ルール検証は Validator に集約する（clean / onion）**: `application/validators/` の Validator を**唯一の検証実体**とし、DryRun（`*/validate`）と本登録（POST/PATCH）の双方がここを通す。UseCase は Validator を注入して呼び、自前で同じ検証を書かない（片方だけ変更して DryRun と本番の判定が食い違う事故を防ぐため）。
+- **業務ルール検証は Validator に集約する（clean / onion）**: `application/validators/` の Validator を**唯一の検証実体**とし、UseCase は Validator を注入して呼ぶ。自前で同じ検証を書かない（同じルールが 2 か所に散ると、片方だけ変更したときに気づけないため）。
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask` / `UpdateTaskValidator` → `Task`）。UseCase はそれをそのまま保存するだけでよく、ロードを伴う検証でも DB read が 1 回で済む。`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる。
   - 組み立てるものが無い Validator は `void` でよい（`RegisterValidator` はメール重複の有無しか使わないため）。
   - ドメイン不変条件の実体は domain に残す（`Task.draft` / `applyUpdate`）。Validator は「保存せず検証する」オーケストレーションのみ担う。

@@ -21,7 +21,6 @@ Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理ア�
 
 - 認証: 登録 / ログイン / リフレッシュ（ローテーション）/ ログアウト（JWT。アクセスはメモリ、リフレッシュは httpOnly Cookie）
 - タスク CRUD: 所有者のみ操作可。状態（todo/in_progress/done）、期間（開始必須・終了任意、開始≤終了）
-- 事前検証（DryRun）: 保存せず入力を検証する `*/validate` エンドポイント
 - 画像添付: タスクに 1 枚（任意・png/jpeg/webp・2MB まで）。`/uploads` で静的配信、保存先は volume で永続化
 - 関連 URL: タスクに `http`/`https` のみのリンクを添付。確認画面・詳細で**安全なリンクカード**として表示（`javascript:` 等は入力検証＋描画時ガードで遮断、`rel="noopener noreferrer"`）
 - 契約から生成した Swagger UI（`/docs`）

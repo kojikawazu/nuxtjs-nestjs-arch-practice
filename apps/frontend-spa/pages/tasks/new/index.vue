@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
-const { validateCreate } = useTasks();
 const { save, load, draftImage } = useTaskDraft();
 
 const error = ref<string | null>(null);
@@ -15,16 +14,6 @@ const initial: Partial<TaskFormValue> | undefined = load() ?? undefined;
 async function onFormSubmit(payload: TaskFormSubmit) {
   error.value = null;
   try {
-    // 確認画面へ遷移する前にサーバ側 DryRun 検証（保存はしない）を済ませる。
-    // これにより確認画面は「検証通過済みの内容」だけを描画すればよく、中間状態を持たない。
-    await validateCreate({
-      title: payload.value.title,
-      description: payload.value.description,
-      status: payload.value.status,
-      startDate: payload.value.startDate,
-      endDate: payload.value.endDate,
-      url: payload.value.url,
-    });
     save(payload.value);
     // 画像は sessionStorage に置けないためメモリで引き継ぐ
     draftImage.value = payload.imageFile ?? null;

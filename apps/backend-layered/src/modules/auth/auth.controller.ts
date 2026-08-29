@@ -1,11 +1,5 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
-import type {
-  AuthTokens,
-  DryRunResult,
-  LoginRequest,
-  RefreshRequest,
-  RegisterRequest,
-} from '@app/api-client';
+import type { AuthTokens, LoginRequest, RefreshRequest, RegisterRequest } from '@app/api-client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthService } from './auth.service';
@@ -35,23 +29,6 @@ export class AuthController {
   @HttpCode(201)
   register(@Body(new ZodValidationPipe(registerSchema)) dto: RegisterRequest): Promise<AuthTokens> {
     return this.auth.register(dto);
-  }
-
-  /**
-   * 登録の事前検証（DryRun・ユーザー作成やトークン発行はしない）
-   * 実API: POST /auth/register/validate（成功時 200 OK）
-   * 処理の実体: AuthService.validateRegister（auth.service.ts）
-   *   ※ 入力検証に加えメール重複だけを確認（重複 → 409）
-   * @param dto - RegisterRequest（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
-   * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
-   */
-  @Post('register/validate')
-  @HttpCode(200)
-  async registerValidate(
-    @Body(new ZodValidationPipe(registerSchema)) dto: RegisterRequest,
-  ): Promise<DryRunResult> {
-    await this.auth.validateRegister(dto);
-    return { valid: true };
   }
 
   /**

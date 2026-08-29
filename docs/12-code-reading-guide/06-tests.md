@@ -17,7 +17,7 @@
 
 読むポイント:
 
-- DryRun テストは「`users.create`/`tasks.save` が**呼ばれない**こと」をアサートして、書き込みが起きないことを保証する。
+- Validator のテストは「`create`/`update` が**呼ばれない**こと」と「検証済みドメイン（`NewTask` / `Task`）を返すこと」をアサートし、検証だけで書き込みが起きないことを保証する。
 - e2e は `test-app.factory.ts` の `createTestApp` が SQLite と `/uploads` 静的配信を本番と同じ経路で立てる。
 - 比率は「正常系 1 : 異常系（準正常系 + 異常系）2 以上」を目安にしている。
 

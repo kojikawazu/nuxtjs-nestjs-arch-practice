@@ -35,8 +35,6 @@ test('タスク管理の一連フロー', async ({ page }) => {
     'href',
     'https://example.com/recipe',
   );
-  // confirm 進入時にサーバ側 DryRun 検証が走り、通過すると作成できる
-  await expect(page.getByTestId('validation-ok')).toBeVisible();
   await page.getByTestId('confirm-create').click();
 
   // --- 詳細表示 ---
@@ -57,7 +55,6 @@ test('タスク管理の一連フロー', async ({ page }) => {
   await page.getByTestId('task-status').selectOption('done');
   await page.getByTestId('task-submit').click();
   await expect(page.getByTestId('confirm-step')).toBeVisible();
-  await expect(page.getByTestId('validation-ok')).toBeVisible();
   await page.getByTestId('confirm-update').click();
 
   await expect(page.getByTestId('detail-title')).toBeVisible();
@@ -100,7 +97,6 @@ test('画像を添付して作成すると、詳細で画像が表示・ロー�
   await page.getByTestId('task-submit').click();
   // 確認画面でも選択画像のプレビューが表示される
   await expect(page.getByTestId('confirm-image')).toBeVisible();
-  await expect(page.getByTestId('validation-ok')).toBeVisible();
   await page.getByTestId('confirm-create').click();
 
   // 詳細で画像が表示され、実際にロードできる（静的配信まで通っている）

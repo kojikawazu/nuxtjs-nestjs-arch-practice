@@ -7,8 +7,7 @@ import type { CreateTaskInput } from '../inputs/create.input';
  *
  * 新規作成には所有権などの追加ルールが無いため、ドメインの不変条件（開始≤終了）だけを
  * `Task.draft` で確認する。Repository には一切触れない（書き込みが起きないことを保証）。
- * DryRun（`POST /tasks/validate`）と本登録（`POST /tasks`）の双方がここを通る**唯一の検証実体**で、
- * 両経路の判定が食い違わないことを構造的に保証する。
+ * UseCase はこの Validator を通してから保存するため、検証の実体はここ 1 か所に集まる。
  * ※ ドメイン不変条件の実体は domain に残し、ここは「保存せず検証する」オーケストレーションのみ担う。
  */
 @Injectable()

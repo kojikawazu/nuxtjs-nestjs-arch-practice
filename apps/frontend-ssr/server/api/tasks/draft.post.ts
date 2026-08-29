@@ -1,8 +1,8 @@
 /**
  * 入力内容（draft）を確認画面へ引き渡すために httpOnly Cookie へ保存する。
  *
- * 保存前に backend の DryRun 検証（POST /tasks/validate）を通すことで、確認画面に到達した時点で
- * 「検証通過済み」が保証される。これにより SSR で描画する確認 HTML が常に正しい状態になる。
+ * 形式検証（taskDraftSchema）と Cookie サイズ上限（3500 バイト）をここで担保する。
+ * 業務ルール（開始 ≤ 終了 など）の検証は本登録（POST /tasks）が担う。
  */
 export default defineEventHandler(async (event) => {
   const body = await readBody<unknown>(event);
@@ -20,7 +20,6 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  await forwardTaskValidate(event, draft);
   setDraftCookie(event, draft);
   return { ok: true };
 });

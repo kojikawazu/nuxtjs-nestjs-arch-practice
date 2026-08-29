@@ -84,7 +84,7 @@ modules/tasks/
 │  ├ tasks.controller.ts   # HTTP 入口・DTO 受け・UseCase へ委譲
 │  └ dto/                  # zod スキーマ（.strict() + satisfies z.ZodType<契約型>）+ ルート単位 ZodValidationPipe
 ├ application/
-│  ├ usecases/             # 1 ルート = 1 ユースケース（list/create/get/update/delete/validate*/image*）
+│  ├ usecases/             # 1 ルート = 1 ユースケース（list/create/get/update/delete/image*）
 │  └ task.util.ts          # 認可(findOwnedTask)・日付検証・契約変換・画像 I/O の共有ヘルパー
 └ infrastructure/
    └ task.entity.ts        # TypeORM Entity
@@ -139,7 +139,7 @@ api/tasks/                         # src/api/tasks（機能スライス）
 │  │  └ task.read-model.ts         #     TaskReadModel（= 契約 Task）/ TaskReadModelWithOwner
 │  ├ usecases/                     #   書き込み（create/update/delete/image）。@Inject(TASK_REPOSITORY)・引数は Input
 │  ├ query-services/               #   ★読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側（旧 queries/）
-│  ├ validators/                   #   ★DryRun（検証のみ・保存しない）。create/update の */validate を集約
+│  ├ validators/                   #   ★業務ルール検証（保存しない）。UseCase が注入して呼ぶ唯一の検証実体
 │  ├ services/
 │  │  └ task-access.ts             #   loadOwnedTask（存在/所有チェックの共有・書き込み用）
 │  └ mappers/
@@ -174,7 +174,7 @@ shared/                            # feature 非依存の共通基盤
 - 業務エラーは `DomainError`（HTTP 非依存）で投げ、`AllExceptionsFilter` が `kind` を見て 404/403/400 と `ApiError` 形へ翻訳する。
 - DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeOrmTaskRepository }` 等として Port ↔ 実装を束ねる（依存性逆転の要）。
 - **読み取りは CQRS で分離**: list/get は `query-services/` の Query Service が読み取り専用 Port `TaskQuery` にのみ依存し、ドメイン `Task` を経由せず ORM 行 → **Read Model（`read-models/`）** を直射影する（[読み取り分離（CQRS-lite）](#読み取り分離cqrs-lite) を参照）。
-- **業務ルール検証は `validators/` に集約**: `CreateTaskValidator` / `UpdateTaskValidator` が**唯一の検証実体**で、DryRun（`*/validate`）と本登録（`POST` / `PATCH`）の**双方がここを通る**。UseCase は Validator を注入して呼び、自前では検証しない（同じルールを 2 か所に書かないため。片方だけ変更して DryRun と本番の判定が食い違う事故を構造的に防ぐ）。
+- **業務ルール検証は `validators/` に集約**: `CreateTaskValidator` / `UpdateTaskValidator` が**唯一の検証実体**で、UseCase は Validator を注入して呼び、自前では検証しない（同じルールを 2 か所に書かないため）。
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask`、`UpdateTaskValidator` → `Task`、`RegisterValidator` → `void`）。UseCase は受け取った実体をそのまま保存するだけでよく、`UpdateTaskValidator` では **SELECT が 1 回で済む**（`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる）。`RegisterValidator` は組み立てるものが無いため `void`。
   - ドメイン不変条件の実体は domain に残し（`Task.draft` / `applyUpdate`）、validators は「保存せず検証する」オーケストレーションのみを持つ。
 - **`inputs` / `read-models` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline）。**`validators/` は clean / onion 両方**が持つ（onion は読み取りが `queries/`）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
@@ -203,7 +203,7 @@ api/auth/
 │  ├ ports/                         #   PasswordHasher / TokenIssuer / RefreshTokenRepository（暗号・DB を抽象化）
 │  ├ inputs/                        #   register/login（契約→Input）
 │  ├ usecases/                      #   register / login / refresh / logout（1操作1ユースケース）
-│  ├ validators/register.validator  #   DryRun（メール重複）
+│  ├ validators/register.validator  #   業務ルール検証（メール重複）
 │  └ services/issue-auth-tokens.ts  #   トークン発行＋保存の共有ヘルパー
 ├ infrastructure/                   # ★application/ports/ と対称
 │  ├ entities/refresh-token.orm-entity.ts
@@ -237,7 +237,7 @@ modules/tasks/
 ├ application/
 │  ├ usecases/                        #   書き込み。domain の契約/サービスに依存
 │  ├ queries/                         #   読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側
-│  ├ validators/                      #   DryRun（検証のみ・保存しない）。create/update の */validate を集約
+│  ├ validators/                      #   業務ルール検証（保存しない）。UseCase が注入して呼ぶ唯一の検証実体
 │  └ mappers/task.mapper.ts           #   domain Task → 契約 Task
 ├ infrastructure/                     # ★domain の契約と同じ語彙で対称に配置
 │  ├ entities/task.orm-entity.ts      #   TypeORM Entity
@@ -266,8 +266,8 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 
 | | 書き込み（Command） | 読み取り（Query） |
 |---|---|---|
-| 対象ルート | POST/PATCH/DELETE・`*/image`（書き込み）/ `*/validate`（DryRun） | `GET /tasks`・`GET /tasks/{id}` |
-| 配置 | `application/usecases/`（保存）/ clean・onion は `application/validators/`（検証。DryRun と本登録の双方が通る） | clean=`application/query-services/` / onion=`application/queries/` |
+| 対象ルート | POST/PATCH/DELETE・`*/image`（書き込み） | `GET /tasks`・`GET /tasks/{id}` |
+| 配置 | `application/usecases/`（保存）/ clean・onion は `application/validators/`（業務ルール検証） | clean=`application/query-services/` / onion=`application/queries/` |
 | 依存する契約 | `TaskRepository`（domain `Task` を返す） | `TaskQuery`（**Read Model を直接返す**・読み取り専用） |
 | 契約の所在 | clean=`application/ports/` / onion=`domain/repositories/` | 同左（`task-query` として隣に置く） |
 | 変換 | ORM → domain → 契約（2 段。不変条件を通す） | **ORM 行 → Read Model（1 段直射影）**。clean は `read-models/` の `TaskReadModel`、domain を作らない |
@@ -296,8 +296,8 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 
 同じ「入力 → 確認 → 確定」フローを、状態の置き場所を変えて実装し比較している。
 
-両版とも `/tasks/new`（入力）→ `/tasks/new/confirm`（確認）の 2 ルート構成・遷移前に DryRun 検証・
-画像はメモリ保持、と**揃えてある**。差は「draft をどこに置くか」の一点に絞ってある。
+両版とも `/tasks/new`（入力）→ `/tasks/new/confirm`（確認）の 2 ルート構成・画像はメモリ保持、と**揃えてある**。
+差は「draft をどこに置くか」の一点に絞ってある。
 
 | | `frontend-spa`（CSR） | `frontend-ssr`（SSR） |
 |---|---|---|
@@ -307,15 +307,13 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 | 別タブで確認画面を開く | **draft が無く入力画面へ戻る**（タブ単位のため） | **復元できる**（Cookie はタブ間で共有） |
 | サイズ上限 | 実質なし（sessionStorage は約 5MB） | **3,500 バイト**（日本語 約 380 文字。下記の制約を参照） |
 | XSS 耐性 | **JS から読める**（XSS で入力内容が漏れうる） | httpOnly のため JS から読めない |
-| 検証の実行主体 | ブラウザ（`useTasks().validateCreate()` を直接） | Nitro BFF（`POST /api/tasks/draft` が backend へ中継） |
 | 画像プレビュー | `useState` の File を `createObjectURL`。**保存できないためリロードで消える** | 同左（`<ClientOnly>` で囲む） |
 
 > **どちらが優れているかではなく、制約が入れ替わる**。Cookie 方式はサイズ上限と引き換えに XSS 耐性とタブ間共有を得て、sessionStorage 方式はサイズ自由と引き換えにその両方を失う。
 
 **CSR 版の draft フロー**:
 
-1. フォーム submit → クライアントが `validateCreate()` で backend の DryRun を直接叩く。
-2. 通過したら `useTaskDraft().save()` が sessionStorage へ保存（画像は `useState` へ退避）。
+1. フォーム submit → `useTaskDraft().save()` が sessionStorage へ保存（画像は `useState` へ退避）。
 3. `/tasks/new/confirm` へ遷移。ページは `load()` で同期的に復元して描画する（サーバは関与しない）。
 4. 「作成する」→ `POST /tasks` → 画像があれば `POST /tasks/{id}/image` → `clear()` で draft 破棄 → 詳細へ。
 
@@ -324,8 +322,8 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 
 **SSR 版の draft フロー**:
 
-1. フォーム submit → クライアントが `POST /api/tasks/draft`（メモリのアクセストークンを Bearer で付与）。
-2. Nitro BFF が Cookie 上限チェック → backend `POST /tasks/validate`（DryRun）へ Bearer を中継 → 通過したら draft を httpOnly Cookie に保存。
+1. フォーム submit → クライアントが `POST /api/tasks/draft`。
+2. Nitro BFF が形式検証（`taskDraftSchema`）と Cookie 上限チェックを行い、draft を httpOnly Cookie に保存する（backend へは中継しない）。
 3. `/tasks/new/confirm` へ遷移。ページは `useRequestFetch()` で `GET /api/tasks/draft` を**サーバ実行**し、確認内容を含む HTML を返す。
 4. 「作成する」→ `POST /tasks` → 画像があれば `POST /tasks/{id}/image` → `DELETE /api/tasks/draft` で draft 破棄 → 詳細へ。
 

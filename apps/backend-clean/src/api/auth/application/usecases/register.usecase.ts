@@ -27,7 +27,6 @@ export class RegisterUseCase {
 
   /**
    * Validator でメール重複を確認（重複=409）→ パスワードをハッシュ化してユーザー作成 → トークン発行。
-   * 検証は DryRun と同じ Validator を通すため、両経路の判定は必ず一致する。
    * @param input - RegisterInput（Controller が契約 RegisterRequest から変換した Command）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */

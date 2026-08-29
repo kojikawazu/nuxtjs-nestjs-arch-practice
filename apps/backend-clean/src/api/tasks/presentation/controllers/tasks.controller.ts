@@ -14,7 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { DryRunResult, Task, TaskCreate, TaskUpdate } from '@app/api-client';
+import type { Task, TaskCreate, TaskUpdate } from '@app/api-client';
 import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../../../shared/presentation/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../../auth/auth.types';
@@ -27,8 +27,6 @@ import { DeleteTaskUseCase } from '../../application/usecases/delete.usecase';
 import { RemoveTaskImageUseCase } from '../../application/usecases/remove-image.usecase';
 import { SetTaskImageUseCase } from '../../application/usecases/set-image.usecase';
 import { UpdateTaskUseCase } from '../../application/usecases/update.usecase';
-import { CreateTaskValidator } from '../../application/validators/create.validator';
-import { UpdateTaskValidator } from '../../application/validators/update.validator';
 import { createTaskSchema } from '../dto/create.dto';
 import { updateTaskSchema } from '../dto/update.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -36,7 +34,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 /**
  * タスクの HTTP 入口（presentation 層）。
  * 認証・入力検証（DTO/Pipe）に専念し、DTO → application の Input に詰め替えてから
- * 各 UseCase（書き込み）/ QueryService（読み取り）/ Validator（DryRun）へ委譲する。
+ * 各 UseCase（書き込み）/ QueryService（読み取り）へ委譲する。
  * application 側は presentation の DTO を知らない（依存は常に内向き）。
  */
 @Controller('tasks')
@@ -45,10 +43,8 @@ export class TasksController {
   constructor(
     private readonly listTasks: ListTasksQueryService,
     private readonly createTask: CreateTaskUseCase,
-    private readonly validateCreateTask: CreateTaskValidator,
     private readonly getTask: GetTaskQueryService,
     private readonly updateTask: UpdateTaskUseCase,
-    private readonly validateUpdateTask: UpdateTaskValidator,
     private readonly deleteTask: DeleteTaskUseCase,
     private readonly setTaskImage: SetTaskImageUseCase,
     private readonly removeTaskImage: RemoveTaskImageUseCase,
@@ -85,24 +81,6 @@ export class TasksController {
   }
 
   /**
-   * タスク作成の事前検証（DryRun・DB に保存しない）
-   * 実API: POST /tasks/validate（成功時 200 OK）
-   * 処理の実体: CreateTaskValidator.execute（application/validators/create.validator.ts）
-   * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
-   * @param body - TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
-   * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
-   */
-  @Post('validate')
-  @HttpCode(200)
-  async createValidate(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body(new ZodValidationPipe(createTaskSchema)) body: TaskCreate,
-  ): Promise<DryRunResult> {
-    this.validateCreateTask.execute(toCreateTaskInput(user.userId, body));
-    return { valid: true };
-  }
-
-  /**
    * タスクの取得(単一)
    * 実API: GET /tasks/{id}
    * 処理の実体: GetTaskQueryService.execute（application/query-services/get.query-service.ts）
@@ -133,27 +111,6 @@ export class TasksController {
     @Body(new ZodValidationPipe(updateTaskSchema)) body: TaskUpdate,
   ): Promise<Task> {
     return this.updateTask.execute(toUpdateTaskInput(user.userId, id, body));
-  }
-
-  /**
-   * タスク更新の事前検証（DryRun・DB に保存しない）
-   * 実API: POST /tasks/{id}/validate（成功時 200 OK）
-   * 処理の実体: UpdateTaskValidator.execute（application/validators/update.validator.ts）
-   *   ※ マージ後の値で開始 ≤ 終了などを検証。不存在=404 / 非所有=403 も区別
-   * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
-   * @param id - string（対象タスクの ID・パスパラメータ）
-   * @param body - TaskUpdate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
-   * @returns Promise<DryRunResult>（{ valid: true }。源: @app/api-client ← packages/api-spec/main.tsp）
-   */
-  @Post(':id/validate')
-  @HttpCode(200)
-  async updateValidate(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateTaskSchema)) body: TaskUpdate,
-  ): Promise<DryRunResult> {
-    await this.validateUpdateTask.execute(toUpdateTaskInput(user.userId, id, body));
-    return { valid: true };
   }
 
   /**
