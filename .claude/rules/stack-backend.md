@@ -65,5 +65,7 @@ globs: apps/backend-*/**
 - **アップロードは受信段階で止める**: multipart のサイズ上限は `MulterModule.registerAsync` の `limits.fileSize` に設定値（`MAX_UPLOAD_BYTES`）を渡し、**メモリに載る前**に切る。ハンドラ手前の Pipe だけで検証すると、上限超過のファイルも一度全部受信してから弾くことになる。Pipe 側にも同じ上限を残す（多層防御）。超過は 413（大きすぎて受け取れない）、MIME 違反・欠落は 422（内容が不正）。
   - **上限・許可 MIME をデコレータにハードコードしない**。`ParseFilePipeBuilder` はデコレータ評価時に定数を要求し `ConfigService` を使えないため、**DI 可能な Pipe クラス**（`ImageFilePipe`）にして `@UploadedFile(ImageFilePipe)` で使う。設定を変えたら実際の検証も変わる状態を保つ。
   - frontend の事前チェック（`NUXT_PUBLIC_MAX_UPLOAD_BYTES`）にも同じ値を配る。ずれると「送信できるのにサーバで弾かれる」／「送れるはずのファイルをフォームが拒む」が起きる。
-- **秘密値**: パスワードは bcrypt（72バイト以内）、リフレッシュ等の長い値は SHA-256 + `timingSafeEqual`。
+- **秘密値**: パスワードは bcrypt、リフレッシュ等の長い値は SHA-256 + `timingSafeEqual`。
+  - パスワードの上限は**文字数ではなく UTF-8 バイト長**（72 バイト）で検証する（`isWithinUtf8Bytes`）。bcrypt は 72 バイト超を静かに切り捨てるため、`.max(72)` だとマルチバイトで「先頭 72 バイトが同じ別パスワードでログインできる」状態になる。
+  - **登録とログインの両方**に同じ上限を課す。登録だけ絞ってもログインが無制限なら抜け道は残る。
 - **テスト**: Service 単体は Repository のみモック。e2e は supertest + in-memory SQLite（外部依存なしで速く回す）。**DB 固有の挙動（照合順序・unique 制約）は e2e では検出できない**ため、MySQL コンテナを使う IT（`test:it` / `*.it-spec.ts`）に切り出して 3 版とも回す。レベルの使い分けは [testing.md](./testing.md) を参照。
