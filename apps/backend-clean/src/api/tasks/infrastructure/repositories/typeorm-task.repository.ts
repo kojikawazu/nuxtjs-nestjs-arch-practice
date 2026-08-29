@@ -33,8 +33,8 @@ export class TypeOrmTaskRepository implements TaskRepository {
       title: input.title,
       description: input.description,
       status: input.status,
-      startDate: input.startDate,
-      endDate: input.endDate,
+      startDate: input.period.start,
+      endDate: input.period.end,
       url: input.url,
     });
     const saved = await this.repo.save(entity);

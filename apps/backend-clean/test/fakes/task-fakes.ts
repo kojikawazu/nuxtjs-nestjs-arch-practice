@@ -6,6 +6,7 @@ import {
 import type { TaskQuery } from '../../src/api/tasks/application/ports/task-query.port';
 import type { TaskRepository } from '../../src/api/tasks/application/ports/task-repository.port';
 import { Task, type TaskState } from '../../src/api/tasks/domain/entities/task';
+import { DateRange } from '../../src/api/tasks/domain/value-objects/date-range';
 
 /**
  * tasks UseCase 単体テスト用の共有ヘルパー（クリーンアーキテクチャ版）。
@@ -98,8 +99,7 @@ export function buildState(overrides: Partial<TaskState> = {}): TaskState {
     title: '買い物',
     description: '牛乳を買う',
     status: 'todo',
-    startDate: new Date('2026-01-10T00:00:00.000Z'),
-    endDate: null,
+    period: DateRange.of(new Date('2026-01-10T00:00:00.000Z'), null),
     url: null,
     imageUrl: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
