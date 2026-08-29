@@ -14,7 +14,7 @@ const SAFE_PROTOCOLS = ['http:', 'https:'];
 
 /**
  * 値が http/https の URL として解釈できれば true（旧 `@IsUrl({ protocols: ['http','https'] })` 相当）。
- * `javascript:` / `data:` 等の危険スキームは false（→ 400）。
+ * `javascript:` / `data:` 等の危険スキームは false（→ 422）。
  */
 export function isHttpUrl(value: string): boolean {
   try {

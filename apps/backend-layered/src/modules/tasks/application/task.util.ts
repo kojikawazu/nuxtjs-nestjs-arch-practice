@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import type { Task } from '@app/api-client';
 import { TaskEntity } from '../infrastructure/task.entity';
@@ -13,7 +17,7 @@ import { TaskEntity } from '../infrastructure/task.entity';
  * 横断的な小処理をここに集約し、各 UseCase からは本筋（手順）だけが読めるようにする。
  */
 
-/** MIME → 拡張子。許可外は 400。 */
+/** MIME → 拡張子。許可外は 422。 */
 export const EXT_BY_MIME: Readonly<Record<string, string>> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -36,14 +40,21 @@ export async function findOwnedTask(
   return entity;
 }
 
-/** 開始・終了が両方あるとき、終了が開始より前なら 400。 */
+/**
+ * 開始・終了が両方あるとき、終了が開始より前なら 422。
+ * 開始・終了の対のうち利用者が直せるのは後から入れた終了側なので、errors は endDate に紐づける。
+ */
 export function assertDateOrder(start: Date, end: Date | null): void {
   if (end && end.getTime() < start.getTime()) {
-    throw new BadRequestException('endDate must be on or after startDate');
+    const message = 'endDate must be on or after startDate';
+    throw new UnprocessableEntityException({
+      message,
+      errors: [{ field: 'endDate', messages: [message] }],
+    });
   }
 }
 
-/** サーバ生成名（taskId + uuid）で画像を保存し、公開パスを返す。許可外 MIME は 400。 */
+/** サーバ生成名（taskId + uuid）で画像を保存し、公開パスを返す。許可外 MIME は 422。 */
 export async function saveImageFile(
   dir: string,
   taskId: string,
@@ -51,7 +62,11 @@ export async function saveImageFile(
 ): Promise<string> {
   const ext = EXT_BY_MIME[file.mimetype];
   if (!ext) {
-    throw new BadRequestException('Unsupported image type');
+    const message = 'Unsupported image type';
+    throw new UnprocessableEntityException({
+      message,
+      errors: [{ field: 'file', messages: [message] }],
+    });
   }
   await mkdir(dir, { recursive: true });
   // クライアント由来でなくサーバ生成名（パストラバーサル防止）

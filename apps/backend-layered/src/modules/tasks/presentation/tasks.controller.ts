@@ -4,13 +4,13 @@ import {
   Delete,
   Get,
   HttpCode,
-  HttpStatus,
   Param,
   ParseFilePipeBuilder,
   Patch,
   Post,
   UploadedFile,
   UseGuards,
+  UnprocessableEntityException,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -62,7 +62,7 @@ export class TasksController {
    * タスクの作成
    * 実API: POST /tasks（成功時 201 Created）
    * 処理の実体: CreateTaskUseCase.execute（application/usecases/create.usecase.ts）
-   *   ※ dto は ZodValidationPipe(createTaskSchema) で検証済み（未知キーは .strict で 400）
+   *   ※ dto は ZodValidationPipe(createTaskSchema) で検証済み（未知キーは .strict で 422）
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param dto - TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<Task>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
@@ -128,7 +128,7 @@ export class TasksController {
    * 画像添付（1枚・multipart/form-data, フィールド名 `file`）
    * 実API: POST /tasks/{id}/image
    * 処理の実体: SetTaskImageUseCase.execute（application/usecases/set-image.usecase.ts）
-   *   ※ MIME（png/jpeg/webp）とサイズ（≤2MB）を ParseFilePipe で検証し、違反は 400
+   *   ※ MIME（png/jpeg/webp）とサイズ（≤2MB）を ParseFilePipe で検証し、違反は 422（errors.field は file）
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
    * @param file - Express.Multer.File（multipart の file フィールド）
@@ -147,7 +147,16 @@ export class TasksController {
           skipMagicNumbersValidation: true,
         })
         .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
-        .build({ errorHttpStatusCode: HttpStatus.BAD_REQUEST, fileIsRequired: true }),
+        .build({
+          fileIsRequired: true,
+          // 画像も JSON ボディと同じ「検証失敗 = 422 + フィールド別の理由」に揃える。
+          // field は multipart のフィールド名（file）＝契約上の入力名。
+          exceptionFactory: (message: string) =>
+            new UnprocessableEntityException({
+              message,
+              errors: [{ field: 'file', messages: [message] }],
+            }),
+        }),
     )
     file: Express.Multer.File,
   ): Promise<Task> {

@@ -169,6 +169,66 @@ describe('TaskForm', () => {
     expect(startInput.element.value).toBe('2026-06-10');
   });
 
+  // serverErrors: backend の 422（ApiError.errors）を、クライアント検証と同じ位置に出す。
+  it('準正常系: serverErrors を対応するフィールドのエラー欄へ表示する', async () => {
+    const wrapper = await mountSuspended(TaskForm, {
+      props: {
+        serverErrors: [
+          { field: 'title', messages: ['タイトルを入力してください'] },
+          { field: 'endDate', messages: ['endDate must be on or after startDate'] },
+        ],
+      },
+    });
+
+    expect(wrapper.find('[data-testid="error-title"]').text()).toBe('タイトルを入力してください');
+    expect(wrapper.find('[data-testid="error-end-date"]').text()).toBe(
+      'endDate must be on or after startDate',
+    );
+    expect(wrapper.find('[data-testid="error-url"]').exists()).toBe(false);
+  });
+
+  it('準正常系: 画像の検証失敗（field=file）は画像欄へ割り付ける', async () => {
+    const wrapper = await mountSuspended(TaskForm, {
+      props: {
+        serverErrors: [{ field: 'file', messages: ['PNG / JPEG / WebP のみ添付できます'] }],
+      },
+    });
+
+    expect(wrapper.find('[data-testid="error-image"]').text()).toBe(
+      'PNG / JPEG / WebP のみ添付できます',
+    );
+  });
+
+  it('準正常系: フォームに表示先が無いフィールドは無視し、他の指摘は表示する', async () => {
+    const wrapper = await mountSuspended(TaskForm, {
+      props: {
+        serverErrors: [
+          { field: '_', messages: ['リクエストボディが不正です'] },
+          { field: 'status', messages: ['不正な状態です'] },
+          { field: 'title', messages: ['タイトルを入力してください'] },
+        ],
+      },
+    });
+
+    // 表示先の無い指摘はページ側が message を全文表示するため、ここでは落とすだけでよい
+    expect(wrapper.find('[data-testid="error-title"]').text()).toBe('タイトルを入力してください');
+    expect(wrapper.find('[data-testid="error-start-date"]').exists()).toBe(false);
+  });
+
+  it('正常系: 入力を直して再 submit すると、サーバ由来のエラー表示は消える', async () => {
+    const wrapper = await mountSuspended(TaskForm, {
+      props: { serverErrors: [{ field: 'title', messages: ['タイトルを入力してください'] }] },
+    });
+    expect(wrapper.find('[data-testid="error-title"]').exists()).toBe(true);
+
+    await wrapper.find('[data-testid="task-title"]').setValue('直したタイトル');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    expect(wrapper.find('[data-testid="error-title"]').exists()).toBe(false);
+    expect(wrapper.emitted('submit')).toHaveLength(1);
+  });
+
   // payloadByteLimit: SSR 版の新規作成は入力内容を Cookie で確認画面へ運ぶため、
   // 文字数とは別に直列化サイズの上限がある（未指定の画面では検証しない）。
   it('準正常系: 上限指定時、サイズ超過を入力中に表示し submit させない', async () => {

@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { UnprocessableEntityException } from '@nestjs/common';
 import type { TaskEntity } from '../../infrastructure/task.entity';
 import {
   USER,
@@ -58,14 +58,14 @@ describe('CreateTaskUseCase', () => {
     expect(result.url).toBe('https://example.com/docs');
   });
 
-  it('異常系: 終了が開始より前なら BadRequestException で save されない', async () => {
+  it('異常系: 終了が開始より前なら UnprocessableEntityException で save されない', async () => {
     await expect(
       usecase.execute(USER, {
         title: '逆転',
         startDate: '2026-03-10T00:00:00.000Z',
         endDate: '2026-03-01T00:00:00.000Z',
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
     expect(repo.save).not.toHaveBeenCalled();
   });
 });

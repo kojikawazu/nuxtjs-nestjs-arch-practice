@@ -1,6 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import type { ApiError } from '@app/api-client';
 import { cleanupTestUploadDir, createTestApp } from './test-app.factory';
+
+/** 422 レスポンスから、エラーが紐づいたフィールド名を取り出す。 */
+const errorFields = (body: ApiError): string[] => (body.errors ?? []).map((e) => e.field);
 
 /**
  * タスク CRUD + 所有者認可 + 日付範囲の e2e テスト（実スタック / HTTP 経由）。
@@ -80,20 +84,32 @@ describe('Tasks (e2e)', () => {
     expect(created.body.endDate).toBeUndefined();
   });
 
-  it('異常系: startDate 無しはバリデーションで 400', async () => {
-    await http.post('/tasks').set(auth(token)).send({ title: '開始なし' }).expect(400);
+  it('異常系: startDate 無しはバリデーションで 422（errors に startDate）', async () => {
+    const res = await http.post('/tasks').set(auth(token)).send({ title: '開始なし' }).expect(422);
+
+    expect(res.body.statusCode).toBe(422);
+    expect(errorFields(res.body)).toEqual(['startDate']);
   });
 
-  it('異常系: 終了が開始より前は 400', async () => {
-    await http
+  it('異常系: 終了が開始より前は 422（業務ルール違反も errors に endDate で返る）', async () => {
+    const res = await http
       .post('/tasks')
       .set(auth(token))
       .send({ title: '逆転', startDate: END, endDate: START })
-      .expect(400);
+      .expect(422);
+
+    expect(errorFields(res.body)).toEqual(['endDate']);
+    expect(res.body.errors[0].messages).toEqual(['endDate must be on or after startDate']);
   });
 
-  it('異常系: タイトル空はバリデーションで 400', async () => {
-    await http.post('/tasks').set(auth(token)).send({ title: '', startDate: START }).expect(400);
+  it('異常系: タイトル空はバリデーションで 422（errors に title）', async () => {
+    const res = await http
+      .post('/tasks')
+      .set(auth(token))
+      .send({ title: '', startDate: START })
+      .expect(422);
+
+    expect(errorFields(res.body)).toEqual(['title']);
   });
 
   it('準正常系: 他人のタスクは取得・更新できない（403）', async () => {
@@ -128,21 +144,25 @@ describe('Tasks (e2e)', () => {
       expect(detail.body.url).toBe('https://example.com/docs');
     });
 
-    it('異常系: javascript: スキームはバリデーションで 400', async () => {
-      await http
+    it('異常系: javascript: スキームはバリデーションで 422（errors に url）', async () => {
+      const res = await http
         .post('/tasks')
         .set(auth(token))
         .send({ title: 'XSS試行', startDate: START, url: 'javascript:alert(1)' })
-        .expect(400);
+        .expect(422);
+
+      expect(errorFields(res.body)).toEqual(['url']);
     });
 
-    it('異常系: 2048 文字を超える URL は 400', async () => {
+    it('異常系: 2048 文字を超える URL は 422（errors に url）', async () => {
       const tooLong = `https://example.com/${'a'.repeat(2048)}`;
-      await http
+      const res = await http
         .post('/tasks')
         .set(auth(token))
         .send({ title: '長すぎURL', startDate: START, url: tooLong })
-        .expect(400);
+        .expect(422);
+
+      expect(errorFields(res.body)).toEqual(['url']);
     });
   });
 
@@ -183,28 +203,34 @@ describe('Tasks (e2e)', () => {
       await http.get(imageUrl).expect(404);
     });
 
-    it('異常系: 画像でない MIME は 400', async () => {
+    it('異常系: 画像でない MIME は 422（errors に file）', async () => {
       const id = await createTask();
-      await http
+      const res = await http
         .post(`/tasks/${id}/image`)
         .set(auth(token))
         .attach('file', Buffer.from('plain text'), { filename: 'a.txt', contentType: 'text/plain' })
-        .expect(400);
+        .expect(422);
+
+      expect(errorFields(res.body)).toEqual(['file']);
     });
 
-    it('異常系: サイズ上限（2MB）超過は 400', async () => {
+    it('異常系: サイズ上限（2MB）超過は 422（errors に file）', async () => {
       const id = await createTask();
       const tooBig = Buffer.alloc(2 * 1024 * 1024 + 1, 1);
-      await http
+      const res = await http
         .post(`/tasks/${id}/image`)
         .set(auth(token))
         .attach('file', tooBig, { filename: 'big.png', contentType: 'image/png' })
-        .expect(400);
+        .expect(422);
+
+      expect(errorFields(res.body)).toEqual(['file']);
     });
 
-    it('異常系: ファイル無しは 400', async () => {
+    it('異常系: ファイル無しは 422（errors に file）', async () => {
       const id = await createTask();
-      await http.post(`/tasks/${id}/image`).set(auth(token)).expect(400);
+      const res = await http.post(`/tasks/${id}/image`).set(auth(token)).expect(422);
+
+      expect(errorFields(res.body)).toEqual(['file']);
     });
 
     it('異常系: 存在しないタスクへの添付は 404', async () => {

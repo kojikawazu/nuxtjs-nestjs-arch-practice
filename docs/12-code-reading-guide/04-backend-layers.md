@@ -30,7 +30,7 @@ apps/backend-layered/src/config/static-assets.ts                  # /uploads 静
 - 画像: `set-task-image` ユースケースが `saveImageFile`（サーバ生成 uuid 名）で保存し旧ファイルを掃除。MIME/サイズの一次検証は Controller の `ParseFilePipe`。
 - DTO は `implements TaskCreate`（`@app/api-client`）で契約とのズレを型で検出する。Entity→契約への変換は `toContractTask`。
 
-> **差分ポイント**: 例外は投げっぱなしにせず `AllExceptionsFilter` が `ApiError { statusCode, message, error }` に統一する。内部情報を漏らさない。
+> **差分ポイント**: 例外は投げっぱなしにせず `AllExceptionsFilter` が `ApiError { statusCode, message, error, errors }` に統一する。内部情報を漏らさない。`errors` は検証失敗（422）のときだけ付くフィールド別の理由。
 > **構成メモ**: auth / users は従来レイヤード（Controller/Service/Entity を役割で区別）。tasks は同じレイヤードに **UseCase 層を足し、presentation/application/infrastructure をフォルダ分離** した形。
 
 ---

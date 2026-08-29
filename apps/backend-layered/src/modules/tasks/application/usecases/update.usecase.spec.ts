@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
 import type { TaskEntity } from '../../infrastructure/task.entity';
 import {
   OTHER,
@@ -49,12 +49,12 @@ describe('UpdateTaskUseCase', () => {
     expect(repo.save).not.toHaveBeenCalled();
   });
 
-  it('異常系: 既存 startDate より前の endDate 指定は BadRequestException で save されない', async () => {
+  it('異常系: 既存 startDate より前の endDate 指定は UnprocessableEntityException で save されない', async () => {
     repo.findOne.mockResolvedValue(buildEntity()); // 既存 startDate = 2026-01-10
 
     await expect(
       usecase.execute(USER, 'task-1', { endDate: '2026-01-05T00:00:00.000Z' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
     expect(repo.save).not.toHaveBeenCalled();
   });
 });

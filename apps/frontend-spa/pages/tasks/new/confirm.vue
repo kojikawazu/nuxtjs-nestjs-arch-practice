@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { Task } from '@app/api-client';
+
 const { create, uploadImage } = useTasks();
-const { load, clear, draftImage } = useTaskDraft();
+const { load, clear, draftImage, draftErrors } = useTaskDraft();
 
 const error = ref<string | null>(null);
 const loading = ref(false);
@@ -36,8 +38,11 @@ async function onConfirm() {
   if (!draft) return;
   loading.value = true;
   error.value = null;
+  // 本体作成と画像アップロードで catch を分ける。作成が成功した後に差し戻すと、
+  // 送り直しで同じタスクがもう 1 つできてしまうため（POST は冪等でない）。
+  let created: Task;
   try {
-    const created = await create({
+    created = await create({
       title: draft.title,
       description: draft.description,
       status: draft.status,
@@ -45,6 +50,20 @@ async function onConfirm() {
       endDate: draft.endDate,
       url: draft.url,
     });
+  } catch (e) {
+    error.value = getErrorMessage(e, 'タスクの作成に失敗しました');
+    const fieldErrors = getFieldErrors(e);
+    if (fieldErrors.length > 0) {
+      // この画面には入力欄が無いため、フィールド別に直せる入力画面へ差し戻す
+      draftErrors.value = fieldErrors;
+      await navigateTo('/tasks/new');
+      return;
+    }
+    loading.value = false;
+    return;
+  }
+
+  try {
     // 画像は作成後に別経路でアップロードする（任意・1枚）
     if (draftImage.value) {
       await uploadImage(created.id, draftImage.value);
@@ -53,7 +72,8 @@ async function onConfirm() {
     clear();
     await navigateTo(`/tasks/${created.id}`);
   } catch (e) {
-    error.value = getErrorMessage(e, 'タスクの作成に失敗しました');
+    // タスク本体は作成済みなので入力画面へは戻さず、この画面で理由だけ知らせる
+    error.value = getErrorMessage(e, '画像の添付に失敗しました');
     loading.value = false;
   }
 }

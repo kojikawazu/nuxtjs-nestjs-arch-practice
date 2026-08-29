@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ValidationError } from '@app/api-client';
 import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
 const error = ref<string | null>(null);
@@ -6,6 +7,13 @@ const error = ref<string | null>(null);
 // 画像（File）は Cookie にも JSON にも載せられないため、確認画面まではクライアント側で保持する。
 // SSR で描画されるのはテキスト項目のみで、画像プレビューは確認画面で <ClientOnly> として出す。
 const draftImage = useState<File | null>('task-draft-image', () => null);
+
+/**
+ * サーバの検証失敗（422）を確認画面から差し戻すための保持先。
+ * 確認画面は別ルートなので遷移をまたぐ必要があるが、draft 本体と違い Cookie には載せない
+ * （サーバ描画に要らないうえ、永続化すると直したあとも古いエラーが復活してしまうため）。
+ */
+const draftErrors = useState<ValidationError[]>('task-draft-errors', () => []);
 
 /**
  * 「修正する」で戻ってきた場合に入力値を復元するため、保存済み draft を読み出す。
@@ -20,6 +28,8 @@ const initial = computed<Partial<TaskFormValue> | undefined>(() => data.value?.d
 
 async function onFormSubmit(payload: TaskFormSubmit) {
   error.value = null;
+  // 送り直しなので、前回サーバに弾かれた内容は一度捨てる
+  draftErrors.value = [];
   draftImage.value = payload.imageFile ?? null;
   try {
     // draft の保存（httpOnly Cookie）を BFF に委ねる。確認画面はこの Cookie をサーバ描画で読む。
@@ -44,6 +54,7 @@ async function onFormSubmit(payload: TaskFormSubmit) {
       <TaskForm
         :initial="initial"
         :payload-byte-limit="MAX_DRAFT_BYTES"
+        :server-errors="draftErrors"
         submit-label="確認へ"
         @submit="onFormSubmit"
       />
