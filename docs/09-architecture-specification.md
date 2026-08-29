@@ -104,7 +104,7 @@ modules/tasks/
 |---|---|
 | `presentation/` | `controllers/` `dto/` `guards/` `decorators/` `strategies/` |
 | `application/` | `usecases/` `validators/` `mappers/` `services/` `inputs/`（＋ clean のみ `ports/` `read-models/` `query-services/`、onion は読み取りが `queries/`） |
-| `domain/` | `entities/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`） |
+| `domain/` | `entities/` `value-objects/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`） |
 | `infrastructure/` | `repositories/` `services/` `entities/`（ORM Entity）`mappers/` |
 
 - **狙いは契約と実装の対称性**。`domain/repositories/task.repository.ts`（契約）↔ `infrastructure/repositories/typeorm-task.repository.ts`（実装）、`domain/services/image-storage.ts` ↔ `infrastructure/services/local-image-storage.ts` のように、**どの実装がどの契約を満たすかをフォルダ位置だけで辿れる**。barrel を置かず相対 import で繋ぐ本リポジトリでは、この対称性が依存方向の可読性を直接支える（clean では契約が `application/ports/` にあるため、対称の相手は application 側になる）。
@@ -178,6 +178,22 @@ shared/                            # feature 非依存の共通基盤
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask`、`UpdateTaskValidator` → `Task`、`RegisterValidator` → `void`）。UseCase は受け取った実体をそのまま保存するだけでよく、`UpdateTaskValidator` では **SELECT が 1 回で済む**（`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる）。`RegisterValidator` は組み立てるものが無いため `void`。
   - ドメイン不変条件の実体は domain に残し（`Task.draft` / `applyUpdate`）、validators は「保存せず検証する」オーケストレーションのみを持つ。
 - **`read-models` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline）。**`inputs/` は clean / onion 両方**が持つ（依存を内向きに保つための境界変換なので、どちらのアーキでも要る）。**`validators/` は clean / onion 両方**が持つ（onion は読み取りが `queries/`）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（→ 次項「採用しない概念」）。
+
+### domain の構成要素（Entity / Value Object / Domain Service）
+
+`domain/` に置けるのは下記 3 種。判定軸は「不変かどうか」ではなく **同一性（identity）を持つか**と**置き場所があるか**（正本は [.claude/rules/stack-backend.md](../.claude/rules/stack-backend.md)）。
+
+| 要素 | 判定基準 | 置き場所 | 例 |
+|---|---|---|---|
+| **Entity** | **同一性（id）を持ち**、時間とともに状態が変わる。等価性は id で決まる | `domain/entities/` | `Task` / `User` |
+| **Value Object** | 同一性を持たず、**属性だけで等価**。**不変** | `domain/value-objects/` | `DateRange`（開始・終了の対） |
+| **Domain Service** | Entity にも VO にも**自然な置き場所がない**操作（複数の集約にまたがる／契約越しの取得が要る） | onion=`domain/services/` / clean=`application/services/` | `TaskAccessService`（取得＋所有チェック） |
+
+- **「VO 以外は Domain Service」ではない**。この切り分けを字義どおり適用すると Entity まで Domain Service になり、状態を持たない**貧血ドメイン**になる。Domain Service は**置き場所が無いときの最後の手段**で、既定の受け皿ではない。
+- **VO の要件**: ①**不変**（`readonly`。変更は新インスタンス）②**同一性を持たない**（等価性は属性で決まる）③**不正な状態のインスタンスを作れない**（生成時に検証し、通ったあとは常に妥当）。③が要点で、「検証関数を呼び忘れる」経路そのものを型で消せる。
+- **VO と zod の責務分担**: VO が担うのは **zod では表現しにくいフィールド間の関係**だけ（開始 ≤ 終了）。単一フィールドの長さ・形式・列挙は `presentation/dto/` の zod に残す。
+  - zod は `z.string().max(120)` のような単一フィールドの制約は得意だが、「開始 ≤ 終了」は `.refine()` でオブジェクト全体を見るしかなく、しかも PATCH では**既存値とマージした後**でないと判定できない。ここが zod の手の届かない領域で、VO の担当範囲になる。
+  - 逆に長さや形式まで VO に持たせると、同じルールの入口が zod と VO の 2 つになり、片方だけ変えたときに気づけない（DryRun を廃止した理由と同じ形の問題）。
 
 ### 採用しない概念
 
