@@ -215,6 +215,31 @@ describe('Tasks (e2e)', () => {
       await http.get(imageUrl).expect(404);
     });
 
+    // タスクを消しても画像だけ残ると、公開 URL から参照できる孤立ファイルが溜まっていく。
+    it('正常系: タスクを削除すると添付画像の実体も消える（孤立ファイルを残さない）', async () => {
+      const id = await createTask();
+      const uploaded = await http
+        .post(`/tasks/${id}/image`)
+        .set(auth(token))
+        .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
+        .expect(201);
+      const imageUrl = uploaded.body.imageUrl as string;
+      await http.get(imageUrl).expect(200);
+
+      // 画像を外さずにタスクごと削除する
+      await http.delete(`/tasks/${id}`).set(auth(token)).expect(204);
+
+      await http.get(imageUrl).expect(404);
+      await http.get(`/tasks/${id}`).set(auth(token)).expect(404);
+    });
+
+    it('正常系: 画像の無いタスクの削除も成功する（削除対象が無くても失敗しない）', async () => {
+      const id = await createTask();
+
+      await http.delete(`/tasks/${id}`).set(auth(token)).expect(204);
+      await http.get(`/tasks/${id}`).set(auth(token)).expect(404);
+    });
+
     it('異常系: 画像でない MIME は 422（errors に file）', async () => {
       const id = await createTask();
       const res = await http

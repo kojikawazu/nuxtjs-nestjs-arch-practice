@@ -106,6 +106,7 @@ sequenceDiagram
 
 タスクの `url` を確認画面・詳細で「安全なリンクカード」として表示する。外部コンテンツは一切読み込まない（iframe / 画像 / サーバ fetch なし）ため、SSRF・クリックジャッキング・任意描画のリスクは構造的に発生しない。多層防御で URL を扱う:
 
+- **孤立ファイルを残さない**: タスク削除時に添付画像の実体も削除する（DB → ストレージの順）。片方だけ失敗する場合は「参照されない孤立ファイルが残る」側に倒す。逆順（ストレージ先）だと DB 削除の失敗で `imageUrl` が実体の無いパスを指し続ける。ストレージ削除の失敗は本処理を巻き戻さない（掃除の失敗で削除自体を失敗させない）。
 - **スキーム allowlist**: `http`/`https` のみ許可。バックエンドは zod スキーマの `refine(isHttpUrl)`（`common/validation/zod-helpers.ts`）で検証し、`javascript:` / `data:` / `file:` 等は **422** で拒否。長さは 2048 文字まで。
 - **フロント入力検証**: `TaskForm` が `isSafeHttpUrl()`（`new URL()` + protocol allowlist）で検証し、不正スキームは submit させない。
 - **描画時ガード（最重要）**: Vue は `:href` を `javascript:` に対してサニタイズしない。`UrlPreview` は `isSafeHttpUrl()` を通った値のときだけ `<a>` を描画し、それ以外はリンクを出さず「無効な URL」表示にする（DB を直接改竄された等で不正値が残っても安全）。
