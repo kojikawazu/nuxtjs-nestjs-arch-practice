@@ -103,7 +103,7 @@ modules/tasks/
 | 層 | サブフォルダ |
 |---|---|
 | `presentation/` | `controllers/` `dto/` `guards/` `decorators/` `strategies/` |
-| `application/` | `usecases/` `validators/` `mappers/` `services/`（＋ clean のみ `ports/` `inputs/` `read-models/` `query-services/`、onion は読み取りが `queries/`） |
+| `application/` | `usecases/` `validators/` `mappers/` `services/` `inputs/`（＋ clean のみ `ports/` `read-models/` `query-services/`、onion は読み取りが `queries/`） |
 | `domain/` | `entities/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`） |
 | `infrastructure/` | `repositories/` `services/` `entities/`（ORM Entity）`mappers/` |
 
@@ -177,7 +177,7 @@ shared/                            # feature 非依存の共通基盤
 - **業務ルール検証は `validators/` に集約**: `CreateTaskValidator` / `UpdateTaskValidator` が**唯一の検証実体**で、UseCase は Validator を注入して呼び、自前では検証しない（同じルールを 2 か所に書かないため）。
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask`、`UpdateTaskValidator` → `Task`、`RegisterValidator` → `void`）。UseCase は受け取った実体をそのまま保存するだけでよく、`UpdateTaskValidator` では **SELECT が 1 回で済む**（`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる）。`RegisterValidator` は組み立てるものが無いため `void`。
   - ドメイン不変条件の実体は domain に残し（`Task.draft` / `applyUpdate`）、validators は「保存せず検証する」オーケストレーションのみを持つ。
-- **`inputs` / `read-models` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline）。**`validators/` は clean / onion 両方**が持つ（onion は読み取りが `queries/`）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
+- **`read-models` / `query-services` / `presentation/guards` は clean のみに導入**（layered=baseline）。**`inputs/` は clean / onion 両方**が持つ（依存を内向きに保つための境界変換なので、どちらのアーキでも要る）。**`validators/` は clean / onion 両方**が持つ（onion は読み取りが `queries/`）。`forms` / `models` / `schemas` / `resolves` / `interceptors` / `middlewares` は**意図的に置かない**（REST + 契約駆動では schema の真実は TypeSpec にあり models/schemas は二重管理、resolves は GraphQL 専用、interceptors/middlewares は現状 `AllExceptionsFilter`＋`FileInterceptor` で充足。空フォルダは読み手のコストになるため作らない）。
 - **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、clean では `shared/presentation/pipes/ZodValidationPipe` をルート単位で適用する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `UnprocessableEntityException`（422）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。400 ではなく 422 なのは、構文としては正しい JSON がフィールド単位で意味的に不正、という状態を指すため。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
 - auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion も同様にクリーン化済み（契約は domain 所有）。layered の auth / users のみ従来レイヤードのまま。
 
@@ -235,6 +235,7 @@ modules/tasks/
 │     ├ image-storage.ts              #   ImageStorage interface + token（★ドメインが求める能力）
 │     └ task-access.service.ts        #   TaskAccessService（★ドメインサービス: 取得+所有チェック・書き込み用）
 ├ application/
+│  ├ inputs/                          #   ★ユースケース入力（Command 型）+ 契約→Input 変換。presentation 非依存化の要
 │  ├ usecases/                        #   書き込み。domain の契約/サービスに依存
 │  ├ queries/                         #   読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側
 │  ├ validators/                      #   業務ルール検証（保存しない）。UseCase が注入して呼ぶ唯一の検証実体
@@ -256,6 +257,7 @@ shared/                               # feature / domain 契約に非依存の�
 └ validation/zod-helpers.ts            #   ISO 8601・http/https の形式検証
 ```
 
+- **application は presentation を import しない**: Controller が契約型 `TaskCreate` / `TaskUpdate` を `application/inputs/` の `toCreateTaskInput` / `toUpdateTaskInput` で Command 型に直してから UseCase を呼ぶ。変換関数が引数に取るのは DTO 型（`z.infer<typeof createTaskSchema>`）ではなく**契約型**で、契約型は `@app/api-client`（層の外の共有パッケージ）にあり presentation・application のどちらからも等距離のため、これを共通語彙にすると矢印が presentation → application の一方向に揃う。ISO 文字列 → `Date` の正規化もこの境界で済ませる。
 - clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。読み取り契約 `TaskQuery` も同様に onion は `domain/repositories/` に置く。
 - 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。読み取り側（Query）は domain を経由しないため、`GetTaskQuery` 内で owner を比較して 404/403 を区別する。
 - エンティティ・DomainError・例外フィルタは clean と同じ（tasks）。**auth / users も clean 同様にクリーン化済み**（fat `AuthService` を register/login/refresh/logout の 4 ユースケース＋ register validator に分解し、UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository を Port 化。契約は onion 流に `domain/repositories/` `domain/services/` が所有）。layered のみ従来レイヤード。

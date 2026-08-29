@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Task } from '../../domain/entities/task';
 import { TaskAccessService } from '../../domain/services/task-access.service';
-import type { UpdateTaskDto } from '../../presentation/dto/update.dto';
+import type { UpdateTaskInput } from '../inputs/update.input';
 
 /**
  * タスク更新の業務ルール検証（保存はしない）。
@@ -19,20 +19,18 @@ export class UpdateTaskValidator {
 
   /**
    * 所有タスクをロード（不存在=404 / 非所有=403）→ 更新を適用して開始≤終了を検証し、その Task を返す（保存しない）。
-   * @param userId - string（@CurrentUser 由来の所有者 ID）
-   * @param id - string（対象タスクの ID）
-   * @param dto - UpdateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskUpdate）
+   * @param input - UpdateTaskInput（Controller が契約 TaskUpdate から変換した Command）
    * @returns Promise<Task>（更新適用済み・検証済みのドメイン Task。検証 NG は DomainError を throw）
    */
-  async execute(userId: string, id: string, dto: UpdateTaskDto): Promise<Task> {
-    const task = await this.access.loadOwned(userId, id);
+  async execute(input: UpdateTaskInput): Promise<Task> {
+    const task = await this.access.loadOwned(input.userId, input.id);
     task.applyUpdate({
-      title: dto.title,
-      description: dto.description,
-      status: dto.status,
-      startDate: dto.startDate !== undefined ? new Date(dto.startDate) : undefined,
-      endDate: dto.endDate !== undefined ? (dto.endDate ? new Date(dto.endDate) : null) : undefined,
-      url: dto.url,
+      title: input.title,
+      description: input.description,
+      status: input.status,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      url: input.url,
     });
     return task;
   }

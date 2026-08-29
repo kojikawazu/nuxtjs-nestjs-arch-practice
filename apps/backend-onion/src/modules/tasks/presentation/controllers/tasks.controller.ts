@@ -19,6 +19,8 @@ import { CurrentUser } from '../../../auth/presentation/decorators/current-user.
 import { ZodValidationPipe } from '../../../../shared/presentation/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../../auth/auth.types';
 import { JwtAuthGuard } from '../../../auth/presentation/guards/jwt-auth.guard';
+import { toCreateTaskInput } from '../../application/inputs/create.input';
+import { toUpdateTaskInput } from '../../application/inputs/update.input';
 import { GetTaskQuery } from '../../application/queries/get.query';
 import { ListTasksQuery } from '../../application/queries/list.query';
 import { CreateTaskUseCase } from '../../application/usecases/create.usecase';
@@ -62,18 +64,19 @@ export class TasksController {
    * タスクの作成
    * 実API: POST /tasks（成功時 201 Created）
    * 処理の実体: CreateTaskUseCase.execute（application/usecases/create.usecase.ts）
-   *   ※ dto は ZodValidationPipe(createTaskSchema) で検証済み（未知キーは .strict で 422）
+   *   ※ body は ZodValidationPipe(createTaskSchema) で検証後（未知キーは .strict で 422）、
+   *     toCreateTaskInput で application の Input に変換する
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
-   * @param dto - TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @param body - TaskCreate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<Task>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
    */
   @Post()
   @HttpCode(201)
   create(
     @CurrentUser() user: AuthenticatedUser,
-    @Body(new ZodValidationPipe(createTaskSchema)) dto: TaskCreate,
+    @Body(new ZodValidationPipe(createTaskSchema)) body: TaskCreate,
   ): Promise<Task> {
-    return this.createTask.execute(user.userId, dto);
+    return this.createTask.execute(toCreateTaskInput(user.userId, body));
   }
 
   /**
@@ -94,19 +97,19 @@ export class TasksController {
    * タスクの更新（指定フィールドのみ）
    * 実API: PATCH /tasks/{id}
    * 処理の実体: UpdateTaskUseCase.execute（application/usecases/update.usecase.ts）
-   *   ※ dto は ZodValidationPipe(updateTaskSchema) で検証済み
+   *   ※ body は ZodValidationPipe(updateTaskSchema) で検証後、toUpdateTaskInput で Input に変換する
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
-   * @param dto - TaskUpdate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
+   * @param body - TaskUpdate（入力 DTO。源: @app/api-client ← packages/api-spec/main.tsp）
    * @returns Promise<Task>（Task の源: @app/api-client ← packages/api-spec/main.tsp）
    */
   @Patch(':id')
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateTaskSchema)) dto: TaskUpdate,
+    @Body(new ZodValidationPipe(updateTaskSchema)) body: TaskUpdate,
   ): Promise<Task> {
-    return this.updateTask.execute(user.userId, id, dto);
+    return this.updateTask.execute(toUpdateTaskInput(user.userId, id, body));
   }
 
   /**

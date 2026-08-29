@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
 import { TASK_REPOSITORY, type TaskRepository } from '../../domain/repositories/task.repository';
-import type { CreateTaskDto } from '../../presentation/dto/create.dto';
+import type { CreateTaskInput } from '../inputs/create.input';
 import { toContractTask } from '../mappers/task.mapper';
 import { CreateTaskValidator } from '../validators/create.validator';
 
@@ -16,12 +16,11 @@ export class CreateTaskUseCase {
 
   /**
    * Validator で検証（開始≤終了）した NewTask を Repository へ保存し、契約 Task を返す。
-   * @param userId - string（@CurrentUser 由来の所有者 ID）
-   * @param dto - CreateTaskDto（ZodValidationPipe 検証済み。= 契約 TaskCreate）
+   * @param input - CreateTaskInput（Controller が契約 TaskCreate から変換した Command）
    * @returns Promise<Task>（契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
-  async execute(userId: string, dto: CreateTaskDto): Promise<TaskContract> {
-    const draft = this.validator.execute(userId, dto);
+  async execute(input: CreateTaskInput): Promise<TaskContract> {
+    const draft = this.validator.execute(input);
     const created = await this.tasks.create(draft);
     return toContractTask(created);
   }

@@ -6,6 +6,7 @@ import {
   createTaskRepoMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { toCreateTaskInput } from '../inputs/create.input';
 import { CreateTaskValidator } from '../validators/create.validator';
 import { CreateTaskUseCase } from './create.usecase';
 
@@ -21,10 +22,12 @@ describe('CreateTaskUseCase', () => {
   it('正常系: status 省略時は todo、description/endDate/url 省略時は null で create を呼ぶ', async () => {
     repo.create.mockResolvedValue(buildTask({ id: 'new', title: '新規', description: null }));
 
-    const result = await usecase.execute(USER, {
-      title: '新規',
-      startDate: '2026-01-10T00:00:00.000Z',
-    });
+    const result = await usecase.execute(
+      toCreateTaskInput(USER, {
+        title: '新規',
+        startDate: '2026-01-10T00:00:00.000Z',
+      }),
+    );
 
     expect(repo.create).toHaveBeenCalledWith({
       userId: USER,
@@ -42,13 +45,15 @@ describe('CreateTaskUseCase', () => {
   it('正常系: startDate/endDate(ISO) を Date に変換し、url 指定はそのまま渡す', async () => {
     repo.create.mockImplementation(async (input) => buildTask({ ...input }));
 
-    const result = await usecase.execute(USER, {
-      title: '期間あり',
-      status: 'in_progress',
-      startDate: '2026-03-01T00:00:00.000Z',
-      endDate: '2026-03-10T00:00:00.000Z',
-      url: 'https://example.com/docs',
-    });
+    const result = await usecase.execute(
+      toCreateTaskInput(USER, {
+        title: '期間あり',
+        status: 'in_progress',
+        startDate: '2026-03-01T00:00:00.000Z',
+        endDate: '2026-03-10T00:00:00.000Z',
+        url: 'https://example.com/docs',
+      }),
+    );
 
     const created = repo.create.mock.calls[0][0];
     expect(created.startDate).toEqual(new Date('2026-03-01T00:00:00.000Z'));
@@ -60,11 +65,13 @@ describe('CreateTaskUseCase', () => {
 
   it('異常系: 終了が開始より前なら InvalidDateRangeError で create されない', async () => {
     await expect(
-      usecase.execute(USER, {
-        title: '逆転',
-        startDate: '2026-03-10T00:00:00.000Z',
-        endDate: '2026-03-01T00:00:00.000Z',
-      }),
+      usecase.execute(
+        toCreateTaskInput(USER, {
+          title: '逆転',
+          startDate: '2026-03-10T00:00:00.000Z',
+          endDate: '2026-03-01T00:00:00.000Z',
+        }),
+      ),
     ).rejects.toBeInstanceOf(InvalidDateRangeError);
     expect(repo.create).not.toHaveBeenCalled();
   });
