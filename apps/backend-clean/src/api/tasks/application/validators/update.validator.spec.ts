@@ -13,7 +13,7 @@ import {
 } from '../../../../../test/fakes/task-fakes';
 import { UpdateTaskValidator } from './update.validator';
 
-describe('UpdateTaskValidator（DryRun・保存しない）', () => {
+describe('UpdateTaskValidator（検証のみ・保存しない）', () => {
   let repo: TaskRepoMock;
   let validator: UpdateTaskValidator;
 
@@ -22,15 +22,16 @@ describe('UpdateTaskValidator（DryRun・保存しない）', () => {
     validator = new UpdateTaskValidator(asTaskRepo(repo));
   });
 
-  it('正常系: 自分のタスクなら検証を通り、update を呼ばない', async () => {
+  it('正常系: 更新を適用した Task を返し、update は呼ばない（保存しない）', async () => {
     repo.findById.mockResolvedValue(buildTask());
 
-    await expect(
-      validator.execute({ userId: USER, id: 'task-1', status: 'done' }),
-    ).resolves.toBeUndefined();
+    const task = await validator.execute({ userId: USER, id: 'task-1', status: 'done' });
 
     expect(repo.findById).toHaveBeenCalledWith('task-1');
     expect(repo.update).not.toHaveBeenCalled();
+    // 返る Task は更新適用済み（未指定フィールドは元の値のまま）
+    expect(task.toState().status).toBe('done');
+    expect(task.toState().title).toBe('買い物');
   });
 
   it('異常系: 存在しないタスクは TaskNotFoundError で update されない', async () => {

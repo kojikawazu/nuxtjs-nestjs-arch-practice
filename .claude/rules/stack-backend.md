@@ -32,6 +32,10 @@ globs: apps/backend-*/**
   - **domain と infrastructure は同じ語彙で対称に保つ**（`domain/repositories/` の契約 ↔ `infrastructure/repositories/` の実装、`domain/services/ImageStorage` ↔ `infrastructure/services/LocalImageStorage`）。どの実装がどの契約を満たすかをフォルダ位置だけで辿れるようにするため。
   - **空フォルダは作らない**（`forms` / `models` 等の未使用概念は置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。
   - layered は対象外（tasks のみ層分離し、auth / users は従来レイヤードのまま＝比較軸として維持する）。
+- **業務ルール検証は Validator に集約する（clean / onion）**: `application/validators/` の Validator を**唯一の検証実体**とし、DryRun（`*/validate`）と本登録（POST/PATCH）の双方がここを通す。UseCase は Validator を注入して呼び、自前で同じ検証を書かない（片方だけ変更して DryRun と本番の判定が食い違う事故を防ぐため）。
+  - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask` / `UpdateTaskValidator` → `Task`）。UseCase はそれをそのまま保存するだけでよく、ロードを伴う検証でも DB read が 1 回で済む。`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる。
+  - 組み立てるものが無い Validator は `void` でよい（`RegisterValidator` はメール重複の有無しか使わないため）。
+  - ドメイン不変条件の実体は domain に残す（`Task.draft` / `applyUpdate`）。Validator は「保存せず検証する」オーケストレーションのみ担う。
 - **ファイル名から feature 名を落とす（3 版共通）**: feature フォルダ（`tasks/` 等）配下で**操作ごとにファイルが分かれる**場合、ファイル名から feature 名を除く（`create-task.usecase.ts` → `create.usecase.ts`、`set-task-image.usecase.ts` → `set-image.usecase.ts`）。パスが既に feature を示しており冗長なため。
   - 対象は**操作で分かれるファイル**（usecase / validator / query / query-service / dto / input）。
   - **エンティティそのものを指すファイルは feature 名を残す**（`task.mapper.ts` / `task-access.ts` / `task.repository.ts` / `task.orm-entity.ts` / `task.read-model.ts` / `typeorm-task.repository.ts`）。落とすと `mapper.ts` のようになり「何を扱うか」がパスからも消えるため。

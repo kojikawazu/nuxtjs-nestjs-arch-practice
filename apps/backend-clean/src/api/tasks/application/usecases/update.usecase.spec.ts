@@ -7,6 +7,7 @@ import {
   createTaskRepoMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { UpdateTaskValidator } from '../validators/update.validator';
 import { UpdateTaskUseCase } from './update.usecase';
 
 describe('UpdateTaskUseCase', () => {
@@ -15,7 +16,7 @@ describe('UpdateTaskUseCase', () => {
 
   beforeEach(() => {
     repo = createTaskRepoMock();
-    usecase = new UpdateTaskUseCase(asTaskRepo(repo));
+    usecase = new UpdateTaskUseCase(new UpdateTaskValidator(asTaskRepo(repo)), asTaskRepo(repo));
   });
 
   it('正常系: 指定フィールドのみ更新する（未指定は元のまま）', async () => {
@@ -23,6 +24,8 @@ describe('UpdateTaskUseCase', () => {
 
     const result = await usecase.execute({ userId: USER, id: 'task-1', status: 'done' });
 
+    // Validator が検証済み Task を返すため UseCase は読み直さない（SELECT は 1 回）
+    expect(repo.findById).toHaveBeenCalledTimes(1);
     expect(repo.update).toHaveBeenCalledTimes(1);
     expect(result.status).toBe('done');
     expect(result.title).toBe('買い物');

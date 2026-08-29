@@ -12,7 +12,7 @@ import {
 } from '../../../../../test/fakes/task-fakes';
 import { UpdateTaskValidator } from './update.validator';
 
-describe('UpdateTaskValidator（DryRun・保存しない）', () => {
+describe('UpdateTaskValidator（検証のみ・保存しない）', () => {
   let access: TaskAccessMock;
   let validator: UpdateTaskValidator;
 
@@ -21,11 +21,15 @@ describe('UpdateTaskValidator（DryRun・保存しない）', () => {
     validator = new UpdateTaskValidator(asTaskAccess(access));
   });
 
-  it('正常系: 自分のタスクなら検証を通る（resolve）', async () => {
+  it('正常系: 更新を適用した Task を返す（保存はしない）', async () => {
     access.loadOwned.mockResolvedValue(buildTask());
 
-    await expect(validator.execute(USER, 'task-1', { status: 'done' })).resolves.toBeUndefined();
+    const task = await validator.execute(USER, 'task-1', { status: 'done' });
+
     expect(access.loadOwned).toHaveBeenCalledWith(USER, 'task-1');
+    // 返る Task は更新適用済み（未指定フィールドは元の値のまま）
+    expect(task.toState().status).toBe('done');
+    expect(task.toState().title).toBe('買い物');
   });
 
   it('異常系: 存在しないタスクは TaskNotFoundError', async () => {

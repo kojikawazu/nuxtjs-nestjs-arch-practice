@@ -8,16 +8,17 @@ import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepository,
 } from '../../domain/repositories/refresh-token.repository';
-import { EmailAlreadyRegisteredError } from '../../domain/errors/auth.errors';
 import { PASSWORD_HASHER, type PasswordHasher } from '../../domain/services/password-hasher';
 import { TOKEN_ISSUER, type TokenIssuer } from '../../domain/services/token-issuer';
 import type { RegisterInput } from '../inputs/register.input';
 import { issueAuthTokens } from '../services/issue-auth-tokens';
+import { RegisterValidator } from '../validators/register.validator';
 
 /** 新規登録（メール重複を弾き、パスワードをハッシュ化して作成 → トークン発行）。 */
 @Injectable()
 export class RegisterUseCase {
   constructor(
+    private readonly validator: RegisterValidator,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
     @Inject(TOKEN_ISSUER) private readonly tokenIssuer: TokenIssuer,
@@ -25,15 +26,13 @@ export class RegisterUseCase {
   ) {}
 
   /**
-   * メール重複を確認（重複=409）→ パスワードをハッシュ化してユーザー作成 → トークン発行。
+   * Validator でメール重複を確認（重複=409）→ パスワードをハッシュ化してユーザー作成 → トークン発行。
+   * 検証は DryRun と同じ Validator を通すため、両経路の判定は必ず一致する。
    * @param input - RegisterInput（Controller が契約 RegisterRequest から変換した Command）
    * @returns Promise<AuthTokens>（access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(input: RegisterInput): Promise<AuthTokens> {
-    const existing = await this.users.findByEmail(input.email);
-    if (existing) {
-      throw new EmailAlreadyRegisteredError();
-    }
+    await this.validator.execute(input);
     const passwordHash = await this.hasher.hash(input.password);
     const user = await this.users.create({
       email: input.email,
