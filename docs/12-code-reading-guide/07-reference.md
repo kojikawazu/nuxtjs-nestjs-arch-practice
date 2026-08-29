@@ -13,6 +13,7 @@
 | **未認証時** | 401（`ApiError`） | `guards/jwt-auth.guard.ts`, `http-exception.filter.ts` |
 | **削除後** | 204（ボディなし） | `tasks.controller.ts` の `@HttpCode(204)` |
 | **入力検証** | zod スキーマ + ルート単位 `ZodValidationPipe` | `modules/**/dto/*.dto.ts`, `common/pipes/zod-validation.pipe.ts` |
+| **検証失敗の返し方** | 422 + `ApiError.errors`（`{ field, messages }[]`）。`message` は連結した一文で併存 | `zod-validation.pipe.ts`, `http-exception.filter.ts`, FE は `utils/fieldErrors.ts` |
 | **保存せず検証（Validator）** | Validator は検証だけして `save` を呼ばない。UseCase が同じ Validator を通してから保存する | `create.validator.ts`, `update.validator.ts` |
 | **画像保存** | FS + volume、DB はパスのみ | `tasks.service.ts`, `config/static-assets.ts` |
 | **テストのモック方針** | 外部 I/O のみ（DB/HTTP/fs） | 各 `*.spec.ts` |

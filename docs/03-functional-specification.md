@@ -42,7 +42,7 @@
 ## ビジネスロジック
 
 - 認可: タスクは所有者のみ操作可。存在しない=404 / 非所有=403 を区別。
-- 日付: `startDate` 必須（日付のみ・午前0時 UTC）、`endDate` 任意。両方ある場合は `startDate ≤ endDate`（違反 400）。更新時はマージ後の値で判定。
+- 日付: `startDate` 必須（日付のみ・午前0時 UTC）、`endDate` 任意。両方ある場合は `startDate ≤ endDate`（違反 422・`errors[].field` は `endDate`）。更新時はマージ後の値で判定。
 - 状態: `todo` / `in_progress` / `done`。未指定の作成時は `todo`。
 - 画像: 1 枚・任意。保存ファイル名はサーバ生成（`<taskId>-<uuid>.<ext>`）。`imageUrl` は `Task` のみが持つ（クライアントから直接設定不可）。
 - トークン: アクセスは短命（既定 900s・メモリ保持）、リフレッシュは長命（既定 7d・httpOnly Cookie・ローテーション）。

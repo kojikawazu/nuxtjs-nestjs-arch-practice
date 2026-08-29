@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Task, ValidationError } from '@app/api-client';
 import type { TaskFormValue } from '~/components/TaskForm.vue';
 
 const { create, uploadImage } = useTasks();
@@ -9,6 +10,9 @@ const loading = ref(false);
 // 画像は入力画面からクライアント state で引き継ぐ（Cookie に載せられないため）。
 // リロードすると失われるが、テキスト項目はサーバ描画で残る——SSR の効き目が可視化される箇所。
 const draftImage = useState<File | null>('task-draft-image', () => null);
+
+/** 検証失敗（422）を入力画面へ差し戻すための保持先（入力画面と同じキーを共有する）。 */
+const draftErrors = useState<ValidationError[]>('task-draft-errors', () => []);
 const imagePreview = ref<string | null>(null);
 
 const STATUS_LABEL: Record<string, string> = {
@@ -46,8 +50,11 @@ async function onConfirm() {
   if (!draft.value) return;
   loading.value = true;
   error.value = null;
+  // 本体作成と画像アップロードで catch を分ける。作成が成功した後に差し戻すと、
+  // 送り直しで同じタスクがもう 1 つできてしまうため（POST は冪等でない）。
+  let created: Task;
   try {
-    const created = await create({
+    created = await create({
       title: draft.value.title,
       description: draft.value.description,
       status: draft.value.status,
@@ -55,6 +62,20 @@ async function onConfirm() {
       endDate: draft.value.endDate,
       url: draft.value.url,
     });
+  } catch (e) {
+    error.value = getErrorMessage(e, 'タスクの作成に失敗しました');
+    const fieldErrors = getFieldErrors(e);
+    if (fieldErrors.length > 0) {
+      // この画面には入力欄が無いため、フィールド別に直せる入力画面へ差し戻す
+      draftErrors.value = fieldErrors;
+      await navigateTo('/tasks/new');
+      return;
+    }
+    loading.value = false;
+    return;
+  }
+
+  try {
     // 画像は作成後に別経路でアップロードする（任意・1枚）
     if (draftImage.value) {
       await uploadImage(created.id, draftImage.value);
@@ -64,7 +85,8 @@ async function onConfirm() {
     draftImage.value = null;
     await navigateTo(`/tasks/${created.id}`);
   } catch (e) {
-    error.value = getErrorMessage(e, 'タスクの作成に失敗しました');
+    // タスク本体は作成済みなので入力画面へは戻さず、この画面で理由だけ知らせる
+    error.value = getErrorMessage(e, '画像の添付に失敗しました');
     loading.value = false;
   }
 }

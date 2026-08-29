@@ -1,3 +1,4 @@
+import type { ValidationError } from '@app/api-client';
 import type { TaskDraft } from '~/utils/taskDraftSchema';
 
 const DRAFT_KEY = 'task-draft';
@@ -14,6 +15,13 @@ const DRAFT_KEY = 'task-draft';
 export function useTaskDraft() {
   /** 画像（File）は sessionStorage に置けないため、確認画面まではメモリで持ち回る。 */
   const draftImage = useState<File | null>('task-draft-image', () => null);
+
+  /**
+   * サーバの検証失敗（422）を確認画面から入力画面へ差し戻すための保持先。
+   * 確認画面は別ルートなので遷移をまたぐ必要があるが、sessionStorage には残さずメモリに置く
+   * （永続化すると、直して作成したあと再訪したときに古いエラーが復活してしまうため）。
+   */
+  const draftErrors = useState<ValidationError[]>('task-draft-errors', () => []);
 
   const save = (draft: TaskDraft): void => {
     if (!import.meta.client) return;
@@ -43,7 +51,8 @@ export function useTaskDraft() {
     if (!import.meta.client) return;
     sessionStorage.removeItem(DRAFT_KEY);
     draftImage.value = null;
+    draftErrors.value = [];
   };
 
-  return { save, load, clear, draftImage };
+  return { save, load, clear, draftImage, draftErrors };
 }

@@ -14,6 +14,21 @@ namespace TaskApi;
 
 // ───────────────────────── 共通エラー ─────────────────────────
 
+/**
+ * 1 フィールド分の検証エラー。
+ *
+ * マップ（`Record<string[]>`）ではなく配列要素にしているのは、TypeSpec の OpenAPI 3.1 出力が
+ * 動的キーを `unevaluatedProperties` で表現し、openapi-typescript がそれを解釈できず
+ * `Record<string, never>`（キーを持てない型）に落ちるため。配列なら両ツールが素直に扱える。
+ */
+model ValidationError {
+  /** 契約のフィールド名（例: "title" / "endDate" / "file"）。どこにも属さない理由は "_"。 */
+  field: string;
+
+  /** そのフィールドが弾かれた理由（複数可）。 */
+  messages: string[];
+}
+
 @error
 model ApiError {
   /** HTTP ステータスコード */
@@ -24,6 +39,12 @@ model ApiError {
 
   /** エラー種別（例: "Unauthorized"） */
   error?: string;
+
+  /**
+   * フィールド別の検証エラー（422 のときのみ付く）。
+   * message は全件を連結した人間向けの一文で、errors はそれを UI がフィールドへ割り付けるための構造。
+   */
+  errors?: ValidationError[];
 }
 
 // ───────────────────────── ドメインモデル ─────────────────────────

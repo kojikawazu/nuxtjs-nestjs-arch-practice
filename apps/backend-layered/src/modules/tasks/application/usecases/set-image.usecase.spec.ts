@@ -1,5 +1,9 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { TaskEntity } from '../../infrastructure/task.entity';
 import {
@@ -58,11 +62,13 @@ describe('SetTaskImageUseCase', () => {
     expect(unlinkMock).toHaveBeenCalledWith('/tmp/test-uploads/old-file.png');
   });
 
-  it('異常系: 未対応 MIME は BadRequestException で書き込み・保存しない', async () => {
+  it('異常系: 未対応 MIME は UnprocessableEntityException で書き込み・保存しない', async () => {
     repo.findOne.mockResolvedValue(buildEntity());
     const gif = { mimetype: 'image/gif', buffer: Buffer.from('x') } as Express.Multer.File;
 
-    await expect(usecase.execute(USER, 'task-1', gif)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(usecase.execute(USER, 'task-1', gif)).rejects.toBeInstanceOf(
+      UnprocessableEntityException,
+    );
     expect(writeFileMock).not.toHaveBeenCalled();
     expect(repo.save).not.toHaveBeenCalled();
   });

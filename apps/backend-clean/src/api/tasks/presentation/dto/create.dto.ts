@@ -19,7 +19,7 @@ export const createTaskSchema = z
     status: z.enum(['todo', 'in_progress', 'done']).optional(),
     startDate: z.string().refine(isIso8601, { message: 'must be an ISO 8601 date' }),
     endDate: z.string().refine(isIso8601, { message: 'must be an ISO 8601 date' }).optional(),
-    // 関連 URL（任意）。http/https のみ許可し、javascript: 等の危険スキームは 400 で拒否する。
+    // 関連 URL（任意）。http/https のみ許可し、javascript: 等の危険スキームは 422 で拒否する。
     url: z
       .string()
       .max(2048)

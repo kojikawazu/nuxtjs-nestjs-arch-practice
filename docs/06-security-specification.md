@@ -90,7 +90,7 @@ sequenceDiagram
 
 ## ファイルアップロード（タスク添付画像）
 
-- **検証**: `ParseFilePipe` で MIME（`image/png` / `image/jpeg` / `image/webp`）とサイズ（≤ 2MB）を確認し、違反は **400**。申告 MIME で判定する（マジックナンバー検査は無効化）。
+- **検証**: `ParseFilePipe` で MIME（`image/png` / `image/jpeg` / `image/webp`）とサイズ（≤ 2MB）を確認し、違反は **422**（`errors[].field` は `file`）。申告 MIME で判定する（マジックナンバー検査は無効化）。
 - **保存ファイル名はサーバ生成**（`<taskId>-<uuid>.<ext>`）。クライアント由来のファイル名は使わないため、パストラバーサルや既存ファイル上書きを構造的に防ぐ。
 - **削除時**も保存パスの `basename` のみを保存ディレクトリに結合して `unlink` するため、保存先ディレクトリ外を参照しない。
 - **認可**: 添付・削除は所有者のみ（存在=404 / 非所有=403、本体 CRUD と同じ `findOwned`）。
@@ -100,7 +100,7 @@ sequenceDiagram
 
 タスクの `url` を確認画面・詳細で「安全なリンクカード」として表示する。外部コンテンツは一切読み込まない（iframe / 画像 / サーバ fetch なし）ため、SSRF・クリックジャッキング・任意描画のリスクは構造的に発生しない。多層防御で URL を扱う:
 
-- **スキーム allowlist**: `http`/`https` のみ許可。バックエンドは zod スキーマの `refine(isHttpUrl)`（`common/validation/zod-helpers.ts`）で検証し、`javascript:` / `data:` / `file:` 等は **400** で拒否。長さは 2048 文字まで。
+- **スキーム allowlist**: `http`/`https` のみ許可。バックエンドは zod スキーマの `refine(isHttpUrl)`（`common/validation/zod-helpers.ts`）で検証し、`javascript:` / `data:` / `file:` 等は **422** で拒否。長さは 2048 文字まで。
 - **フロント入力検証**: `TaskForm` が `isSafeHttpUrl()`（`new URL()` + protocol allowlist）で検証し、不正スキームは submit させない。
 - **描画時ガード（最重要）**: Vue は `:href` を `javascript:` に対してサニタイズしない。`UrlPreview` は `isSafeHttpUrl()` を通った値のときだけ `<a>` を描画し、それ以外はリンクを出さず「無効な URL」表示にする（DB を直接改竄された等で不正値が残っても安全）。
 - **リンク属性**: `target="_blank"` には `rel="noopener noreferrer"` を必須付与し、タブナビング（`window.opener` 乗っ取り）と Referer 漏洩を防ぐ。

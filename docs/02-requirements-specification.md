@@ -30,9 +30,9 @@
 - FR-02: 認証失敗は 401。ユーザーの有無を区別しない（列挙防止）。
 - FR-03: 使用済みリフレッシュトークンは無効化され、再発行される。
 - FR-05〜FR-09: 未認証は 401、他人のタスク操作は 403、存在しない ID は 404。
-- FR-05/FR-08: `startDate` 必須（未指定 400）、`startDate ≤ endDate`（逆転 400）、`status` は todo/in_progress/done のみ。
+- FR-05/FR-08: `startDate` 必須（未指定 422）、`startDate ≤ endDate`（逆転 422）、`status` は todo/in_progress/done のみ。検証失敗は `ApiError.errors` にフィールド別の理由が入る。
 - FR-10: 検証成功は 200 `{ valid: true }`、失敗は通常と同じ `ApiError`。DB へ一切書き込まない。
-- FR-11: MIME は png/jpeg/webp、サイズ ≤ 2MB（違反 400）。所有者のみ（403/404）。添付後 `imageUrl` が設定され `/uploads/<file>` で取得できる。
+- FR-11: MIME は png/jpeg/webp、サイズ ≤ 2MB（違反 422・`errors[].field` は `file`）。所有者のみ（403/404）。添付後 `imageUrl` が設定され `/uploads/<file>` で取得できる。
 
 ## 優先度の定義
 

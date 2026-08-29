@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TaskStatus } from '@app/api-client';
+import type { TaskStatus, ValidationError } from '@app/api-client';
 import { taskFormSchema } from '~/utils/taskFormSchema';
 
 export interface TaskFormValue {
@@ -29,6 +29,8 @@ const props = withDefaults(
     /** 既存の添付画像の表示用 URL（編集時のプレビュー） */
     initialImageSrc?: string;
     submitLabel?: string;
+    /** サーバの検証失敗（422）が返したフィールド別エラー。クライアント検証と同じ位置に表示する */
+    serverErrors?: ValidationError[];
   }>(),
   { submitLabel: '確認へ' },
 );
@@ -61,6 +63,33 @@ const errors = reactive<{
   url?: string;
   image?: string;
 }>({});
+
+/**
+ * 契約のフィールド名 → このフォームの表示先。
+ * ここに無いフィールド（status や、どこにも属さない "_" 等）はフォーム上に置き場所が無いため無視する。
+ * その場合もページ側が message を全文表示するので、理由そのものが消えるわけではない。
+ */
+const ERROR_KEY_BY_FIELD: Readonly<Record<string, keyof typeof errors>> = {
+  title: 'title',
+  description: 'description',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  url: 'url',
+  file: 'image',
+};
+
+// サーバ 422 のフィールド別エラーを、クライアント検証と同じ表示経路（errors）へ流し込む。
+// 次の submit で validate() が同じキーを初期化するため、直して送り直せば自然に消える。
+watch(
+  () => props.serverErrors,
+  (list) => {
+    for (const { field, messages } of list ?? []) {
+      const key = ERROR_KEY_BY_FIELD[field];
+      if (key && messages.length > 0) errors[key] = messages[0];
+    }
+  },
+  { immediate: true },
+);
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement;

@@ -71,6 +71,34 @@ describe('useTasks', () => {
     expect(created.url).toBe('https://example.com/docs');
   });
 
+  it('準正常系: 検証失敗(422)は errors をフィールド別に取り出せる形で投げる', async () => {
+    server.use(
+      http.post(`${BASE}/tasks`, () =>
+        HttpResponse.json(
+          {
+            statusCode: 422,
+            message: 'title: 必須です, endDate: 開始以降にしてください',
+            errors: [
+              { field: 'title', messages: ['必須です'] },
+              { field: 'endDate', messages: ['開始以降にしてください'] },
+            ],
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+
+    const { create } = useTasks();
+    const rejected = await create({ title: '', startDate: '2026-06-10T00:00:00.000Z' }).catch(
+      (e: unknown) => e,
+    );
+
+    expect(rejected).toMatchObject({ statusCode: 422 });
+    expect(getFieldErrors(rejected).map((e) => e.field)).toEqual(['title', 'endDate']);
+    // 人間向けの一文も従来どおり取り出せる（表示先の無い指摘の受け皿になる）
+    expect(getErrorMessage(rejected, 'fallback')).toContain('title');
+  });
+
   it('異常系: 404 のとき statusCode 付きエラーを投げる', async () => {
     server.use(
       http.get(`${BASE}/tasks/missing`, () =>
@@ -135,16 +163,41 @@ describe('useTasks', () => {
       accessToken.value = null;
     });
 
-    it('異常系: uploadImage が 400 のとき statusCode 付きエラーを投げる', async () => {
+    it('準正常系: uploadImage が 422 のとき errors（field=file）を載せて投げる', async () => {
       server.use(
         http.post(`${BASE}/tasks/t1/image`, () =>
-          HttpResponse.json({ statusCode: 400, message: 'invalid' }, { status: 400 }),
+          HttpResponse.json(
+            {
+              statusCode: 422,
+              message: 'Unsupported image type',
+              errors: [{ field: 'file', messages: ['Unsupported image type'] }],
+            },
+            { status: 422 },
+          ),
         ),
       );
 
       const { uploadImage } = useTasks();
       const file = new File(['x'], 'a.png', { type: 'image/png' });
-      await expect(uploadImage('t1', file)).rejects.toMatchObject({ statusCode: 400 });
+      const rejected = await uploadImage('t1', file).catch((e: unknown) => e);
+
+      expect(rejected).toMatchObject({ statusCode: 422 });
+      expect(getFieldErrors(rejected).map((e) => e.field)).toEqual(['file']);
+    });
+
+    it('異常系: uploadImage の失敗本文が JSON でなくても statusCode 付きエラーを投げる', async () => {
+      server.use(
+        http.post(`${BASE}/tasks/t1/image`, () =>
+          HttpResponse.text('<html>gateway error</html>', { status: 502 }),
+        ),
+      );
+
+      const { uploadImage } = useTasks();
+      const file = new File(['x'], 'a.png', { type: 'image/png' });
+      const rejected = await uploadImage('t1', file).catch((e: unknown) => e);
+
+      expect(rejected).toMatchObject({ statusCode: 502 });
+      expect(getFieldErrors(rejected)).toEqual([]);
     });
 
     it('準正常系: removeImage が 403 のときエラーを投げる', async () => {

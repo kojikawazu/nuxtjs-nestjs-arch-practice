@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
-const { save, load, draftImage } = useTaskDraft();
+const { save, load, draftImage, draftErrors } = useTaskDraft();
 
 const error = ref<string | null>(null);
 
@@ -13,6 +13,8 @@ const initial: Partial<TaskFormValue> | undefined = load() ?? undefined;
 
 async function onFormSubmit(payload: TaskFormSubmit) {
   error.value = null;
+  // 送り直しなので、前回サーバに弾かれた内容は一度捨てる
+  draftErrors.value = [];
   try {
     save(payload.value);
     // 画像は sessionStorage に置けないためメモリで引き継ぐ
@@ -30,7 +32,12 @@ async function onFormSubmit(payload: TaskFormSubmit) {
 
     <div class="mt-6">
       <p v-if="error" class="mb-3 text-sm text-red-600" data-testid="draft-error">{{ error }}</p>
-      <TaskForm :initial="initial" submit-label="確認へ" @submit="onFormSubmit" />
+      <TaskForm
+        :initial="initial"
+        :server-errors="draftErrors"
+        submit-label="確認へ"
+        @submit="onFormSubmit"
+      />
     </div>
   </div>
 </template>

@@ -22,6 +22,8 @@ export class TaskAccessDeniedError extends DomainError {
 
 export class InvalidDateRangeError extends DomainError {
   readonly kind = 'invalid' as const;
+  // 開始・終了の対のうち、利用者が直せるのは後から入れた終了側なので endDate に紐づける。
+  readonly fields = ['endDate'] as const;
   constructor() {
     super('endDate must be on or after startDate');
     this.name = 'InvalidDateRangeError';
@@ -30,6 +32,8 @@ export class InvalidDateRangeError extends DomainError {
 
 export class UnsupportedImageTypeError extends DomainError {
   readonly kind = 'invalid' as const;
+  // multipart のフィールド名（file）＝契約上の入力名に合わせる。
+  readonly fields = ['file'] as const;
   constructor() {
     super('Unsupported image type');
     this.name = 'UnsupportedImageTypeError';

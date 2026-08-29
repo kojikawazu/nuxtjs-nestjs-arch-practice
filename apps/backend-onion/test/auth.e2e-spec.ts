@@ -38,11 +38,14 @@ describe('Auth (e2e)', () => {
     expect(res.body.statusCode).toBe(409);
   });
 
-  it('異常系: 短すぎるパスワードは 400（バリデーション）', async () => {
-    await http
+  it('異常系: 短すぎるパスワードは 422（errors に password）', async () => {
+    const res = await http
       .post('/auth/register')
       .send({ email: 'a@example.com', password: 'short', displayName: 'A' })
-      .expect(400);
+      .expect(422);
+
+    expect(res.body.statusCode).toBe(422);
+    expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual(['password']);
   });
 
   it('正常系: 正しい資格情報でログインできる（200）', async () => {

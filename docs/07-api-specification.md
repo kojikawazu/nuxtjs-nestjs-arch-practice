@@ -35,12 +35,12 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 
 > **DryRun（`*/validate`）は廃止した**。保存せず事前検証する専用エンドポイントを 3 本持っていたが、
 > 本登録（`POST` / `PATCH`）が同じ検証を通しており重複していたため削除した。
-> 業務ルール違反はいずれも本登録の実行時に返る（開始 > 終了は 400、メール重複は 409、非所有は 403、不存在は 404）。
+> 業務ルール違反はいずれも本登録の実行時に返る（開始 > 終了は 422、メール重複は 409、非所有は 403、不存在は 404）。
 > サーバ側の検証実体は `application/validators/` の Validator に集約されている（[docs/09](./09-architecture-specification.md)）。
 
 ### 画像アップロード（タスク添付）
 
-- `POST /tasks/{id}/image` は **multipart/form-data**（フィールド名 `file`）で 1 枚を受け取り、保存後の `Task`（`imageUrl` 入り）を返す。MIME（png/jpeg/webp）・サイズ（≤2MB）違反は 400、非所有 403、不存在 404、未認証 401。
+- `POST /tasks/{id}/image` は **multipart/form-data**（フィールド名 `file`）で 1 枚を受け取り、保存後の `Task`（`imageUrl` 入り）を返す。MIME（png/jpeg/webp）・サイズ（≤2MB）違反・ファイル無しは **422**（`errors[].field` は `file`）、非所有 403、不存在 404、未認証 401。
 - `DELETE /tasks/{id}/image` は添付を外し、`imageUrl` の消えた `Task` を返す。
 - 画像は `imageUrl`（例: `/uploads/<file>`）で参照し、`GET /uploads/<file>`（静的配信）で取得する。
 - multipart は型安全クライアント（openapi-fetch）に不向きなため、フロントはこの 2 本のみ素の `fetch` + `FormData` で呼ぶ（Bearer は付与）。
@@ -48,8 +48,8 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 ## リクエスト / レスポンス形式
 
 - 型定義は契約由来（`@app/api-client` の `Task` / `AuthTokens` / `TaskCreate` 等）。`imageUrl` は `Task` のみが持つ（`TaskCreate`/`TaskUpdate` には無い＝クライアントから直接書き換え不可）。
-- リクエストの入力検証は全 backend 版で **zod スキーマ + ルート単位 `ZodValidationPipe`** に統一（`presentation/dto/` のスキーマ・`.strict()` で未知キー拒否・グローバル `ValidationPipe` は不使用）。違反は 400 `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean)）。
-- `url`（任意・関連 URL）は `Task` / `TaskCreate` / `TaskUpdate` が持つ。`http`/`https` のみ許可し（zod `refine(isHttpUrl)`）、`javascript:`/`data:` 等の危険スキームや 2048 文字超は **400**。確認画面・詳細では安全なリンク（`target="_blank" rel="noopener noreferrer"`）として表示する。
+- リクエストの入力検証は全 backend 版で **zod スキーマ + ルート単位 `ZodValidationPipe`** に統一（`presentation/dto/` のスキーマ・`.strict()` で未知キー拒否・グローバル `ValidationPipe` は不使用）。違反は **422** `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean)）。
+- `url`（任意・関連 URL）は `Task` / `TaskCreate` / `TaskUpdate` が持つ。`http`/`https` のみ許可し（zod `refine(isHttpUrl)`）、`javascript:`/`data:` 等の危険スキームや 2048 文字超は **422**。確認画面・詳細では安全なリンク（`target="_blank" rel="noopener noreferrer"`）として表示する。
 - フロントの BFF（`/api/auth/*`）は上記 backend を呼び出し、リフレッシュトークンを Cookie 化する。
 
 ## フロント BFF（Nitro）エンドポイント
@@ -69,8 +69,24 @@ backend の契約とは別に、Nuxt の Nitro が持つ内部 API。ブラウ�
 
 ## エラーハンドリング
 
-- 形式: `ApiError { statusCode, message, error? }`。
-- 主なコード: 400(バリデーション) / 401(認証) / 403(認可) / 404(不存在) / 409(重複登録)。
+- 形式: `ApiError { statusCode, message, error?, errors? }`。
+- 主なコード: **422(検証失敗)** / 401(認証) / 403(認可) / 404(不存在) / 409(重複登録) / 413(draft Cookie 上限・BFF のみ)。
+- **400 と 422 の使い分け**: 400 は「構文が壊れている」（JSON として読めない等）、422 は「構文は正しいが意味的に処理できない」。zod の形式検証・業務ルール違反（開始 > 終了）・画像の MIME/サイズ違反はいずれも後者なので **422** を返す。
+- **`errors`（フィールド別の理由）**: 422 のときだけ付く `ValidationError[]`。`message` は全件を連結した人間向けの一文で、`errors` は UI がフィールドへ割り付けるための構造。両者は併存し、`message` は従来どおり必ず入る。
+
+```jsonc
+// POST /tasks に { "title": "", "startDate": "2026-06-15T00:00:00.000Z", "endDate": "2026-06-10T00:00:00.000Z" }
+{
+  "statusCode": 422,
+  "message": "title: 1文字以上入力してください",
+  "errors": [{ "field": "title", "messages": ["1文字以上入力してください"] }]
+}
+```
+
+- `field` は契約のフィールド名（`title` / `endDate` / 画像は `file`）。どのフィールドにも紐づかない理由は `"_"` に入る。
+- 業務ルール違反も `errors` を持つ（開始 > 終了は `field: "endDate"`）。clean / onion は `DomainError.fields` を例外フィルタが展開し、layered は `UnprocessableEntityException` に直接載せる。
+- フロントは `utils/fieldErrors.ts` の `getFieldErrors()` で取り出し、`TaskForm` の各入力欄の下（`data-testid="error-*"`）へ表示する。表示先の無いフィールドは無視し、代わりにページ側が `message` を全文表示する。
+- **契約上の注意**: `errors` はマップ（`Record<string, string[]>`）ではなく配列。TypeSpec の OpenAPI 3.1 出力が動的キーを `unevaluatedProperties` で表現し、`openapi-typescript` がそれを解釈できず `Record<string, never>` に落ちるため、配列で表現している。
 
 ## 実行例（curl）
 

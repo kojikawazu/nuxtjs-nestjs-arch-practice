@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ValidationError } from '@app/api-client';
 import type { TaskFormSubmit, TaskFormValue } from '~/components/TaskForm.vue';
 
 const route = useRoute();
@@ -15,6 +16,7 @@ const imageFile = ref<File | null>(null);
 const imagePreview = ref<string | null>(null);
 const removeImageFlag = ref(false);
 const saveError = ref<string | null>(null);
+const serverErrors = ref<ValidationError[]>([]);
 const loading = ref(false);
 
 onUnmounted(() => {
@@ -28,6 +30,8 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 async function onFormSubmit(payload: TaskFormSubmit) {
+  // 送り直しなので、前回サーバに弾かれた内容は一度捨てる
+  serverErrors.value = [];
   const value = payload.value;
   draft.value = value;
   imageFile.value = payload.imageFile ?? null;
@@ -63,6 +67,9 @@ async function onConfirm() {
     await navigateTo(`/tasks/${id}`);
   } catch (e) {
     saveError.value = getErrorMessage(e, '更新に失敗しました');
+    // 検証失敗（422）は入力を直せば通るので、フォームへ戻してフィールド別に見せる
+    serverErrors.value = getFieldErrors(e);
+    if (serverErrors.value.length > 0) step.value = 'form';
     loading.value = false;
   }
 }
@@ -86,6 +93,7 @@ async function onConfirm() {
             url: task.url,
           }"
           :initial-image-src="task.imageUrl ? imageSrc(task.imageUrl) : undefined"
+          :server-errors="serverErrors"
           submit-label="確認へ"
           @submit="onFormSubmit"
         />
