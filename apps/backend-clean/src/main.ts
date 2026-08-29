@@ -13,7 +13,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // 入力検証はルート単位の ZodValidationPipe（presentation/dto の zod スキーマ）で行うため、
-  // グローバル ValidationPipe は使わない（backend-clean のみ zod 採用。layered/onion は class-validator）。
+  // グローバル ValidationPipe は使わない
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({ origin: true, credentials: true });
 

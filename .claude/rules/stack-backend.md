@@ -30,9 +30,19 @@ globs: apps/backend-*/**
   - `domain/` — `entities/` `errors/`（＋ onion のみ契約所有の `repositories/` `services/`）
   - `infrastructure/` — `repositories/` `services/` `entities/`（ORM Entity）`mappers/`
   - **domain と infrastructure は同じ語彙で対称に保つ**（`domain/repositories/` の契約 ↔ `infrastructure/repositories/` の実装、`domain/services/ImageStorage` ↔ `infrastructure/services/LocalImageStorage`）。どの実装がどの契約を満たすかをフォルダ位置だけで辿れるようにするため。
-  - **空フォルダは作らない**（`forms` / `models` 等の未使用概念は置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。
+  - **空フォルダは作らない**（未使用の概念フォルダは置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。**置かないフォルダとその理由**は下記「採用しない概念」を参照。
   - layered は対象外（tasks のみ層分離し、auth / users は従来レイヤードのまま＝比較軸として維持する）。
 - **application は presentation を import しない（clean / onion）**: Controller が契約型（`TaskCreate` / `TaskUpdate` / `RegisterRequest` 等）を `application/inputs/` の変換関数で Command 型（`CreateTaskInput` 等）に直してから UseCase / Validator を呼ぶ。変換関数の引数は **DTO 型（`z.infer<...>`）ではなく契約型**にする（契約型は `@app/api-client` にあり presentation・application のどちらからも等距離なので、共通語彙にすると依存が内向きに揃う）。ISO 文字列 → `Date` の正規化も境界であるこの変換で済ませ、内側に文字列日付を持ち込まない。
+- **採用しない概念（3 版共通）**: 他フレームワーク由来の下記フォルダ／クラスは**意図的に置かない**。「無いこと」自体が設計判断なので、迷ったときに再導入されないよう理由ごと残す。
+  - **`forms/`（Laravel の FormRequest 相当）**: リクエスト検証を 1 クラスにまとめる入れ物は作らない。FormRequest は `authorize()` と `rules()`（形式ルールと `unique:` 等の DB ルール）を同居させるが、本リポジトリではそれぞれ関心が異なるため 3 か所に分けている。**「zod と Validator の間に FormRequest 相当の段がある」のではなく、FormRequest 1 つが下記に分解されている**。
+    - **認可**（`authorize()` 相当）→ `presentation/guards/` の Guard ＋ 所有権チェック（`loadOwnedTask` / `TaskAccessService`）
+    - **形式検証**（`required|max:120` 相当。必須・型・長さ・列挙・ISO 日付・URL スキーム）= transport の関心 → `presentation/dto/` の zod スキーマ ＋ ルート単位の `ZodValidationPipe`。422 と `ApiError.errors` の組み立てもここ
+    - **業務ルール検証**（`unique:users` 相当。開始≤終了・メール重複）= ドメインの関心 → `application/validators/` の Validator（clean / onion）
+    - 迷ったら「**HTTP でなくても成り立つ制約か**」で切り分ける。成り立つならドメイン側（Validator / entity）、HTTP の入り口でしか意味がないなら zod スキーマ側。
+    - **検証の入口は各段で 1 つに保つ**（FormRequest が信頼できるのは、それを通らずハンドラへ入る経路が無いため）。保存せず検証だけ行う DryRun エンドポイント（`*/validate`）は、同じルールの入口が二重になるため**再導入しない**。
+  - **`models/` `schemas/`**: 契約の真実は `packages/api-spec/main.tsp`（→ `@app/api-client`）にあるため、別に型やスキーマの一覧を持つと二重管理になる。
+  - **`resolves/`**: GraphQL 専用の概念で、REST では出番がない。
+  - **`interceptors/` `middlewares/`**: 現状は `AllExceptionsFilter`（例外→`ApiError`）と `FileInterceptor`（multipart）で足りている。必要になった時点で作る。
 - **業務ルール検証は Validator に集約する（clean / onion）**: `application/validators/` の Validator を**唯一の検証実体**とし、UseCase は Validator を注入して呼ぶ。自前で同じ検証を書かない（同じルールが 2 か所に散ると、片方だけ変更したときに気づけないため）。
   - **Validator は検証済みのドメインオブジェクトを返す**（`CreateTaskValidator` → `NewTask` / `UpdateTaskValidator` → `Task`）。UseCase はそれをそのまま保存するだけでよく、ロードを伴う検証でも DB read が 1 回で済む。`void` にすると検証時と保存時で別々に読むことになり、その間の他者更新で「検証した対象とは違う行を保存する」ことが起こりうる。
   - 組み立てるものが無い Validator は `void` でよい（`RegisterValidator` はメール重複の有無しか使わないため）。
