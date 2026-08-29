@@ -122,6 +122,11 @@ model RegisterRequest {
   @format("email")
   email: string;
 
+  /**
+   * パスワード。8 文字以上、かつ **UTF-8 で 72 バイト以内**（bcrypt が超過分を切り捨てる境界）。
+   * `maxLength` は JSON Schema で表せる文字数の上限にすぎない（マルチバイトでは 72 バイト超が通る）。
+   * 実際の判定はサーバの UTF-8 バイト長検証で、超過は 422。
+   */
   @minLength(8)
   @maxLength(72)
   password: string;
@@ -135,6 +140,7 @@ model LoginRequest {
   @format("email")
   email: string;
 
+  /** パスワード。登録と同じ **UTF-8 72 バイト**の上限を課す（超過は 422）。 */
   password: string;
 }
 

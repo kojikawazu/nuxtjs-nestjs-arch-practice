@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import type { PasswordHasher } from '../../application/ports/password-hasher.port';
 
-/** bcrypt のコスト係数。DTO 側で 8〜72 文字に制限し bcrypt の 72 バイト制約に整合させる。 */
+/** bcrypt のコスト係数。72 バイト超は bcrypt が切り捨てるため、DTO 側で UTF-8 72 バイト以内に制限している。 */
 const PASSWORD_SALT_ROUNDS = 12;
 
 /** PasswordHasher Port の bcrypt 実装（infrastructure 層）。 */

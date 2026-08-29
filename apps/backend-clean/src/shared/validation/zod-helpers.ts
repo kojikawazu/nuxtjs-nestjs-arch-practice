@@ -23,3 +23,21 @@ export function isHttpUrl(value: string): boolean {
     return false;
   }
 }
+
+/**
+ * bcrypt が扱えるパスワードの最大バイト数。これを超えた分は**静かに切り捨てられる**。
+ * 文字数ではなくバイト数なのが要点で、マルチバイト文字では両者が大きくずれる。
+ */
+export const BCRYPT_MAX_PASSWORD_BYTES = 72;
+
+/**
+ * 文字列の UTF-8 バイト長が上限以内なら true。
+ *
+ * パスワードの上限を `.max()`（文字数）で見ると bcrypt の制約と一致しない。
+ * 例: 「あ」24 文字は 72 バイトちょうどだが、25 文字目を足した 73 バイトの別パスワードでも
+ * bcrypt は先頭 72 バイトしか見ないため `compare` が成功してしまう。
+ * 「利用者が入力したものと違う値でログインできる」状態を防ぐため、バイト長で判定する。
+ */
+export function isWithinUtf8Bytes(value: string, maxBytes: number): boolean {
+  return Buffer.byteLength(value, 'utf8') <= maxBytes;
+}
