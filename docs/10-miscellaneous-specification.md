@@ -36,8 +36,8 @@
 | Controller | HTTP メソッド・パス・入力を受け、Application 層へ処理を委譲する入口。DB 操作・業務判断は置かない。 | [`tasks.controller.ts`](../apps/backend-clean/src/api/tasks/presentation/controllers/tasks.controller.ts) |
 | Guard | Controller 到達前に認証・認可を判定する NestJS の仕組み。 | [`jwt-auth.guard.ts`](../apps/backend-clean/src/api/auth/presentation/guards/jwt-auth.guard.ts) |
 | Pipe | HTTP 入力を変換・検証する NestJS の仕組み。このプロジェクトでは Zod schema をルート単位で実行する。 | [`zod-validation.pipe.ts`](../apps/backend-clean/src/shared/presentation/pipes/zod-validation.pipe.ts) |
-| Zod schema | 実行時に値を検証できる schema。frontend の検証は UX 用であり、信頼できない入力の最終検証は backend が担う。 | [`create-task.dto.ts`](../apps/backend-clean/src/api/tasks/presentation/dto/create-task.dto.ts) |
-| DryRun | 永続化せずに入力を検証する `*/validate` エンドポイント。本保存でも同じ業務ルールを再検証する。 | [`create-task.validator.ts`](../apps/backend-onion/src/modules/tasks/application/validators/create-task.validator.ts) |
+| Zod schema | 実行時に値を検証できる schema。frontend の検証は UX 用であり、信頼できない入力の最終検証は backend が担う。 | [`create.dto.ts`](../apps/backend-clean/src/api/tasks/presentation/dto/create.dto.ts) |
+| DryRun | 永続化せずに入力を検証する `*/validate` エンドポイント。本保存でも同じ業務ルールを再検証する。 | [`create.validator.ts`](../apps/backend-onion/src/modules/tasks/application/validators/create.validator.ts) |
 | DomainError | HTTP に依存しない業務エラーの基底。presentation の例外フィルタが `kind` を HTTP ステータスと `ApiError` へ翻訳する。 | [`domain-error.ts`](../apps/backend-clean/src/shared/domain/errors/domain-error.ts)、[`http-exception.filter.ts`](../apps/backend-clean/src/shared/presentation/filters/http-exception.filter.ts) |
 | 所有者認可 | タスクは作成者だけが操作できるという業務ルール。不存在は 404、他者所有は 403 を返す。 | [`task-access.service.ts`](../apps/backend-onion/src/modules/tasks/domain/services/task-access.service.ts) |
 | アクセストークン / リフレッシュトークン | 短命の access token は frontend のメモリ、長命の refresh token は httpOnly Cookie で扱い、refresh 時はローテーションする。 | [`auth-bff.ts`](../apps/frontend-spa/server/utils/auth-bff.ts)、[`auth.service.ts`](../apps/backend-layered/src/modules/auth/auth.service.ts) |
@@ -62,7 +62,7 @@
 
 | 用語 | 意味 | このプロジェクトでの例 |
 |------|------|------|
-| UT (Unit Test) | 1 クラス・関数のロジックを、外部 I/O をモックして検証するテスト。 | [`create-task.usecase.spec.ts`](../apps/backend-clean/src/api/tasks/application/usecases/create-task.usecase.spec.ts) |
+| UT (Unit Test) | 1 クラス・関数のロジックを、外部 I/O をモックして検証するテスト。 | [`create.usecase.spec.ts`](../apps/backend-clean/src/api/tasks/application/usecases/create.usecase.spec.ts) |
 | IT (Integration Test) | 本番 DB 固有の挙動を実物の MySQL で検証するテスト。SQLite との差分を検出するために分ける。 | [`db-fidelity.it-spec.ts`](../apps/backend-clean/test/it/db-fidelity.it-spec.ts) |
 | e2e | HTTP リクエストからレスポンスまでを in-memory SQLite で速く検証する backend テスト。 | [`tasks.e2e-spec.ts`](../apps/backend-clean/test/tasks.e2e-spec.ts) |
 | シナリオテスト | frontend と backend を通したユーザージャーニーを検証する出荷ゲート。通常の E2E は SQLite を使い、本番 DB に近い MySQL シナリオは `SCENARIO_DB=mysql` を指定する `make test-scenario-mysql` で実行する。 | [`task-flow.spec.ts`](../apps/frontend-spa/tests/e2e/task-flow.spec.ts)、[`Makefile`](../Makefile) |
