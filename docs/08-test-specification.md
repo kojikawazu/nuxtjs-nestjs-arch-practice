@@ -74,7 +74,8 @@
   - E2E: URL 入力 → 確認画面に `url-preview-link` 表示 → 作成後の詳細でも安全なリンクとして表示。
 - 画像アップロード（1枚・任意）:
   - BE 単体: `setImage`/`removeImage` で **fs（外部I/O）のみモック**。サーバ生成ファイル名・旧ファイル削除・未対応MIME(422)・404/403 を検証（`writeFile`/`save` が呼ばれないこともアサート）。
-  - BE e2e: `POST /tasks/{id}/image` を supertest `.attach` で検証。正常(添付→`GET /uploads/<file>` 200→削除で 404)、不正MIME/超過/ファイル無し(422・`errors[].field` は `file`)、404/403/401。`UPLOAD_DIR` は OS 一時ディレクトリに隔離（外部依存なし）。
+  - BE 単体: `ImageFilePipe`（3 版）を最小の `ConfigService` で直接叩き、欠落/不正 MIME(422・`errors[].field` は `file`)・上限超過(413) を検証。**設定値を変えると境界も動くこと**をテストで固定し、ハードコードへの逆戻りを検出する。
+  - BE e2e: `POST /tasks/{id}/image` を supertest `.attach` で検証。正常(添付→`GET /uploads/<file>` 200→削除で 404)、不正MIME/ファイル無し(422・`errors[].field` は `file`)、**サイズ超過(413)** は保存へ到達しないこと（添付後も `imageUrl` が未設定のまま）まで確認。404/403/401。`UPLOAD_DIR` は OS 一時ディレクトリに隔離（外部依存なし）。
   - FE 単体: `useTasks.uploadImage/removeImage`（MSW で multipart を横取り、Bearer 付与を確認）、TaskForm のファイル選択（imageFile emit・非対応MIMEのクライアント検証）。
   - E2E: 画像添付で作成→詳細で表示・実ロード（`naturalWidth>0`）まで確認。
 - タスク作成の部分成功（本体は作成できたが画像だけ失敗）:

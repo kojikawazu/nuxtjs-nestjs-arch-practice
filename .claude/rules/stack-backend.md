@@ -62,5 +62,8 @@ globs: apps/backend-*/**
   - 論理削除を導入する場合は `softDelete()` / `softRemove()` を使い、`deletedAt` へ手で日時を代入しない。
   - 監査列を複数 Entity で共有する場合は**抽象ベースクラス**（例: `abstract class AuditableEntity`）に集約して `extends` する。TypeORM 組み込みの `BaseEntity`（Active Record 用）と衝突しない名前にする。
   - **例外**: シードデータ・テストで日時を固定する場合のみ明示指定を許容する（本番コードパスには持ち込まない）。
+- **アップロードは受信段階で止める**: multipart のサイズ上限は `MulterModule.registerAsync` の `limits.fileSize` に設定値（`MAX_UPLOAD_BYTES`）を渡し、**メモリに載る前**に切る。ハンドラ手前の Pipe だけで検証すると、上限超過のファイルも一度全部受信してから弾くことになる。Pipe 側にも同じ上限を残す（多層防御）。超過は 413（大きすぎて受け取れない）、MIME 違反・欠落は 422（内容が不正）。
+  - **上限・許可 MIME をデコレータにハードコードしない**。`ParseFilePipeBuilder` はデコレータ評価時に定数を要求し `ConfigService` を使えないため、**DI 可能な Pipe クラス**（`ImageFilePipe`）にして `@UploadedFile(ImageFilePipe)` で使う。設定を変えたら実際の検証も変わる状態を保つ。
+  - frontend の事前チェック（`NUXT_PUBLIC_MAX_UPLOAD_BYTES`）にも同じ値を配る。ずれると「送信できるのにサーバで弾かれる」／「送れるはずのファイルをフォームが拒む」が起きる。
 - **秘密値**: パスワードは bcrypt（72バイト以内）、リフレッシュ等の長い値は SHA-256 + `timingSafeEqual`。
 - **テスト**: Service 単体は Repository のみモック。e2e は supertest + in-memory SQLite（外部依存なしで速く回す）。**DB 固有の挙動（照合順序・unique 制約）は e2e では検出できない**ため、MySQL コンテナを使う IT（`test:it` / `*.it-spec.ts`）に切り出して 3 版とも回す。レベルの使い分けは [testing.md](./testing.md) を参照。

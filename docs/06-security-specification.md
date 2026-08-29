@@ -90,7 +90,10 @@ sequenceDiagram
 
 ## ファイルアップロード（タスク添付画像）
 
-- **検証**: `ParseFilePipe` で MIME（`image/png` / `image/jpeg` / `image/webp`）とサイズ（≤ 2MB）を確認し、違反は **422**（`errors[].field` は `file`）。申告 MIME で判定する（マジックナンバー検査は無効化）。
+- **検証**: 2 段構えにする。
+  - **受信段階**: `MulterModule` の `limits.fileSize`（設定 `MAX_UPLOAD_BYTES` 由来）で上限超過を止める。超過は **413**。ここで止めることで、巨大な multipart を**メモリに載せる前**に切れる（認証済みクライアントによるメモリ消費を防ぐ）。
+  - **ハンドラ手前**: `ImageFilePipe`（DI で `ConfigService` を注入）が MIME（`image/png` / `image/jpeg` / `image/webp`）と欠落を確認し、違反は **422**（`errors[].field` は `file`）。サイズも再確認する（多層防御。`limits` が外れた場合の最後の砦）。申告 MIME で判定する（マジックナンバー検査は無効化）。
+  - 上限・許可 MIME は**設定から読む**（ハードコードしない）。デコレータ評価時には `ConfigService` が使えないため、`ParseFilePipeBuilder` ではなく DI 可能な Pipe クラスにしている。
 - **保存ファイル名はサーバ生成**（`<taskId>-<uuid>.<ext>`）。クライアント由来のファイル名は使わないため、パストラバーサルや既存ファイル上書きを構造的に防ぐ。
 - **削除時**も保存パスの `basename` のみを保存ディレクトリに結合して `unlink` するため、保存先ディレクトリ外を参照しない。
 - **認可**: 添付・削除は所有者のみ（存在=404 / 非所有=403、本体 CRUD と同じ `findOwned`）。

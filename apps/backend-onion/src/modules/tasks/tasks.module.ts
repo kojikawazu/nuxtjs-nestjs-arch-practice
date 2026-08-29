@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { MulterModule } from '@nestjs/platform-express';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TASK_QUERY } from './domain/repositories/task-query';
 import { TASK_REPOSITORY } from './domain/repositories/task.repository';
@@ -17,6 +19,7 @@ import { LocalImageStorage } from './infrastructure/services/local-image-storage
 import { TaskOrmEntity } from './infrastructure/entities/task.orm-entity';
 import { TypeOrmTaskQuery } from './infrastructure/repositories/typeorm-task.query';
 import { TypeOrmTaskRepository } from './infrastructure/repositories/typeorm-task.repository';
+import { ImageFilePipe } from '../../shared/presentation/pipes/image-file.pipe';
 import { TasksController } from './presentation/controllers/tasks.controller';
 
 /**
@@ -32,7 +35,17 @@ import { TasksController } from './presentation/controllers/tasks.controller';
  * 業務ルール検証は validators に集約し、書き込みの UseCase が注入して呼ぶ（検証の実体を 1 か所に保つ）。
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([TaskOrmEntity])],
+  imports: [
+    TypeOrmModule.forFeature([TaskOrmEntity]),
+    // 画像の上限を Multer の受信段階へ渡す（設定 = 環境変数 MAX_UPLOAD_BYTES）。
+    // Pipe の検証だけだと、上限超過のファイルも一度メモリへ載ってから弾かれる。
+    MulterModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        limits: { fileSize: config.getOrThrow<number>('upload.maxBytes') },
+      }),
+    }),
+  ],
   controllers: [TasksController],
   providers: [
     // ドメインサービス
@@ -46,6 +59,8 @@ import { TasksController } from './presentation/controllers/tasks.controller';
     DeleteTaskUseCase,
     SetTaskImageUseCase,
     RemoveTaskImageUseCase,
+    // 添付画像の検証（設定から上限・許可 MIME を読む）
+    ImageFilePipe,
     // 業務ルール検証（保存しない）
     CreateTaskValidator,
     UpdateTaskValidator,

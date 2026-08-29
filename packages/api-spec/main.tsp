@@ -218,7 +218,8 @@ namespace Tasks {
 
   /**
    * タスクへの画像添付（1枚・任意）。multipart/form-data でフィールド名 `file` を送る。
-   * MIME は png/jpeg/webp、サイズ上限あり（超過・不正 MIME は 400）。更新後の Task を返す。
+   * MIME は png/jpeg/webp（不正なら 422）。サイズ上限はサーバ設定（MAX_UPLOAD_BYTES・既定 2MB）で、
+   * 超過は受信段階で 413。更新後の Task を返す。
    */
   @route("/{id}/image")
   @post

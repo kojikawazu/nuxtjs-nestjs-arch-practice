@@ -214,16 +214,20 @@ describe('Tasks (e2e)', () => {
       expect(errorFields(res.body)).toEqual(['file']);
     });
 
-    it('異常系: サイズ上限（2MB）超過は 422（errors に file）', async () => {
+    it('異常系: サイズ上限（2MB）超過は Multer が受信段階で弾き 413', async () => {
       const id = await createTask();
       const tooBig = Buffer.alloc(2 * 1024 * 1024 + 1, 1);
       const res = await http
         .post(`/tasks/${id}/image`)
         .set(auth(token))
         .attach('file', tooBig, { filename: 'big.png', contentType: 'image/png' })
-        .expect(422);
+        .expect(413);
 
-      expect(errorFields(res.body)).toEqual(['file']);
+      // 「内容が不正」ではなく「大きすぎて受け取れない」ので 422 ではない。
+      // 保存にも到達しないことは、添付前の imageUrl が変わらないことで確かめる。
+      expect(res.body.statusCode).toBe(413);
+      const detail = await http.get(`/tasks/${id}`).set(auth(token)).expect(200);
+      expect(detail.body.imageUrl).toBeUndefined();
     });
 
     it('異常系: ファイル無しは 422（errors に file）', async () => {

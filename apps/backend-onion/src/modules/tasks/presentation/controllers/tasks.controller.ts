@@ -5,17 +5,16 @@ import {
   Get,
   HttpCode,
   Param,
-  ParseFilePipeBuilder,
   Patch,
   Post,
   UploadedFile,
   UseGuards,
-  UnprocessableEntityException,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Task, TaskCreate, TaskUpdate } from '@app/api-client';
 import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
+import { ImageFilePipe } from '../../../../shared/presentation/pipes/image-file.pipe';
 import { ZodValidationPipe } from '../../../../shared/presentation/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../../../auth/auth.types';
 import { JwtAuthGuard } from '../../../auth/presentation/guards/jwt-auth.guard';
@@ -131,7 +130,8 @@ export class TasksController {
    * 画像添付（1枚・multipart/form-data, フィールド名 `file`）
    * 実API: POST /tasks/{id}/image
    * 処理の実体: SetTaskImageUseCase.execute（application/usecases/set-image.usecase.ts）
-   *   ※ MIME（png/jpeg/webp）とサイズ（≤2MB）を ParseFilePipe で検証し、違反は 422（errors.field は file）
+   *   ※ サイズ上限は Multer が受信段階で弾く（超過は 413）。MIME・欠落は ImageFilePipe が 422
+   *     （errors.field は file）。上限・許可 MIME は設定（MAX_UPLOAD_BYTES）由来
    * @param user - AuthenticatedUser（@CurrentUser が JWT から復元）
    * @param id - string（対象タスクの ID・パスパラメータ）
    * @param file - Express.Multer.File（multipart の file フィールド。ImageFile に詰め替えて委譲）
@@ -142,25 +142,8 @@ export class TasksController {
   uploadImage(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @UploadedFile(
-      new ParseFilePipeBuilder()
-        // 申告 MIME で判定する（マジックナンバー検査は無効化）。拡張子の確定は UseCase 側でも担保。
-        .addFileTypeValidator({
-          fileType: /^image\/(png|jpe?g|webp)$/,
-          skipMagicNumbersValidation: true,
-        })
-        .addMaxSizeValidator({ maxSize: 2 * 1024 * 1024 })
-        .build({
-          fileIsRequired: true,
-          // 画像も JSON ボディと同じ「検証失敗 = 422 + フィールド別の理由」に揃える。
-          // field は multipart のフィールド名（file）＝契約上の入力名。
-          exceptionFactory: (message: string) =>
-            new UnprocessableEntityException({
-              message,
-              errors: [{ field: 'file', messages: [message] }],
-            }),
-        }),
-    )
+    // 上限・許可 MIME は設定（MAX_UPLOAD_BYTES）から読むため、DI 可能な Pipe クラスで検証する
+    @UploadedFile(ImageFilePipe)
     file: Express.Multer.File,
   ): Promise<Task> {
     // Express の file から application 層の ImageFile（mimetype/buffer のみ）へ詰め替える

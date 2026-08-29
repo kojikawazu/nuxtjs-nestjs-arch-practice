@@ -82,4 +82,5 @@
 - 主要ポート: frontend `3000` / backend `3001` / MySQL `3306`（e2e 用 `mysql-test` は `3307`・`test` profile）。
 - DB 切替: `DB_TYPE=mysql`（本番/compose）/ `better-sqlite3`（ローカル・e2e）。
 - 画像保存先: `UPLOAD_DIR`（既定 `uploads`＝backend 作業ディレクトリ相対）。compose では `/repo/apps/backend-layered/uploads` に上書きし、`uploads-data` volume をマウント。
+- 画像の上限: `MAX_UPLOAD_BYTES`（既定 2097152 = 2MB）。backend は Multer の `limits.fileSize` と `ImageFilePipe` の両方でこの値を使う。frontend は `NUXT_PUBLIC_MAX_UPLOAD_BYTES` に**同じ値**を入れる（フォームの事前チェック用。ずれると送信できるのにサーバで弾かれる／その逆が起きる）。
 - 再生成: `pnpm api:gen`（契約 → OpenAPI → 型/クライアント、Swagger もこの生成物を配信）。

@@ -151,6 +151,8 @@ services:
       # サーバ側(BFF)は service 名で backend に到達。クライアント(ブラウザ)はホスト公開ポート。
       NUXT_API_BASE_URL: http://backend:3001
       NUXT_PUBLIC_API_BASE_URL: http://localhost:${BACKEND_PORT:-3001}
+      # フォームの事前チェックを backend の受信上限と揃える
+      NUXT_PUBLIC_MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-2097152}
     ports:
       - '${FRONTEND_PORT:-3000}:3000'
 
@@ -169,6 +171,8 @@ services:
       # SSR のサーバ側セッション復元・BFF は service 名で backend に到達。クライアントはホスト公開ポート。
       NUXT_API_BASE_URL: http://backend:3001
       NUXT_PUBLIC_API_BASE_URL: http://localhost:${BACKEND_PORT:-3001}
+      # フォームの事前チェックを backend の受信上限と揃える
+      NUXT_PUBLIC_MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-2097152}
     ports:
       - '${FRONTEND_SSR_PORT:-3010}:3010'
 

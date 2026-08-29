@@ -41,12 +41,13 @@
 | 25 | 検証失敗を 422 + フィールド別エラーで返す | ✅ | 入力検証の失敗を 400 → **422** に変更し、契約 `ApiError` に `errors`（`{ field, messages }[]`）を追加。zod の形式検証・業務ルール違反（開始 > 終了）・画像の MIME/サイズ/欠落をすべて 422 に揃え、どのフィールドが何の理由で弾かれたかを構造で返す。clean / onion は `DomainError.fields` を例外フィルタが展開（`endDate` 等はドメインエンティティ自身の属性名なので依存は内向きのまま）、layered は例外に直接載せる。FE は `utils/fieldErrors.ts` の `getFieldErrors()` で取り出し、`TaskForm` の既存のインライン表示へ流す（作成フローは確認画面に入力欄が無いため、422 を受けたら入力画面へ差し戻す）。`errors` をマップでなく配列にしたのは、TypeSpec の OpenAPI 3.1 出力が動的キーを `unevaluatedProperties` で表現し `openapi-typescript` が解釈できない（`Record<string, never>` に落ちる）ため。409 / 404 / 403 / 401 は不変 |
 | 26 | onion: application の presentation 依存を解消 | ✅ | onion tasks の `application/` が `presentation/dto/` を import していた 4 箇所（usecase 2 + validator 2）を、`application/inputs/`（`CreateTaskInput` / `UpdateTaskInput` ＋ 契約→Input 変換）を挟んで解消。変換関数の引数は DTO 型ではなく**契約型**（`TaskCreate` / `TaskUpdate`）にすることで、presentation・application のどちらからも等距離な `@app/api-client` を共通語彙にし、依存を内向きに揃えた。ISO 文字列 → `Date` の正規化も境界に移動。clean tasks・onion auth と同じ形になり、**3 版とも application → presentation の import は 0 件**。HTTP 契約・e2e シナリオは不変（単体 71→77） |
 | 27 | 画像付きタスク作成を再試行安全にする | ✅ | 作成（`POST /tasks`）と画像添付（`POST /tasks/{id}/image`）が別 API のため、本体成功・画像失敗の部分成功で押し直すとタスクが二重作成された（#64）。**作成が通った時点で draft を破棄する**方式で解消。draft は「もう一度作成する」ための唯一の入力源なので、消せば押し直し・リロードのどちらからも再作成できない（フラグでボタンを塞ぐ方式と違い、リロードで復活しない）。部分成功時は確認画面に留まり、再作成ボタンを出さずに「画像を再送する」「画像なしで完了する」の 2 択を提示する。編集フローは `PATCH`（冪等）なので対象外。FE 単体で MSW により部分成功を注入し、再試行後も `POST /tasks` が 1 回だけであることを 2 版とも検証（spa 49→53 / ssr 50→54） |
+| 28 | 画像アップロードを受信段階で制限し設定と同期する | ✅ | `FileInterceptor` に Multer の `limits` が無く、上限超過のファイルも**一度メモリへ載ってから** `ParseFilePipe` で弾いていた（#66）。また `MAX_UPLOAD_BYTES` は読み込まれるだけで controller が 2MB をハードコードしていた。`MulterModule.registerAsync` で設定値を `limits.fileSize` に渡し受信段階で停止（超過は **413**）。デコレータ評価時に `ConfigService` を使えない制約は、`ParseFilePipeBuilder` をやめて **DI 可能な `ImageFilePipe`** に置き換えて解決（MIME 違反・欠落は 422 + `errors[].field=file`、サイズは多層防御で 413）。frontend の事前チェックも `NUXT_PUBLIC_MAX_UPLOAD_BYTES` で同期し、TypeSpec の doc・`.env.example`・compose も揃えた。単体は 3 版とも +6（設定値を変えると境界が動くことまで固定）|
 
 ## テスト集計
 
-- backend-layered: 単体 46 / e2e 27（入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
-- backend-clean: 単体 78 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
-- backend-onion: 単体 77 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
+- backend-layered: 単体 52 / e2e 27（入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
+- backend-clean: 単体 84 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
+- backend-onion: 単体 83 / e2e 27（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
 - frontend-spa: 単体 53 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft・サーバ 422 をフィールド別表示・作成は再試行安全）
 - frontend-ssr: 単体 54 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft・サーバ 422 をフィールド別表示・作成は再試行安全）
 
