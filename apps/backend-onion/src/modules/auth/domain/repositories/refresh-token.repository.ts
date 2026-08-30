@@ -21,8 +21,14 @@ export interface RefreshTokenRepository {
   /** ユーザーの保存済みトークンから生トークンに一致する行を定数時間比較で探す。無ければ null。 */
   findMatch(userId: string, token: string): Promise<StoredRefreshToken | null>;
 
-  /** 指定 id の行を削除する（ローテーションで使用済みトークンを失効）。 */
-  deleteById(id: string): Promise<void>;
+  /**
+   * ローテーションで使用済みトークン行を失効させる。
+   * **同一行に対して成功するのは 1 回だけ**で、消せた呼び出しだけが新トークンを発行できる。
+   * 照合と失効が別クエリのため、ここを排他点にしないと、同じトークンでの並行リフレッシュで
+   * 両方が同じ行を見て 2 組のトークンを発行してしまう。
+   * @returns この呼び出しが行を消せたら true。既に他の呼び出しが消していたら false
+   */
+  consumeById(id: string): Promise<boolean>;
 
   /** ユーザーの全リフレッシュトークンを失効させる（ログアウト）。 */
   deleteAllForUser(userId: string): Promise<void>;

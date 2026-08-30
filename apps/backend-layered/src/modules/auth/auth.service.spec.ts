@@ -41,7 +41,7 @@ describe('AuthService', () => {
     users = { findByEmail: jest.fn(), findById: jest.fn(), create: jest.fn() };
     refreshRepo = {
       find: jest.fn().mockResolvedValue([]),
-      delete: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
       create: jest.fn((x) => x),
       save: jest.fn(async (x) => x),
     };
@@ -174,6 +174,27 @@ describe('AuthService', () => {
 
       await expect(service.refresh(refreshToken)).rejects.toBeInstanceOf(UnauthorizedException);
       expect(users.findById).not.toHaveBeenCalled();
+    });
+
+    it('準正常系: 並行リフレッシュで使用済み行を消せなかった側は回転せず UnauthorizedException', async () => {
+      const user = await buildUser();
+      const refreshToken = await issueRefreshToken(user.id);
+      refreshRepo.find.mockResolvedValue([
+        {
+          id: 'rt-1',
+          userId: user.id,
+          tokenHash: createHash('sha256').update(refreshToken).digest('hex'),
+          expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+          createdAt: new Date(),
+        } as RefreshTokenEntity,
+      ]);
+      users.findById.mockResolvedValue(user);
+      // 同じ行を先に消した呼び出しが別にいる（＝この呼び出しは負け）
+      refreshRepo.delete.mockResolvedValue({ affected: 0 });
+
+      await expect(service.refresh(refreshToken)).rejects.toBeInstanceOf(UnauthorizedException);
+      // 負けた側が新しいトークンペアを発行してしまうと、1 本のトークンから 2 本に増える
+      expect(refreshRepo.save).not.toHaveBeenCalled();
     });
   });
 

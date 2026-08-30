@@ -81,7 +81,7 @@ export const asTokenIssuer = (m: TokenIssuerMock): TokenIssuer => m as unknown a
 export type RefreshRepoMock = {
   save: jest.Mock;
   findMatch: jest.Mock;
-  deleteById: jest.Mock;
+  consumeById: jest.Mock;
   deleteAllForUser: jest.Mock;
 };
 
@@ -89,7 +89,7 @@ export function createRefreshRepoMock(): RefreshRepoMock {
   return {
     save: jest.fn(async () => undefined),
     findMatch: jest.fn(),
-    deleteById: jest.fn(async () => undefined),
+    consumeById: jest.fn(async () => true),
     deleteAllForUser: jest.fn(async () => undefined),
   };
 }

@@ -78,7 +78,7 @@ export class AuthService {
   }
 
   /**
-   * リフレッシュ（ローテーション）。署名検証 → 保存ハッシュ照合 → ユーザー確認 → 旧トークン失効 → 新規発行。失敗は 401。
+   * リフレッシュ（ローテーション）。署名検証 → 保存ハッシュ照合 → ユーザー確認 → 旧トークン失効（消せた場合のみ）→ 新規発行。失敗は 401。
    * @param refreshToken - string（クライアント提示のリフレッシュトークン）
    * @returns Promise<AuthTokens>（新しい access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
@@ -103,8 +103,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // ローテーション: 使用済みトークン行を削除してから新規発行する
-    await this.refreshTokens.delete({ id: matched.id });
+    // ローテーション: DELETE の影響行数を排他判定に使い、消せた呼び出しだけが新トークンを発行する。
+    // 照合と失効が別クエリのため、ここを排他点にしないと、同じトークンでの並行リフレッシュで
+    // 両方が同じ行を見て 2 組のトークンを発行してしまう。
+    const consumed = await this.refreshTokens.delete({ id: matched.id });
+    if ((consumed.affected ?? 0) === 0) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
     return this.issueTokens(user);
   }
 

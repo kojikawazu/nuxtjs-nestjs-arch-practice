@@ -1,6 +1,8 @@
 import 'reflect-metadata';
+import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '../../src/modules/users/user.entity';
+import { RefreshTokenEntity } from '../../src/modules/auth/entities/refresh-token.entity';
 
 /**
  * BE IT（統合テスト・**MySQL コンテナ必須**）: DB 忠実性の検証。
@@ -21,7 +23,7 @@ const dataSource = new DataSource({
   username: process.env.IT_DB_USERNAME ?? 'taskuser',
   password: process.env.IT_DB_PASSWORD ?? 'taskpassword',
   database: process.env.IT_DB_DATABASE ?? 'taskdb_it',
-  entities: [UserEntity],
+  entities: [UserEntity, RefreshTokenEntity],
   synchronize: true,
   // この IT は taskdb_it を占有して毎回作り直す（E2E は taskdb_e2e＝同一 mysql-test コンテナを DB 名で二役）
   dropSchema: true,
@@ -77,5 +79,50 @@ describe('DB 忠実性 IT（MySQL コンテナ）', () => {
         repo.create({ email: 'hanako@example.com', passwordHash: 'y', displayName: 'dup' }),
       ),
     ).rejects.toThrow();
+  });
+
+  describe('リフレッシュトークンの並行消費（ローテーション）', () => {
+    /** 消費対象の行を 1 件用意する（tokenHash は行を一意にするためだけの値）。 */
+    const insertToken = async (): Promise<string> => {
+      const repo = dataSource.getRepository(RefreshTokenEntity);
+      const row = await repo.save(
+        repo.create({
+          userId: 'user-1',
+          tokenHash: `hash-${randomUUID()}`,
+          expiresAt: new Date(Date.now() + 60_000),
+        }),
+      );
+      return row.id;
+    };
+
+    it('正常系: 単独の DELETE は影響行数 1 を返す（消費判定が成立する前提）', async () => {
+      const id = await insertToken();
+
+      const result = await dataSource.getRepository(RefreshTokenEntity).delete({ id });
+
+      // TypeORM が MySQL ドライバで affected を埋めることを実物で確認する
+      expect(result.affected).toBe(1);
+    });
+
+    it('準正常系: 同一行への並行 DELETE で影響行数 1 を得るのは片方だけ', async () => {
+      const id = await insertToken();
+      // 別コネクションから同時に消しにいく。同一プロセスの await 順ではなく
+      // **DB の行ロック**で直列化されることを確かめたいので、query runner を分ける。
+      const a = dataSource.createQueryRunner();
+      const b = dataSource.createQueryRunner();
+      await Promise.all([a.connect(), b.connect()]);
+
+      try {
+        const [first, second] = await Promise.all([
+          a.manager.delete(RefreshTokenEntity, { id }),
+          b.manager.delete(RefreshTokenEntity, { id }),
+        ]);
+
+        // 合計が 2 になると、1 本のリフレッシュトークンから 2 組のトークンペアが発行されうる
+        expect((first.affected ?? 0) + (second.affected ?? 0)).toBe(1);
+      } finally {
+        await Promise.all([a.release(), b.release()]);
+      }
+    });
   });
 });
