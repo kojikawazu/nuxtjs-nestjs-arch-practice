@@ -90,4 +90,25 @@ describe('SetTaskImageUseCase', () => {
     );
     expect(writeFileMock).not.toHaveBeenCalled();
   });
+
+  it('準正常系: 保存に失敗したら直前に書いた新ファイルを消し、元のエラーを投げ直す', async () => {
+    repo.findOne.mockResolvedValue(buildEntity({ imageUrl: '/uploads/old-file.png' }));
+    const dbError = new Error('db is down');
+    repo.save.mockRejectedValue(dbError);
+
+    await expect(usecase.execute(USER, 'task-1', pngFile())).rejects.toBe(dbError);
+    // 消すのは書いたばかりの新ファイルだけ。旧ファイルはまだ imageUrl から参照されている
+    expect(unlinkMock).toHaveBeenCalledTimes(1);
+    const [writtenPath] = writeFileMock.mock.calls[0];
+    expect(unlinkMock).toHaveBeenCalledWith(writtenPath);
+  });
+
+  it('異常系: 補償削除まで失敗しても、元の保存エラーが投げられる（原因をすり替えない）', async () => {
+    repo.findOne.mockResolvedValue(buildEntity());
+    const dbError = new Error('db is down');
+    repo.save.mockRejectedValue(dbError);
+    unlinkMock.mockRejectedValue(new Error('storage is down'));
+
+    await expect(usecase.execute(USER, 'task-1', pngFile())).rejects.toBe(dbError);
+  });
 });

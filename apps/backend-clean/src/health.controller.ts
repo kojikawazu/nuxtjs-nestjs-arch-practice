@@ -6,7 +6,7 @@ export class HealthController {
   /**
    * 死活チェック（E2E のサーバ起動待ちにも使う）。
    * 実API: GET /health
-   * @returns { status: 'ok' }（常に 200）
+   * @returns 死活状態を表す固定レスポンス（常に 200。型はシグネチャが真実）
    */
   @Get()
   check(): { status: 'ok' } {
