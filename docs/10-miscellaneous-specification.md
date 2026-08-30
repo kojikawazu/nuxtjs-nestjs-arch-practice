@@ -83,4 +83,5 @@
 - DB 切替: `DB_TYPE=mysql`（本番/compose）/ `better-sqlite3`（ローカル・e2e）。
 - 画像保存先: `UPLOAD_DIR`（既定 `uploads`＝backend 作業ディレクトリ相対）。compose では `/repo/apps/backend-layered/uploads` に上書きし、`uploads-data` volume をマウント。
 - 画像の上限: `MAX_UPLOAD_BYTES`（既定 2097152 = 2MB）。backend は Multer の `limits.fileSize` と `ImageFilePipe` の両方でこの値を使う。frontend は `NUXT_PUBLIC_MAX_UPLOAD_BYTES` に**同じ値**を入れる（フォームの事前チェック用。ずれると送信できるのにサーバで弾かれる／その逆が起きる）。
+- JWT 秘密鍵: `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` は**必須**（既定値なし）。`openssl rand -hex 32` で生成し、**2 本に別々の値**を入れる。未設定・サンプル値・32 文字未満・両者が同一のいずれかなら backend は起動に失敗する（→ [06 機密情報の管理](./06-security-specification.md#機密情報の管理)）。
 - 再生成: `pnpm api:gen`（契約 → OpenAPI → 型/クライアント、Swagger もこの生成物を配信）。

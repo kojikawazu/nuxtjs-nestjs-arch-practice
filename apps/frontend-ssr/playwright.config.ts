@@ -44,8 +44,9 @@ export default defineConfig({
       env: {
         ...backendDbEnv,
         BACKEND_PORT: '3001',
-        JWT_ACCESS_SECRET: 'e2e-access-secret',
-        JWT_REFRESH_SECRET: 'e2e-refresh-secret',
+        // 起動時検証（32 文字以上・サンプル値でない・access と refresh が別値）を満たす値にする
+        JWT_ACCESS_SECRET: 'e2e-access-secret-0123456789abcdef',
+        JWT_REFRESH_SECRET: 'e2e-refresh-secret-0123456789abcdef',
         JWT_ACCESS_EXPIRES_IN: '900s',
         JWT_REFRESH_EXPIRES_IN: '7d',
       },

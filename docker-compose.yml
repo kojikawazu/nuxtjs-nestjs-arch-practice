@@ -64,8 +64,12 @@ services:
       # 学習用途: 起動時にスキーマ同期。本番ではマイグレーション運用にする。
       DB_SYNCHRONIZE: 'true'
       BACKEND_PORT: 3001
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
+      # 既定値を置かない（未設定なら空のまま渡し、backend が起動時に落とす）。
+      # `:?` にすると compose がファイル全体を補間する都合で、MySQL しか起動しない
+      # `pnpm db:up` / `make test-back-it` / `make test-scenario-mysql` まで失敗するため使わない。
+      # 生成: openssl rand -hex 32（access と refresh に別々の値を入れる）
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-900s}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       # 添付画像の保存先。下の volume をこのパスにマウントして永続化する。
@@ -97,8 +101,12 @@ services:
       DB_DATABASE: ${MYSQL_DATABASE:-taskdb}
       DB_SYNCHRONIZE: 'true'
       BACKEND_PORT: 3002
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
+      # 既定値を置かない（未設定なら空のまま渡し、backend が起動時に落とす）。
+      # `:?` にすると compose がファイル全体を補間する都合で、MySQL しか起動しない
+      # `pnpm db:up` / `make test-back-it` / `make test-scenario-mysql` まで失敗するため使わない。
+      # 生成: openssl rand -hex 32（access と refresh に別々の値を入れる）
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-900s}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       UPLOAD_DIR: /repo/apps/backend-clean/uploads
@@ -128,8 +136,12 @@ services:
       DB_DATABASE: ${MYSQL_DATABASE:-taskdb}
       DB_SYNCHRONIZE: 'true'
       BACKEND_PORT: 3003
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
+      # 既定値を置かない（未設定なら空のまま渡し、backend が起動時に落とす）。
+      # `:?` にすると compose がファイル全体を補間する都合で、MySQL しか起動しない
+      # `pnpm db:up` / `make test-back-it` / `make test-scenario-mysql` まで失敗するため使わない。
+      # 生成: openssl rand -hex 32（access と refresh に別々の値を入れる）
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-900s}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       UPLOAD_DIR: /repo/apps/backend-onion/uploads
