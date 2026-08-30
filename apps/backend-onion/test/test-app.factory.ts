@@ -30,8 +30,9 @@ export let testUploadDir = '';
  * （HTTP 境界・認可・バリデーション・エラーレスポンス・静的配信の検証が目的）
  */
 export async function createTestApp(): Promise<INestApplication> {
-  process.env.JWT_ACCESS_SECRET = 'test-access-secret';
-  process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+  // 起動時検証（32 文字以上・サンプル値でない・access と refresh が別値）を満たす値にする
+  process.env.JWT_ACCESS_SECRET = 'test-access-secret-0123456789abcdef';
+  process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-0123456789abcdef';
   process.env.JWT_ACCESS_EXPIRES_IN = '900s';
   process.env.JWT_REFRESH_EXPIRES_IN = '7d';
   // 一時ディレクトリに画像を保存（外部依存なし）

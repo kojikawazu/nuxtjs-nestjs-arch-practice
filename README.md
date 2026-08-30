@@ -65,7 +65,13 @@ packages/api-client     生成した型 + openapi-fetch クライアント
 pnpm install
 cp .env.example .env
 pnpm api:gen        # ← 必須: 契約から型/クライアントを生成
+
+# ← 必須: JWT 秘密鍵を生成して .env に設定（2 本に別々の値を入れる）
+echo "JWT_ACCESS_SECRET=$(openssl rand -hex 32)"
+echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
 ```
+
+> ⚠️ **JWT 秘密鍵は必須**です。`.env.example` の該当行は**空**にしてあり、未設定・32 文字未満・`JWT_ACCESS_SECRET` と `JWT_REFRESH_SECRET` が同値のいずれかなら backend は起動に失敗します（既定値へのフォールバックを持たないため。詳細は [06 機密情報の管理](docs/06-security-specification.md#機密情報の管理)）。
 
 > ⚠️ **`pnpm api:gen` は必須**。実行しないと `@app/api-client` の型が未生成のままになり、FE/BE のビルド・型チェック・テストが失敗します（生成物は `.gitignore` 対象で、clone 直後には存在しません）。
 >

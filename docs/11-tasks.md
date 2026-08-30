@@ -47,12 +47,13 @@
 | 31 | タスク削除時に添付画像の実体も削除する | ✅ | 削除ユースケースが DB レコードだけを消し、`/uploads/...` の画像が残っていた（#67）。公開 URL から参照可能なまま運用期間に比例して孤立ファイルが増える状態。画像単体削除（`RemoveTaskImageUseCase`）には既に storage 削除があり、削除経路だけが非対称だったため、そちらに揃えた。順序は **DB → ストレージ**（逆順だと DB 削除の失敗で「レコードはあるのに実体が無い」リンク切れになる。この順なら最悪でも参照されない孤立ファイルが残るだけ）。ストレージ削除の失敗は本処理を巻き戻さない。e2e は 3 版とも `upload → DELETE task → 画像 URL が 404` を検証（単体 +3 / e2e 32→34）|
 | 32 | domain の構成要素を規約化し、Value Object を導入する | ✅ | `domain/` に置けるものの使い分け（Entity / VO / Domain Service）が規約に無く、業務ルールの置き場所を毎回判断していた（#89）。判定軸を「不変かどうか」ではなく **同一性（identity）を持つか**に置き、3 種を規約化（「VO 以外は Domain Service」は Entity まで Domain Service にしてしまい貧血ドメインを招くため明示的に否定）。VO と zod の責務分担は「VO は **zod では表現しにくいフィールド間の関係**のみ」に限定し、単一フィールドの長さ・形式は zod に残した。実装として clean / onion に `domain/value-objects/DateRange` を導入し、`TaskState` / `NewTask` が `startDate` / `endDate` ではなく `period: DateRange` を持つ形に。自由関数 `assertDateOrder` を廃し、**呼び忘れる経路を型で消した**。`applyUpdate` は期間を先に組み立てるため、検証失敗時に部分的に壊れた状態を作らない。layered は baseline として据え置き。HTTP 契約・e2e は 3 版とも不変（単体 95→106）|
 | 33 | アクセストークン失効時に自動リフレッシュして再試行する | ✅ | `useApiClient` が Authorization を載せるだけで 401 を扱わず、既定 15 分を過ぎると**画面上はログイン中のままタスク API が失敗し続けた**（#62。リロードするまで復帰できない）。`composables/useAuthedFetch.ts` を新設し、401 のときだけ 1 回リフレッシュして同じリクエストを再試行する形に統一。`Request` の body は一度しか読めないため**送信前に `clone()` で再試行用の複製を取る**（multipart も同経路）。並行 401 は **1 本の refresh を共有**し（ローテーションと競合すると後発が消費済みトークンで失敗する）、共有する in-flight は**モジュール変数ではなく `nuxtApp` をキーにした WeakMap** に持つ（SSR で他利用者と共有しないため）。リフレッシュ失敗時はメモリと httpOnly Cookie の両方を破棄して `/login` へ。SSR ではサーバ / クライアントの差（backend 直呼びか BFF 経由か）を `useAuth().refresh()` に集約し、`plugins/auth-init.ts` は spa 版と同じ形まで縮んだ（内部 $fetch の Set-Cookie はブラウザ応答に載らないため、サーバ側は自分で Cookie を書き戻す必要がある）。HTTP 契約・E2E シナリオは不変（単体 spa 54→62 / ssr 55→63）|
+| 34 | JWT 秘密鍵を必須化し、起動時に検証する | ✅ | 3 版とも `env.JWT_ACCESS_SECRET ?? 'dev-access-secret'` のフォールバックを持ち、**環境変数を渡し忘れてもリポジトリ公開の鍵で正常に起動していた**（#61 の P1）。値があれば動くため設定漏れに気づけないのが本質的な危険なので、フォールバックを廃止し `configuration()` で起動時に落とす方式へ。拒否条件は **未設定/空・既知のサンプル値（`dev-*` / `change-me-*`）・32 文字未満（HS256 の出力が 32 バイト）・access と refresh が同一** の 4 つ。最後の 1 つを入れたのは、`JwtAccessStrategy` が署名検証だけでトークン種別のクレームを見ておらず、**同一鍵だと 7 日有効の refresh トークンが 15 分のアクセストークンとして通る**ため。compose も既定値をやめ `${JWT_ACCESS_SECRET:?...}` で compose 自体を失敗させ、`.env.example` は値を空にした。e2e / Playwright が起動する backend の秘密鍵も条件を満たす値へ差し替え（単体 3 版とも +7）|
 
 ## テスト集計
 
-- backend-layered: 単体 64 / e2e 34（入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
-- backend-clean: 単体 106 / e2e 34（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
-- backend-onion: 単体 106 / e2e 34（同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
+- backend-layered: 単体 71 / e2e 34（JWT 秘密鍵は起動時検証・入力検証は zod・DryRun 廃止済み・検証失敗は 422 + errors）
+- backend-clean: 単体 113 / e2e 34（JWT 秘密鍵は起動時検証・同一 e2e シナリオ・tasks 読み取りは CQRS 分離・application/presentation 細分化・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors）
+- backend-onion: 単体 113 / e2e 34（JWT 秘密鍵は起動時検証・同一 e2e シナリオ・tasks 読み取りは CQRS 分離・auth/users もクリーン化・入力検証は zod・検証失敗は 422 + errors・application は presentation 非依存）
 - frontend-spa: 単体 62 / E2E 9（フォーム/レスポンス検証は zod・確認画面は CSR + sessionStorage draft・サーバ 422 をフィールド別表示・作成は再試行安全・401 は自動リフレッシュして再試行）
 - frontend-ssr: 単体 63 / E2E 8（フォーム/レスポンス検証は zod・確認画面は SSR + BFF Cookie draft・サーバ 422 をフィールド別表示・作成は再試行安全・401 は自動リフレッシュして再試行）
 
