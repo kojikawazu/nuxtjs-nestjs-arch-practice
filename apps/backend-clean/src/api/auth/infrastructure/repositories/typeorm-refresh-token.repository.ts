@@ -38,8 +38,14 @@ export class TypeOrmRefreshTokenRepository implements RefreshTokenRepository {
     return null;
   }
 
-  async deleteById(id: string): Promise<void> {
-    await this.repo.delete({ id });
+  /**
+   * DELETE の影響行数をそのまま排他判定に使う（同一行を消せるのは 1 回だけ）。
+   * DB が行ロックで直列化するため、追加のトランザクションやロックを持ち込まずに
+   * 「勝者が 1 つだけ」を保証できる。
+   */
+  async consumeById(id: string): Promise<boolean> {
+    const result = await this.repo.delete({ id });
+    return (result.affected ?? 0) > 0;
   }
 
   async deleteAllForUser(userId: string): Promise<void> {

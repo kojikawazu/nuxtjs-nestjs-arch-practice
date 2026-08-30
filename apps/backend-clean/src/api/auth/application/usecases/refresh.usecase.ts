@@ -14,7 +14,7 @@ import { TOKEN_ISSUER, type TokenIssuer } from '../ports/token-issuer.port';
 
 /**
  * リフレッシュ（ローテーション）。
- * 署名検証 → 保存ハッシュ照合 → ユーザー存在確認 → 旧トークン失効 → 新規発行。
+ * 署名検証 → 保存ハッシュ照合 → ユーザー存在確認 → 旧トークン失効（消せた場合のみ）→ 新規発行。
  * いずれの失敗も `InvalidRefreshTokenError`（401）に集約する。
  */
 @Injectable()
@@ -26,7 +26,7 @@ export class RefreshUseCase {
   ) {}
 
   /**
-   * 署名検証 → 保存ハッシュ照合 → ユーザー存在確認 → 旧トークン失効 → 新規発行。失敗は 401 に集約。
+   * 署名検証 → 保存ハッシュ照合 → ユーザー存在確認 → 旧トークン失効（消せた場合のみ）→ 新規発行。失敗は 401 に集約。
    * @param token - string（クライアント提示のリフレッシュトークン）
    * @returns Promise<AuthTokens>（新しい access/refresh。源: @app/api-client ← packages/api-spec/main.tsp）
    */
@@ -43,8 +43,12 @@ export class RefreshUseCase {
     if (!user) {
       throw new InvalidRefreshTokenError();
     }
-    // ローテーション: 使用済みトークン行を削除してから新規発行する
-    await this.refreshTokens.deleteById(matched.id);
+    // ローテーション: 使用済み行を消せた呼び出しだけが新トークンを発行する。
+    // 同じトークンで並行にリフレッシュされても、負けた側はここで 401 になる。
+    const consumed = await this.refreshTokens.consumeById(matched.id);
+    if (!consumed) {
+      throw new InvalidRefreshTokenError();
+    }
     return issueAuthTokens(this.tokenIssuer, this.refreshTokens, user);
   }
 }

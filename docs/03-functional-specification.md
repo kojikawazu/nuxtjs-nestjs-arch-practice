@@ -16,7 +16,7 @@
 |------|------|------|------|
 | 登録 | email / password / displayName | 重複確認 → bcrypt ハッシュ → ユーザー作成 → トークン発行 | AuthTokens(201) |
 | ログイン | email / password | ユーザー照合 → パスワード検証 → トークン発行 | AuthTokens |
-| リフレッシュ | refreshToken（Cookie 経由） | ハッシュ照合 → 旧トークン失効 → 再発行 | AuthTokens |
+| リフレッシュ | refreshToken（Cookie 経由） | ハッシュ照合 → 旧トークン失効（消せた場合のみ）→ 再発行 | AuthTokens（同一トークンの並行使用は 1 本だけ成功し、他は 401） |
 | タスク作成 | title / description? / status? / startDate / endDate? / url? | DTO 検証（url は http/https のみ）→ 開始≤終了確認 → 保存 | Task(201) |
 | タスク更新 | 上記の部分集合 | 所有確認 → マージ → 開始≤終了確認 → 保存 | Task |
 | 画像添付 | multipart `file` | 所有確認 → MIME/サイズ検証 → uuid 名で保存 → 旧ファイル削除 | Task |

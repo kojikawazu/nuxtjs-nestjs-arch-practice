@@ -126,6 +126,24 @@ describe('Auth (e2e)', () => {
     await http.post('/auth/refresh').send({ refreshToken: oldRefresh }).expect(401);
   });
 
+  it('準正常系: 同じリフレッシュトークンを同時に使っても、成功するのは 1 本だけ', async () => {
+    const login = await http
+      .post('/auth/login')
+      .send({ email: credentials.email, password: credentials.password })
+      .expect(200);
+    const refreshToken = login.body.refreshToken as string;
+
+    // 同一トークンで 2 本同時にリフレッシュする（複数タブ / 端末の競合を模す）
+    const [first, second] = await Promise.all([
+      http.post('/auth/refresh').send({ refreshToken }),
+      http.post('/auth/refresh').send({ refreshToken }),
+    ]);
+
+    // 1 本のトークンから 2 組のトークンペアが生まれてはならない（ローテーションの前提が崩れる）
+    const statuses = [first.status, second.status].sort((a, b) => a - b);
+    expect(statuses).toEqual([200, 401]);
+  });
+
   it('異常系: 認証なしで保護ルートにアクセスすると 401', async () => {
     await http.get('/tasks').expect(401);
   });

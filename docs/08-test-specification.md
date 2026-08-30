@@ -50,6 +50,7 @@
 
 - **現状（既定）**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する（`pnpm test` / CI は SQLite のまま）。
 - **実装済み（BE IT・3 版）**: `backend-layered` / `backend-clean` / `backend-onion` の各 `test/it/db-fidelity.it-spec.ts` に **DB 忠実性 IT** を追加。MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する（接続先 DB は `taskdb_it`）。実行は `make test-back-it`（= `mysql-test` を `--wait` で healthy まで待って 3 版の `test:it` を順に実行）。
+  - **同一行への並行 DELETE** も IT で担保する（リフレッシュのローテーションが依存する排他）。別 query runner から同時に `DELETE` を投げ、**影響行数 1 を得るのは片方だけ**であることを確認する。in-memory SQLite は同期ドライバのため真の並行が再現できず、e2e ではこの前提を確かめられない。
 - **実装済み（シナリオの MySQL コンテナ化・二役）**: Playwright の webServer が起動する backend を `SCENARIO_DB=mysql` で **`mysql-test` の `taskdb_e2e`** に繋ぎ、**実ブラウザ + 実 FE + 実 BE + 実 MySQL** の通しシナリオを本番相当で回す。**IT=`taskdb_it` / シナリオ=`taskdb_e2e` を同一コンテナで二役**（`docker/mysql-test-init.sql` が両 DB を作成）。実行は `make test-scenario-mysql`（代表 spa。既定 `test:e2e` は従来どおり SQLite・速い）。
 - **既定の速いテストは SQLite・Docker 不要**: `pnpm test`・BE `test:e2e`（supertest）・FE `test:e2e`（Playwright）はすべて SQLite（`.it-spec` は unit/e2e の testRegex 外）。ローカルの MySQL 経路は `make test-back-it`（IT）/ `make test-scenario-mysql`（シナリオ）。
 - **CI は両方回す**: SQLite ジョブ（`backend` の unit+e2e / `frontend` / `e2e` Playwright）に加え、**`backend-it`**（DB 忠実性 IT を MySQL コンテナで・3 版）と **`scenario-mysql`**（FE+BE 通しシナリオを MySQL コンテナで・spa）の 2 ジョブ。ローカルと同じ `make` 手順・ubuntu ランナーの docker compose を利用。
@@ -65,6 +66,10 @@
 ## カバレッジの要点（実装済み）
 
 - 認証: 登録/重複(409)/ログイン失敗(401)/リフレッシュ回転/旧トークン無効化。
+- リフレッシュの並行消費（3 版共通・**レベルごとに問いを分ける**）:
+  - **BE 単体**: 消費（`consumeById` / `delete`）が「消せなかった」を返したら、回転せず 401 にし**新トークンを保存しない**こと。実装から排他判定を外すとこのテストが落ちる＝回帰検知の実体はここ。
+  - **BE IT（MySQL）**: 同一行への並行 `DELETE` で影響行数 1 を得るのが片方だけであること。単体が前提にしている DB の挙動を実物で確認する。
+  - **BE e2e**: 同一トークンで同時に 2 本リフレッシュすると `[200, 401]` になること。**外部契約の固定**であって並行性の回帰検知ではない（SQLite の同期ドライバでは逐次実行になり、修正前でも同じ結果になる）。
 - タスク: CRUD/未認証(401)/他人のタスク(403)/不存在(404)/バリデーション(422・`errors` のフィールド名まで検証)。
 - **e2e の検証構成は本番と同じにする**: テスト用アプリ生成（`test-app.factory.ts`）にグローバル `ValidationPipe` を入れない。テスト専用のパイプがあると、未知キーや型変換をそれが肩代わりし、**本番では通らない入力が e2e だけ通る**状態になりうる。ルート単位の `ZodValidationPipe` だけが効いていることを、未知キーの拒否（`.strict()` → 422・`errors[].field` はそのキー名）を tasks / auth の e2e で固定して担保する。
 - Value Object（`DateRange`・clean / onion）:

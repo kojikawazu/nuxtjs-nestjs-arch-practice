@@ -39,7 +39,7 @@ describe('RefreshUseCase（ローテーション）', () => {
     const tokens = await usecase.execute('valid-refresh');
 
     expect(refreshTokens.findMatch).toHaveBeenCalledWith(USER_ID, 'valid-refresh');
-    expect(refreshTokens.deleteById).toHaveBeenCalledWith('rt-1');
+    expect(refreshTokens.consumeById).toHaveBeenCalledWith('rt-1');
     expect(refreshTokens.save).toHaveBeenCalledTimes(1);
     expect(tokens.accessToken).toBe('access-token');
   });
@@ -67,6 +67,18 @@ describe('RefreshUseCase（ローテーション）', () => {
     users.findById.mockResolvedValue(null);
 
     await expect(usecase.execute('valid-refresh')).rejects.toBeInstanceOf(InvalidRefreshTokenError);
-    expect(refreshTokens.deleteById).not.toHaveBeenCalled();
+    expect(refreshTokens.consumeById).not.toHaveBeenCalled();
+  });
+
+  it('準正常系: 並行リフレッシュで使用済み行を消せなかった側は回転せず 401 になる', async () => {
+    tokenIssuer.verifyRefreshToken.mockResolvedValue({ userId: USER_ID });
+    refreshTokens.findMatch.mockResolvedValue({ id: 'rt-1', userId: USER_ID });
+    users.findById.mockResolvedValue(buildUser());
+    // 同じ行を先に消した呼び出しが別にいる（＝この呼び出しは負け）
+    refreshTokens.consumeById.mockResolvedValue(false);
+
+    await expect(usecase.execute('valid-refresh')).rejects.toBeInstanceOf(InvalidRefreshTokenError);
+    // 負けた側が新しいトークンペアを発行してしまうと、1 本のトークンから 2 本に増える
+    expect(refreshTokens.save).not.toHaveBeenCalled();
   });
 });
