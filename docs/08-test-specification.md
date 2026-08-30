@@ -24,6 +24,7 @@
 | BE e2e | Jest + supertest（in-memory SQLite） | なし | HTTP 境界・認可・バリデーション・エラーレスポンス |
 | FE Composable `useTasks` | Vitest + **MSW** | backend への HTTP のみ | 副作用を Composable に閉じ込めた設計の検証 |
 | FE Composable `useAuth` | Vitest + **registerEndpoint** | Nitro BFF (`/api/auth/*`) | トークンがメモリに入る/消えるロジック |
+| FE Composable `useAuthedFetch` | Vitest + **MSW** + **registerEndpoint** | backend への HTTP と Nitro BFF (`/api/auth/*`) | 401 → リフレッシュ → 再試行。並行 401 でリフレッシュが 1 回に束ねられること・失敗時のセッション破棄とログイン導線 |
 | FE Component | Vitest + Vue Test Utils | 子/HTTP | バリデーション・confirm/emit |
 | 全体 E2E | **Playwright(chromium)** | なし（実スタック） | ユーザー視点の通しシナリオ |
 

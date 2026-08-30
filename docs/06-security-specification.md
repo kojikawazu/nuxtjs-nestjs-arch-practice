@@ -19,6 +19,11 @@
 - **JWT（access + refresh）** + Passport (`passport-jwt`)。
 - アクセストークン: 短命（既定 900s）。`Authorization: Bearer` で送信。
 - リフレッシュトークン: 長命（既定 7d）。**ローテーション**（使用時に旧トークン行を削除し再発行）。
+- **401 を受けたら 1 回だけリフレッシュして再試行する**（`composables/useAuthedFetch.ts`。SPA / SSR 共通）。
+  - 期限切れのたびに利用者へリロードを強いないため。再試行は 1 回だけで、その結果が再び 401 なら本当に権限が無いと判断して呼び出し側へ返す。
+  - **同時に 401 になった複数リクエストは 1 本のリフレッシュを共有する**（in-flight を共有）。並行してリフレッシュするとローテーションと競合し、後発が消費済みトークンで失敗するため。
+  - 共有する in-flight は `nuxtApp`（SSR ではリクエスト単位）をキーに持つ。モジュール変数にすると SSR で他利用者のリフレッシュ結果を共有してしまう。
+  - リフレッシュに失敗したら**メモリのトークンと httpOnly Cookie の両方を破棄**し、`/login` へ戻す。Cookie を残すと次のリロードで無効なトークンによる復元を試み続けることになる。
 
 ## トークンの保管
 
@@ -64,12 +69,18 @@ sequenceDiagram
   A-->>B: 200 タスク一覧
 
   Note over B,A: accessToken 失効後（またはリロード時）
+  B->>A: GET /tasks (期限切れ accessToken)
+  A-->>B: 401
   B->>F: POST /api/auth/refresh (Cookie の refreshToken を自動送信)
   F->>A: POST /auth/refresh (refreshToken)
   A->>A: ハッシュ照合 → 旧トークン失効 → 新規発行（ローテーション）
   A-->>F: 新しい AuthTokens
   F-->>B: 新 accessToken + Cookie の refreshToken を更新
+  B->>A: GET /tasks を新 accessToken で再試行（1 回だけ）
+  A-->>B: 200 タスク一覧
 ```
+
+> リフレッシュに失敗した場合は再試行せず、セッション破棄（メモリ + Cookie）→ `/login` へ戻す。
 
 ## 認可
 

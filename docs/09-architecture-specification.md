@@ -329,11 +329,12 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 | | `apps/frontend-spa` | `apps/frontend-ssr` |
 |---|---|---|
 | レンダリング | `ssr: false`（クライアントのみ） | `ssr: true`（初期 HTML をサーバ生成） |
-| セッション復元 | クライアント（`plugins/auth-init.client.ts`）。初回ロード後に BFF `/api/auth/refresh` でメモリへ復元 | **サーバ**（`plugins/auth-init.ts`）。初期リクエストで httpOnly refresh Cookie を読み、backend `/auth/refresh` で復元 → `useState` に格納（SSR 描画＋ハイドレーション） |
+| セッション復元 | クライアント（`plugins/auth-init.client.ts`）。初回ロード後に BFF `/api/auth/refresh` でメモリへ復元 | **サーバ**（`plugins/auth-init.ts`）。初期リクエストで httpOnly refresh Cookie を読み、backend `/auth/refresh` で復元 → `useState` に格納（SSR 描画＋ハイドレーション）。サーバ / クライアントの差は `useAuth().refresh()` が吸収する |
 | 入力/レスポンス検証 | **zod**（フォーム検証 `utils/taskFormSchema.ts` + レスポンスのランタイム検証 `utils/taskSchema.ts`） | **zod**（同左。URL 安全判定は `utils/safeUrl.ts` の `isSafeHttpUrl` を共有） |
 | `/tasks` 直アクセス | クライアントで復元後にデータ取得 | **サーバで復元 → サーバで一覧描画**してから配信 |
 | `useApiClient` の base | 常に公開 URL | SSR 時はサーバ用 `apiBaseUrl`、クライアント時は公開 URL |
 | トークンの扱い | access はメモリ、refresh は httpOnly Cookie | 同左（SSR 復元時も refresh は httpOnly のまま。rotate 後の Cookie をサーバが Set-Cookie で返す） |
+| access 失効時（401） | `useAuthedFetch` が BFF `/api/auth/refresh` で 1 回だけリフレッシュして再試行（並行 401 は 1 本の refresh を共有） | 同左。ただし**サーバ側**では BFF を通さず backend を直接呼び、rotate 後のトークンを自分で Cookie へ書き戻す（内部 $fetch の Set-Cookie はブラウザ応答に載らないため） |
 | タスク作成の確認画面 | 独立ルート `/tasks/new/confirm` を**クライアント描画**。draft は sessionStorage | 独立ルート `/tasks/new/confirm` を**サーバ描画**。draft は httpOnly Cookie |
 
 ### 確認画面の方式差（SSR / CSR）
