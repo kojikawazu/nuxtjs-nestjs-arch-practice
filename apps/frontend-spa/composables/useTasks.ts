@@ -51,21 +51,16 @@ function parseTaskList(data: unknown): Task[] {
 export function useTasks() {
   const client = useApiClient();
   const config = useRuntimeConfig();
-  const { accessToken } = useAuthState();
+  // 画像経路は openapi-fetch を通らないが、Authorization 注入と 401 時の
+  // リフレッシュ再試行は同じにしたいので、同じ fetch ラッパを共有する。
+  const authedFetch = useAuthedFetch();
 
   /** 添付画像の公開パス（"/uploads/..."）を表示可能な絶対 URL に変換する。 */
   const imageSrc = (imageUrl: string): string => `${config.public.apiBaseUrl}${imageUrl}`;
 
   /**
-   * 画像アップロード（multipart）。openapi-fetch は multipart に不向きなため、
-   * ここだけ素の fetch を使い、アクセストークンを Bearer で付与する（MSW で横取り可能）。
-   */
-  const authHeaders = (): Record<string, string> =>
-    accessToken.value ? { Authorization: `Bearer ${accessToken.value}` } : {};
-
-  /**
    * 失敗レスポンスの本文を契約 `ApiError` として読む。
-   * multipart 経路は素の fetch のため、openapi-fetch と違ってエラー本文が自動で展開されない。
+   * 画像経路は openapi-fetch を通らないため、エラー本文が自動で展開されない。
    * 本文が JSON でない場合（プロキシの HTML エラー等）もありうるので握りつぶして undefined を返す。
    */
   const readApiError = async (res: Response): Promise<ApiError | undefined> => {
@@ -76,14 +71,16 @@ export function useTasks() {
     }
   };
 
+  /** 画像アップロード（multipart）。openapi-fetch は multipart に不向きなためここだけ Request を組む。 */
   const uploadImage = async (id: string, file: File): Promise<Task> => {
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(`${config.public.apiBaseUrl}/tasks/${id}/image`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: form,
-    });
+    const res = await authedFetch(
+      new Request(`${config.public.apiBaseUrl}/tasks/${id}/image`, {
+        method: 'POST',
+        body: form,
+      }),
+    );
     if (!res.ok) {
       const apiError = await readApiError(res);
       throw createError({
@@ -96,10 +93,9 @@ export function useTasks() {
   };
 
   const removeImage = async (id: string): Promise<Task> => {
-    const res = await fetch(`${config.public.apiBaseUrl}/tasks/${id}/image`, {
-      method: 'DELETE',
-      headers: authHeaders(),
-    });
+    const res = await authedFetch(
+      new Request(`${config.public.apiBaseUrl}/tasks/${id}/image`, { method: 'DELETE' }),
+    );
     if (!res.ok) {
       throw createError({
         statusCode: res.status,
