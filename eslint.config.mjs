@@ -2,6 +2,39 @@ import js from '@eslint/js';
 import jsdoc from 'eslint-plugin-jsdoc';
 import tseslint from 'typescript-eslint';
 
+/**
+ * 層ごとの「import してはいけない層」。依存は常に内向き（presentation → application → domain）で、
+ * infrastructure は契約を実装する側として内向きにだけ依存する（依存性逆転）。
+ *
+ * 対象は clean / onion のみ。layered は presentation → application → infrastructure の素直な依存
+ * （＝ Port による逆転をしない）こと自体が比較軸なので、意図的に対象外にする。
+ */
+const FORBIDDEN_IMPORTS_BY_LAYER = {
+  domain: ['application', 'infrastructure', 'presentation'],
+  application: ['infrastructure', 'presentation'],
+  infrastructure: ['presentation'],
+  presentation: ['infrastructure'],
+};
+
+// 相対 import のパス文字列に層名が現れる（barrel を置かない方針のため）ことを利用して禁止方向を塞ぐ。
+// `*.module.ts` は feature 直下＝層の外にあるため、どの files にも一致せず合成ルートとして自由に配線できる。
+const layerBoundaryConfigs = Object.entries(FORBIDDEN_IMPORTS_BY_LAYER).map(
+  ([layer, forbidden]) => ({
+    files: [`apps/backend-{clean,onion}/src/**/${layer}/**/*.ts`],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: forbidden.map((target) => ({
+            group: [`**/${target}/**`, `**/${target}`],
+            message: `依存方向違反: ${layer} から ${target} を import しない（依存は内向きに保つ）。外部 I/O が必要なら Port（interface + DI トークン）を足し、実装は infrastructure に置いて *.module.ts で束ねる。`,
+          })),
+        },
+      ],
+    },
+  }),
+);
+
 export default tseslint.config(
   {
     ignores: [
@@ -59,4 +92,6 @@ export default tseslint.config(
       'jsdoc/require-returns-type': 'off',
     },
   },
+  // 層の依存方向を機械強制する（規約 → CI で落ちる状態にする）
+  ...layerBoundaryConfigs,
 );

@@ -34,6 +34,11 @@ globs: apps/backend-*/**
   - **空フォルダは作らない**（未使用の概念フォルダは置かない）が、**実ファイルが 1 個でもサブフォルダは作る**（置き場所を毎回判断しなくて済むことを、ファイル 1 個のフォルダのコストより優先する）。**置かないフォルダとその理由**は下記「採用しない概念」を参照。
   - layered は対象外（tasks のみ層分離し、auth / users は従来レイヤードのまま＝比較軸として維持する）。
 - **application は presentation を import しない（clean / onion）**: Controller が契約型（`TaskCreate` / `TaskUpdate` / `RegisterRequest` 等）を `application/inputs/` の変換関数で Command 型（`CreateTaskInput` 等）に直してから UseCase / Validator を呼ぶ。変換関数の引数は **DTO 型（`z.infer<...>`）ではなく契約型**にする（契約型は `@app/api-client` にあり presentation・application のどちらからも等距離なので、共通語彙にすると依存が内向きに揃う）。ISO 文字列 → `Date` の正規化も境界であるこの変換で済ませ、内側に文字列日付を持ち込まない。
+- **層の依存方向は ESLint で機械強制する（clean / onion）**: `eslint.config.mjs` の `@typescript-eslint/no-restricted-imports` で下記を禁止し、`pnpm lint` / CI で検出する。規約と手動レビューだけに頼らず、違反したコミットが落ちる状態に保つ。
+  - domain → application / infrastructure / presentation ／ application → infrastructure / presentation ／ presentation → infrastructure ／ infrastructure → presentation
+  - **layered は対象外**（`presentation → application → infrastructure` の素直な依存＝ Port による逆転をしないこと自体が比較軸のため）。
+  - `*.module.ts` は feature 直下＝層の外なので対象にならず、合成ルートとして infrastructure を配線できる。
+  - 禁止方向に import したくなったら、それは Port を足す合図（interface + DI トークンを内側に足し、実装を infrastructure に置いて `*.module.ts` で束ねる）。
 - **採用しない概念（3 版共通）**: 他フレームワーク由来の下記フォルダ／クラスは**意図的に置かない**。「無いこと」自体が設計判断なので、迷ったときに再導入されないよう理由ごと残す。
   - **`forms/`（Laravel の FormRequest 相当）**: リクエスト検証を 1 クラスにまとめる入れ物は作らない。FormRequest は `authorize()` と `rules()`（形式ルールと `unique:` 等の DB ルール）を同居させるが、本リポジトリではそれぞれ関心が異なるため 3 か所に分けている。**「zod と Validator の間に FormRequest 相当の段がある」のではなく、FormRequest 1 つが下記に分解されている**。
     - **認可**（`authorize()` 相当）→ `presentation/guards/` の Guard ＋ 所有権チェック（`TaskAccessService`）
