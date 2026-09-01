@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Task as TaskContract } from '@app/api-client';
-import { loadOwnedTask } from '../services/task-access';
+import { toContractTask } from '../mappers/task.mapper';
 import { IMAGE_STORAGE, type ImageFile, type ImageStorage } from '../ports/image-storage.port';
 import { TASK_REPOSITORY, type TaskRepository } from '../ports/task-repository.port';
-import { toContractTask } from '../mappers/task.mapper';
+import { TaskAccessService } from '../services/task-access.service';
 
 /**
  * タスクに画像を添付（1 枚・差し替え）する。
@@ -13,6 +13,7 @@ import { toContractTask } from '../mappers/task.mapper';
 @Injectable()
 export class SetTaskImageUseCase {
   constructor(
+    private readonly access: TaskAccessService,
     @Inject(TASK_REPOSITORY)
     private readonly tasks: TaskRepository,
     @Inject(IMAGE_STORAGE)
@@ -20,7 +21,7 @@ export class SetTaskImageUseCase {
   ) {}
 
   /**
-   * 所有タスクをロード → ストレージへ保存 → imageUrl 更新 → 保存確定後に旧ファイルを掃除。
+   * TaskAccessService で所有タスクをロード → ストレージへ保存 → imageUrl 更新 → 保存確定後に旧ファイルを掃除。
    * 保存に失敗したら新ファイルを補償削除し、元のエラーを投げ直す（孤立ファイルを残さない）。
    * @param userId - string（@CurrentUser 由来の所有者 ID）
    * @param id - string（対象タスクの ID）
@@ -28,7 +29,7 @@ export class SetTaskImageUseCase {
    * @returns Promise<Task>（imageUrl 入りの契約 Task。源: @app/api-client ← packages/api-spec/main.tsp）
    */
   async execute(userId: string, id: string, file: ImageFile): Promise<TaskContract> {
-    const task = await loadOwnedTask(this.tasks, userId, id);
+    const task = await this.access.loadOwned(userId, id);
     const publicPath = await this.storage.save(task.id, file);
     const previous = task.attachImage(publicPath);
     const saved = await this.tasks.update(task).catch(async (error: unknown) => {

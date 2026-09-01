@@ -58,7 +58,7 @@ graph TD
 | 入力検証ライブラリ | **zod**（`presentation/dto/` のスキーマ + ルート単位 `ZodValidationPipe`。グローバル `ValidationPipe` は不使用） | **zod**（同左） | **zod**（同左） |
 | 契約(interface)の所在 | （なし） | `application/ports/` | **`domain/`（中核が契約を所有）** |
 | 読み取り分離（CQRS） | （なし・list/get も UseCase） | **list/get を `query-services/` + 読み取り専用 `TaskQuery` に分離**（戻りは `read-models/`） | clean と同じだが `queries/`（契約は `domain/`） |
-| ドメインサービス | （なし） | `application/services/task-access.ts`（関数） | **`domain/services/TaskAccessService`（DI サービス）** |
+| ドメインサービス | （なし） | `application/services/TaskAccessService`（DI サービス） | **`domain/services/TaskAccessService`（同じクラスを domain 中核に置く）** |
 | ドメイン | TypeORM Entity を直接利用 | framework 非依存の `domain/Task` ＋ ORM 分離 | clean と同じ |
 | 業務エラー | Nest 例外を直接 throw | `DomainError`（kind）→ フィルタが HTTP 翻訳 | clean と同じ |
 | 画像保存 | UseCase が fs を直接呼ぶ | `ImageStorage` Port ← FS 実装 | clean と同じ（契約は `domain/services/`） |
@@ -110,7 +110,7 @@ modules/tasks/
 - **狙いは契約と実装の対称性**。`domain/repositories/task.repository.ts`（契約）↔ `infrastructure/repositories/typeorm-task.repository.ts`（実装）、`domain/services/image-storage.ts` ↔ `infrastructure/services/local-image-storage.ts` のように、**どの実装がどの契約を満たすかをフォルダ位置だけで辿れる**。barrel を置かず相対 import で繋ぐ本リポジトリでは、この対称性が依存方向の可読性を直接支える（clean では契約が `application/ports/` にあるため、対称の相手は application 側になる）。
 - **空フォルダは作らない**（未使用の概念フォルダは置かない）が、**実ファイルが 1 個でもサブフォルダは作る**。置き場所の判断を毎回発生させないことを、ファイル 1 個のフォルダのコストより優先する。置かないフォルダの一覧と理由は下記「採用しない概念」を参照。
 - **layered は対象外**。tasks のみ層分離し、auth / users は従来レイヤード（Controller/Service/Entity を役割で区別）のまま維持する ──「層分割の有無」自体が 3 版の比較軸であるため。
-- **ファイル名から feature 名を落とす（層分割とは別で、3 版すべてに適用）**。feature フォルダ配下で操作ごとに分かれるファイル（usecase / validator / query / dto / input）は `create.usecase.ts` `update.validator.ts` `set-image.usecase.ts` のように feature 名を持たない。パス（`tasks/application/usecases/`）が既に feature を示すため。一方 `task.mapper.ts` / `task-access.ts` / `task.repository.ts` / `task.orm-entity.ts` のように**エンティティそのものを指すファイルは feature 名を残す**（落とすと `mapper.ts` となり対象がパスから消える）。`tasks.module.ts` / `tasks.controller.ts` は NestJS 慣習どおり。**クラス名は据え置き**（`create.validator.ts` → `CreateTaskValidator`）。
+- **ファイル名から feature 名を落とす（層分割とは別で、3 版すべてに適用）**。feature フォルダ配下で操作ごとに分かれるファイル（usecase / validator / query / dto / input）は `create.usecase.ts` `update.validator.ts` `set-image.usecase.ts` のように feature 名を持たない。パス（`tasks/application/usecases/`）が既に feature を示すため。一方 `task.mapper.ts` / `task-access.service.ts` / `task.repository.ts` / `task.orm-entity.ts` のように**エンティティそのものを指すファイルは feature 名を残す**（落とすと `mapper.ts` となり対象がパスから消える）。`tasks.module.ts` / `tasks.controller.ts` は NestJS 慣習どおり。**クラス名は据え置き**（`create.validator.ts` → `CreateTaskValidator`）。
 
 ### backend-clean — tasks（クリーンアーキテクチャ・Port で依存性逆転）
 
@@ -141,7 +141,7 @@ api/tasks/                         # src/api/tasks（機能スライス）
 │  ├ query-services/               #   ★読み取り（list/get）。@Inject(TASK_QUERY) ★CQRS の Query 側（旧 queries/）
 │  ├ validators/                   #   ★業務ルール検証（保存しない）。UseCase が注入して呼ぶ唯一の検証実体
 │  ├ services/
-│  │  └ task-access.ts             #   loadOwnedTask（存在/所有チェックの共有・書き込み用）
+│  │  └ task-access.service.ts     #   ★TaskAccessService（ドメインサービス: 取得+所有チェック・書き込み用）
 │  └ mappers/
 │     └ task.mapper.ts             #   domain Task → 契約 Task
 ├ infrastructure/                  # ★domain / application の契約と同じ語彙で対称に配置
@@ -170,6 +170,7 @@ shared/                            # feature 非依存の共通基盤
 ```
 
 - UseCase は `@Inject(TASK_REPOSITORY)` / `@Inject(IMAGE_STORAGE)` で **Port にのみ依存**し、TypeORM・fs を import しない。
+- **ドメインサービスは `application/services/`**: 取得＋所有チェック（`TaskAccessService.loadOwned`）は単一エンティティに収まらないためドメインサービスとして切り出すが、**clean では `domain/` に置けない**（取得に `TaskRepository` Port が要り、Port は `application/ports/` にあるためdomain から参照すると依存が外向きになる）。クラス名・メソッド名は onion と同一で、**違いは所在だけ**（onion は契約を domain 中核が所有するので `domain/services/` に置ける）。この 1 点が clean と onion の実質的な差分にあたる。
 - **application は presentation を import しない**: UseCase/Validator は presentation の DTO ではなく application 所有の **Input（Command 型）** を受け取る。DTO → Input 変換（`toCreateTaskInput` 等）は契約型を入力に取るため application 側にあっても presentation に依存せず、Controller が境界で詰め替える（依存は常に内向き）。
 - 業務エラーは `DomainError`（HTTP 非依存）で投げ、`AllExceptionsFilter` が `kind` を見て 404/403/422/409/401 と `ApiError` 形へ翻訳する。`DomainError.fields`（破れた不変条件が属するドメイン属性名）は `ApiError.errors` へ展開される。`endDate` のような名前はドメインエンティティ自身が持つ属性名であり、presentation の語彙ではないため、ここに置いても依存方向は内向きのまま保たれる。
 - DI は `tasks.module.ts` で `{ provide: TASK_REPOSITORY, useClass: TypeOrmTaskRepository }` 等として Port ↔ 実装を束ねる（依存性逆転の要）。
@@ -215,7 +216,7 @@ FormRequest の責務がどこへ行ったか（`POST /tasks` の場合）:
 
 | FormRequest の責務 | 本リポジトリでの担当 | 実行タイミング |
 |---|---|---|
-| `authorize()` | `presentation/guards/` の Guard ＋ 所有権チェック（`loadOwnedTask` / `TaskAccessService`） | ハンドラ本体の前 |
+| `authorize()` | `presentation/guards/` の Guard ＋ 所有権チェック（`TaskAccessService`） | ハンドラ本体の前 |
 | `rules()` の形式部分（`required\|max:120`） | `presentation/dto/` の zod スキーマ ＋ `ZodValidationPipe`。422 と `ApiError.errors` の組み立てもここ | ハンドラ本体の前 |
 | `rules()` の DB 部分（`unique:users`） | `application/validators/` の Validator（clean / onion） | ハンドラ本体の中 |
 
@@ -301,7 +302,7 @@ shared/                               # feature / domain 契約に非依存の�
 
 - **application は presentation を import しない**: Controller が契約型 `TaskCreate` / `TaskUpdate` を `application/inputs/` の `toCreateTaskInput` / `toUpdateTaskInput` で Command 型に直してから UseCase を呼ぶ。変換関数が引数に取るのは DTO 型（`z.infer<typeof createTaskSchema>`）ではなく**契約型**で、契約型は `@app/api-client`（層の外の共有パッケージ）にあり presentation・application のどちらからも等距離のため、これを共通語彙にすると矢印が presentation → application の一方向に揃う。ISO 文字列 → `Date` の正規化もこの境界で済ませる。
 - clean との差は **契約の置き場所**: clean は `application/ports/`、onion は `domain/`（中核が契約を所有）。読み取り契約 `TaskQuery` も同様に onion は `domain/repositories/` に置く。
-- 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean では application の関数 `loadOwnedTask`）。読み取り側（Query）は domain を経由しないため、`GetTaskQuery` 内で owner を比較して 404/403 を区別する。
+- 所有チェックは `TaskAccessService`（DI 可能なドメインサービス）に集約し、各ユースケースが注入して再利用する（clean も**同じクラス**だが、Port の所在に合わせて `application/services/` に置く）。読み取り側（Query）は domain を経由しないため、`GetTaskQuery` 内で owner を比較して 404/403 を区別する。
 - エンティティ・DomainError・例外フィルタは clean と同じ（tasks）。**auth / users も clean 同様にクリーン化済み**（fat `AuthService` を register/login/refresh/logout の 4 ユースケース＋ register validator に分解し、UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository を Port 化。契約は onion 流に `domain/repositories/` `domain/services/` が所有）。layered のみ従来レイヤード。
 
 ### 読み取り分離（CQRS-lite）
@@ -315,7 +316,7 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 | 依存する契約 | `TaskRepository`（domain `Task` を返す） | `TaskQuery`（**Read Model を直接返す**・読み取り専用） |
 | 契約の所在 | clean=`application/ports/` / onion=`domain/repositories/` | 同左（`task-query` として隣に置く） |
 | 変換 | ORM → domain → 契約（2 段。不変条件を通す） | **ORM 行 → Read Model（1 段直射影）**。clean は `read-models/` の `TaskReadModel`、domain を作らない |
-| 所有判定 | `loadOwnedTask` / `TaskAccessService`（domain `Task.assertOwnedBy`） | Query が owner を比較（`findByIdWithOwner` の戻り owner で 404/403 区別） |
+| 所有判定 | `TaskAccessService`（domain `Task.assertOwnedBy`） | Query が owner を比較（`findByIdWithOwner` の戻り owner で 404/403 区別） |
 
 - **狙い**: 参照に不要なドメインエンティティ生成・2 段マッピングを省き、読み取りを軽量化する。単体テストは read 専用 Port（`TaskQuery`）のみモックで済み、書き込み側 Repository を注入しない（依存が痩せる）。
 - **404/403 の区別**: `where {id, userId}` で短絡すると他人のタスクが 404 になり契約に反するため、Query は **id だけで引いて owner を添えて返し**（`findByIdWithOwner`）、呼び出し側で 404（不存在）/ 403（非所有）を分ける。

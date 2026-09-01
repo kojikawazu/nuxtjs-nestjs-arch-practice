@@ -6,6 +6,7 @@ import { IMAGE_STORAGE } from './application/ports/image-storage.port';
 import { TASK_QUERY } from './application/ports/task-query.port';
 import { TASK_REPOSITORY } from './application/ports/task-repository.port';
 import { GetTaskQueryService } from './application/query-services/get.query-service';
+import { TaskAccessService } from './application/services/task-access.service';
 import { ListTasksQueryService } from './application/query-services/list.query-service';
 import { CreateTaskUseCase } from './application/usecases/create.usecase';
 import { DeleteTaskUseCase } from './application/usecases/delete.usecase';
@@ -32,6 +33,8 @@ import { TasksController } from './presentation/controllers/tasks.controller';
  * 読み取り（list/get）は CQRS の Query 側として TASK_QUERY（参照専用 Port）に分離し、
  * 書き込み（create/update/delete/image）の TASK_REPOSITORY と別経路にしている。
  * 業務ルール検証は validators に集約し、書き込みの UseCase が注入して呼ぶ（検証の実体を 1 か所に保つ）。
+ * 所有チェック（取得＋認可）はドメインサービス `TaskAccessService` に集約し provider として登録する。
+ * → onion 版は同じクラスを `domain/services/` に置く（契約の所在に合わせた配置の違い）。
  */
 @Module({
   imports: [
@@ -47,6 +50,8 @@ import { TasksController } from './presentation/controllers/tasks.controller';
   ],
   controllers: [TasksController],
   providers: [
+    // ドメインサービス（取得＋所有チェック。usecases / validators が再利用）
+    TaskAccessService,
     // 読み取り（Query 側）
     ListTasksQueryService,
     GetTaskQueryService,

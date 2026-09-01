@@ -10,6 +10,7 @@ import {
   type ImageStorageMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { TaskAccessService } from '../services/task-access.service';
 import { DeleteTaskUseCase } from './delete.usecase';
 
 describe('DeleteTaskUseCase', () => {
@@ -20,7 +21,11 @@ describe('DeleteTaskUseCase', () => {
   beforeEach(() => {
     repo = createTaskRepoMock();
     storage = createImageStorageMock();
-    usecase = new DeleteTaskUseCase(asTaskRepo(repo), asImageStorage(storage));
+    usecase = new DeleteTaskUseCase(
+      new TaskAccessService(asTaskRepo(repo)),
+      asTaskRepo(repo),
+      asImageStorage(storage),
+    );
   });
 
   it('正常系: 所有者なら deleteById を呼ぶ', async () => {

@@ -15,6 +15,7 @@ globs: apps/backend-*/**
 - **`backend-clean`（クリーンアーキテクチャ）**: tasks を依存性逆転で再構成。
   - `domain/`（Task エンティティ・業務ルール・DomainError、フレームワーク非依存）→ `application/`（UseCase は `ports/` の interface = `TaskRepository` / `ImageStorage` にのみ依存）→ `infrastructure/`（TypeORM 実装・ローカルFS 実装が Port を実装）→ `presentation/`（Controller）。
   - UseCase は TypeORM を知らない（`@Inject(TASK_REPOSITORY)`）。これが layered との本質的な差。
+  - 所有チェック等のドメインロジックは**ドメインサービス** `application/services/task-access.service.ts`（`TaskAccessService`）に置き、UseCase / Validator が注入して再利用する。取得に Port が要るため domain には置けず application 側に居る（onion は契約を domain が所有するので `domain/services/` に置ける）。クラス・メソッド名は onion と揃え、**差は所在だけ**にする。
   - 業務エラーは `DomainError`（kind: not_found/forbidden/invalid）で投げ、HTTP への変換は例外フィルタが担う（ドメインは HTTP 非依存）。
   - auth / users も同様にクリーン化済み（usecase 分解＋ Port: UserRepository / PasswordHasher / TokenIssuer / RefreshTokenRepository。`DomainError` に conflict(409)/unauthorized(401) を追加）。
   - **共有境界**: `src/shared/` には、feature 名・feature 固有の型・Port に依存しない共通基盤だけを置く（例: `DomainError` の基底、汎用 NestJS Pipe / Filter、形式検証 helper）。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、複数箇所から利用されても `src/api/{feature}/` に置く。`shared/` は便利な雑多フォルダにしない。
@@ -35,7 +36,7 @@ globs: apps/backend-*/**
 - **application は presentation を import しない（clean / onion）**: Controller が契約型（`TaskCreate` / `TaskUpdate` / `RegisterRequest` 等）を `application/inputs/` の変換関数で Command 型（`CreateTaskInput` 等）に直してから UseCase / Validator を呼ぶ。変換関数の引数は **DTO 型（`z.infer<...>`）ではなく契約型**にする（契約型は `@app/api-client` にあり presentation・application のどちらからも等距離なので、共通語彙にすると依存が内向きに揃う）。ISO 文字列 → `Date` の正規化も境界であるこの変換で済ませ、内側に文字列日付を持ち込まない。
 - **採用しない概念（3 版共通）**: 他フレームワーク由来の下記フォルダ／クラスは**意図的に置かない**。「無いこと」自体が設計判断なので、迷ったときに再導入されないよう理由ごと残す。
   - **`forms/`（Laravel の FormRequest 相当）**: リクエスト検証を 1 クラスにまとめる入れ物は作らない。FormRequest は `authorize()` と `rules()`（形式ルールと `unique:` 等の DB ルール）を同居させるが、本リポジトリではそれぞれ関心が異なるため 3 か所に分けている。**「zod と Validator の間に FormRequest 相当の段がある」のではなく、FormRequest 1 つが下記に分解されている**。
-    - **認可**（`authorize()` 相当）→ `presentation/guards/` の Guard ＋ 所有権チェック（`loadOwnedTask` / `TaskAccessService`）
+    - **認可**（`authorize()` 相当）→ `presentation/guards/` の Guard ＋ 所有権チェック（`TaskAccessService`）
     - **形式検証**（`required|max:120` 相当。必須・型・長さ・列挙・ISO 日付・URL スキーム）= transport の関心 → `presentation/dto/` の zod スキーマ ＋ ルート単位の `ZodValidationPipe`。422 と `ApiError.errors` の組み立てもここ
     - **業務ルール検証**（`unique:users` 相当。開始≤終了・メール重複）= ドメインの関心 → `application/validators/` の Validator（clean / onion）
     - 迷ったら「**HTTP でなくても成り立つ制約か**」で切り分ける。成り立つならドメイン側（Validator / entity）、HTTP の入り口でしか意味がないなら zod スキーマ側。
@@ -61,7 +62,7 @@ globs: apps/backend-*/**
   - ドメイン不変条件の実体は domain に残す（`Task.draft` / `applyUpdate`）。Validator は「保存せず検証する」オーケストレーションのみ担う。
 - **ファイル名から feature 名を落とす（3 版共通）**: feature フォルダ（`tasks/` 等）配下で**操作ごとにファイルが分かれる**場合、ファイル名から feature 名を除く（`create-task.usecase.ts` → `create.usecase.ts`、`set-task-image.usecase.ts` → `set-image.usecase.ts`）。パスが既に feature を示しており冗長なため。
   - 対象は**操作で分かれるファイル**（usecase / validator / query / query-service / dto / input）。
-  - **エンティティそのものを指すファイルは feature 名を残す**（`task.mapper.ts` / `task-access.ts` / `task.repository.ts` / `task.orm-entity.ts` / `task.read-model.ts` / `typeorm-task.repository.ts`）。落とすと `mapper.ts` のようになり「何を扱うか」がパスからも消えるため。
+  - **エンティティそのものを指すファイルは feature 名を残す**（`task.mapper.ts` / `task-access.service.ts` / `task.repository.ts` / `task.orm-entity.ts` / `task.read-model.ts` / `typeorm-task.repository.ts`）。落とすと `mapper.ts` のようになり「何を扱うか」がパスからも消えるため。
   - `*.module.ts` / `*.controller.ts` は NestJS 慣習どおり feature 名を保つ（`tasks.module.ts` / `tasks.controller.ts`）。
   - **クラス名は変更しない**（`create.validator.ts` が `CreateTaskValidator` を export する）。クラス名は import 先で単独で読まれるため、feature 名が識別に効く。
 - **DTO / 入力検証**: **全 backend 版（layered / clean / onion）が zod を採用**する。`presentation/dto/` に zod スキーマを置き、ルート単位の `ZodValidationPipe`（layered は `common/pipes/`、clean / onion は `shared/presentation/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` で未知キーを弾き（旧 `forbidNonWhitelisted` 相当）、`satisfies z.ZodType<契約型>` で契約とのズレを型検出する（旧 `implements 契約型` 相当）。検証失敗は `UnprocessableEntityException`（**422**）で、`AllExceptionsFilter` が `ApiError` へ翻訳する（e2e 契約は 3 版で不変）。400 は「構文が壊れている」、422 は「構文は正しいが意味的に処理できない」を表し、後者が入力検証の実態にあたる。`ApiError.errors`（`{ field, messages }[]`）にフィールド別の理由を載せ、`message`（全件を連結した一文）と併存させる。業務ルール違反も同じ 422 で返し、clean / onion は `DomainError.fields` を例外フィルタが展開、layered は例外に直接載せる。

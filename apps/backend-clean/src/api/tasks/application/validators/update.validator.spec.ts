@@ -11,6 +11,7 @@ import {
   createTaskRepoMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { TaskAccessService } from '../services/task-access.service';
 import { UpdateTaskValidator } from './update.validator';
 
 describe('UpdateTaskValidator（検証のみ・保存しない）', () => {
@@ -19,7 +20,7 @@ describe('UpdateTaskValidator（検証のみ・保存しない）', () => {
 
   beforeEach(() => {
     repo = createTaskRepoMock();
-    validator = new UpdateTaskValidator(asTaskRepo(repo));
+    validator = new UpdateTaskValidator(new TaskAccessService(asTaskRepo(repo)));
   });
 
   it('正常系: 更新を適用した Task を返し、update は呼ばない（保存しない）', async () => {
