@@ -7,6 +7,7 @@ import {
   createTaskRepoMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { TaskAccessService } from '../services/task-access.service';
 import { UpdateTaskValidator } from '../validators/update.validator';
 import { UpdateTaskUseCase } from './update.usecase';
 
@@ -16,7 +17,10 @@ describe('UpdateTaskUseCase', () => {
 
   beforeEach(() => {
     repo = createTaskRepoMock();
-    usecase = new UpdateTaskUseCase(new UpdateTaskValidator(asTaskRepo(repo)), asTaskRepo(repo));
+    usecase = new UpdateTaskUseCase(
+      new UpdateTaskValidator(new TaskAccessService(asTaskRepo(repo))),
+      asTaskRepo(repo),
+    );
   });
 
   it('正常系: 指定フィールドのみ更新する（未指定は元のまま）', async () => {

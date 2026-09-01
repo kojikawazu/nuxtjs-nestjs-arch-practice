@@ -10,6 +10,7 @@ import {
   type ImageStorageMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { TaskAccessService } from '../services/task-access.service';
 import { RemoveTaskImageUseCase } from './remove-image.usecase';
 
 describe('RemoveTaskImageUseCase', () => {
@@ -20,7 +21,11 @@ describe('RemoveTaskImageUseCase', () => {
   beforeEach(() => {
     repo = createTaskRepoMock();
     storage = createImageStorageMock();
-    usecase = new RemoveTaskImageUseCase(asTaskRepo(repo), asImageStorage(storage));
+    usecase = new RemoveTaskImageUseCase(
+      new TaskAccessService(asTaskRepo(repo)),
+      asTaskRepo(repo),
+      asImageStorage(storage),
+    );
   });
 
   it('正常系: imageUrl をクリアし、旧パスをストレージから削除する', async () => {

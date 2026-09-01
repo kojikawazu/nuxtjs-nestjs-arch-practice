@@ -11,6 +11,7 @@ import {
   type ImageStorageMock,
   type TaskRepoMock,
 } from '../../../../../test/fakes/task-fakes';
+import { TaskAccessService } from '../services/task-access.service';
 import { SetTaskImageUseCase } from './set-image.usecase';
 
 describe('SetTaskImageUseCase', () => {
@@ -23,7 +24,11 @@ describe('SetTaskImageUseCase', () => {
   beforeEach(() => {
     repo = createTaskRepoMock();
     storage = createImageStorageMock();
-    usecase = new SetTaskImageUseCase(asTaskRepo(repo), asImageStorage(storage));
+    usecase = new SetTaskImageUseCase(
+      new TaskAccessService(asTaskRepo(repo)),
+      asTaskRepo(repo),
+      asImageStorage(storage),
+    );
   });
 
   it('正常系: ストレージへ保存し、返ったパスを imageUrl に設定して update する', async () => {
