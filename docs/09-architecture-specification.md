@@ -112,6 +112,42 @@ modules/tasks/
 - **layered は対象外**。tasks のみ層分離し、auth / users は従来レイヤード（Controller/Service/Entity を役割で区別）のまま維持する ──「層分割の有無」自体が 3 版の比較軸であるため。
 - **ファイル名から feature 名を落とす（層分割とは別で、3 版すべてに適用）**。feature フォルダ配下で操作ごとに分かれるファイル（usecase / validator / query / dto / input）は `create.usecase.ts` `update.validator.ts` `set-image.usecase.ts` のように feature 名を持たない。パス（`tasks/application/usecases/`）が既に feature を示すため。一方 `task.mapper.ts` / `task-access.service.ts` / `task.repository.ts` / `task.orm-entity.ts` のように**エンティティそのものを指すファイルは feature 名を残す**（落とすと `mapper.ts` となり対象がパスから消える）。`tasks.module.ts` / `tasks.controller.ts` は NestJS 慣習どおり。**クラス名は据え置き**（`create.validator.ts` → `CreateTaskValidator`）。
 
+### 層の依存方向（ESLint で機械強制）
+
+依存は常に内向き（**presentation → application → domain**）で、infrastructure だけが契約を実装する側として内向きに依存する（依存性逆転）。**制御の流れ（実行時に呼ぶ向き）とソース依存（import する向き）は別物**である点に注意する。
+
+| | 制御の流れ（実行時に呼ぶ） | ソース依存（import） |
+|---|---|---|
+| layered | application → infrastructure | application → infrastructure（同じ向き） |
+| clean / onion | application → infrastructure | **infrastructure → application / domain**（逆向き） |
+
+許可される import（clean / onion）:
+
+| from → to | 可否 | 補足 |
+|---|---|---|
+| presentation → application | ✅ | Controller は UseCase / Query Service を呼ぶ |
+| presentation → domain | ✅（現状 0 件） | 内向きなので違反ではないが、UseCase が契約型を返すため実際には出てこない |
+| application → domain | ✅ | clean 13 / onion 38（onion は契約が domain にあるぶん多い） |
+| infrastructure → `application/ports/` | clean のみ ✅ | onion は 0 件（契約が domain にあるため application を一切見ない） |
+| infrastructure → domain | ✅ | 契約を実装し、ORM ⇔ domain を変換する |
+| 各層 → `shared/` の同じ層 | ✅ | `DomainError` 基底・汎用 Pipe / Filter |
+| 各層 → `@app/api-client` | ✅ | 層の外の契約。`import type` で参照する |
+| `*.module.ts` → 全部 | ✅ | **feature 直下＝層の外**。合成ルートだけが Port と実装を結ぶ |
+
+禁止される import（`eslint.config.mjs` の `@typescript-eslint/no-restricted-imports` で `pnpm lint` / CI が検出する）:
+
+| from → to | 理由 |
+|---|---|
+| ❌ domain → application / infrastructure / presentation | 中核は外を知らない |
+| ❌ application → infrastructure | 依存性逆転が壊れる。必要なら Port に足し、実装は infrastructure へ置く |
+| ❌ application → presentation | 入力は `application/inputs/` の Command 型で受ける |
+| ❌ presentation → infrastructure | 実装を差すのは `*.module.ts` の仕事 |
+| ❌ infrastructure → presentation | 最外どうしを直結させない |
+
+- **layered は対象外**。`presentation → application → infrastructure` の素直な依存（Port による逆転をしない）こと自体が比較軸のため、`application/task.util.ts` が `infrastructure/task.entity.ts` を import する状態を維持する。
+- **`*.module.ts` はどの層にも属さない**（feature 直下に置く）ため lint の対象にならず、合成ルートとして infrastructure を配線できる。層ディレクトリの中に置くとこの表が崩れる。
+- **型で守る範囲との分担**: 契約の**中身**は `implements` が守り（Port にメソッドを足すと Adapter がコンパイルエラーになる）、契約の**置き場所**はこの lint ルールが守る、という二段構え。導入前は後者が規約と手動レビューだけに依存していた。
+
 ### backend-clean — tasks（クリーンアーキテクチャ・Port で依存性逆転）
 
 layered と同じ tasks を、**依存性逆転**で再構成したもの。application 層は Port（interface）にのみ依存し、TypeORM/fs を知らない。Port の実体は infrastructure 層が提供し、`tasks.module.ts` で束ねる。
