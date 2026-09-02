@@ -198,7 +198,7 @@ describe('Tasks (e2e)', () => {
         .post(`/tasks/${id}/image`)
         .set(auth(token))
         .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
-        .expect(201);
+        .expect(200);
       const imageUrl = uploaded.body.imageUrl as string;
       expect(imageUrl).toMatch(/^\/uploads\/.+\.png$/);
 
@@ -222,7 +222,7 @@ describe('Tasks (e2e)', () => {
         .post(`/tasks/${id}/image`)
         .set(auth(token))
         .attach('file', PNG, { filename: 'pic.png', contentType: 'image/png' })
-        .expect(201);
+        .expect(200);
       const imageUrl = uploaded.body.imageUrl as string;
       await http.get(imageUrl).expect(200);
 

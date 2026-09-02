@@ -20,18 +20,30 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 | メソッド | パス | 概要 | 認証 |
 |----------|------|------|------|
 | POST | /auth/register | 新規登録 → AuthTokens(201) | 不要 |
-| POST | /auth/login | ログイン → AuthTokens | 不要 |
-| POST | /auth/refresh | リフレッシュ → AuthTokens | リフレッシュトークン |
+| POST | /auth/login | ログイン → AuthTokens(200) | 不要 |
+| POST | /auth/refresh | リフレッシュ → AuthTokens(200) | リフレッシュトークン（body。Authorization は使わない） |
 | POST | /auth/logout | ログアウト(204) | アクセストークン |
 | GET | /tasks | 自分のタスク一覧 | アクセストークン |
 | POST | /tasks | 作成 → Task(201) | アクセストークン |
-| GET | /tasks/{id} | 詳細 | アクセストークン |
-| PATCH | /tasks/{id} | 更新 | アクセストークン |
+| GET | /tasks/{id} | 詳細 → Task(200) | アクセストークン |
+| PATCH | /tasks/{id} | 更新 → Task(200) | アクセストークン |
 | DELETE | /tasks/{id} | 削除(204) | アクセストークン |
-| POST | /tasks/{id}/image | 画像添付（multipart, field `file`）→ Task | アクセストークン |
-| DELETE | /tasks/{id}/image | 添付画像の削除 → Task | アクセストークン |
+| POST | /tasks/{id}/image | 画像添付（multipart, field `file`）→ Task(200) | アクセストークン |
+| DELETE | /tasks/{id}/image | 添付画像の削除 → Task(200) | アクセストークン |
 | GET | /uploads/{file} | 添付画像の静的配信 | 不要 |
-| GET | /health | 死活監視 | 不要 |
+| GET | /health | 死活監視（**API 契約の外**・下記） | 不要 |
+
+> **認証要件は契約側でもエンドポイント単位に絞ってある**。`main.tsp` は namespace 既定を `@useAuth(BearerAuth)` にし、
+> public な `POST /auth/register` / `login` / `refresh` だけが `@useAuth(NoAuth)` で opt-out する（生成 OpenAPI では `security: [{}]`）。
+> 逆（既定 NoAuth + 必要な所だけ opt-in）にすると、付け忘れたエンドポイントが契約上 public になる＝危険側に倒れるため、既定を「保護」に置く。
+> `POST /auth/refresh` が public なのは、**期限切れのアクセストークンしか持たない状態から呼ぶ**ため（資格情報は body のリフレッシュトークン）。
+
+> **`GET /health` は意図的に API 契約（`main.tsp`）へ含めない**。死活監視と E2E のサーバ起動待ち（Playwright の `webServer.url`）
+> のための運用エンドポイントで、FE が生成クライアントで叩く製品 API ではないため。実装は 3 版とも `src/health.controller.ts`。
+
+> **成功コードの使い分け**: 201 は**実際に新しいリソースを作る** `POST /tasks` と `POST /auth/register` だけ。
+> `POST /auth/login` / `refresh` と `POST /tasks/{id}/image` は既存の状態を更新して返すだけなので **200**
+> （画像添付は以前 Nest の `@Post` 既定で 201 を返しており、契約の 200 とずれていた）。
 
 > **DryRun（`*/validate`）は廃止した**。保存せず事前検証する専用エンドポイントを 3 本持っていたが、
 > 本登録（`POST` / `PATCH`）が同じ検証を通しており重複していたため削除した。
@@ -40,7 +52,7 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 
 ### 画像アップロード（タスク添付）
 
-- `POST /tasks/{id}/image` は **multipart/form-data**（フィールド名 `file`）で 1 枚を受け取り、保存後の `Task`（`imageUrl` 入り）を返す。
+- `POST /tasks/{id}/image` は **multipart/form-data**（フィールド名 `file`）で 1 枚を受け取り、保存後の `Task`（`imageUrl` 入り）を **200** で返す（新しいリソースを作らないため 201 ではない。`@HttpCode(200)` で Nest の既定を上書きしている）。
   - MIME（png/jpeg/webp）違反・ファイル無しは **422**（`errors[].field` は `file`）。
   - **サイズ超過は 413**（Multer が受信段階で止める）。上限はサーバ設定 `MAX_UPLOAD_BYTES`（既定 2MB）で、ハードコードではない。
   - 非所有 403、不存在 404、未認証 401。
@@ -52,6 +64,7 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 
 - 型定義は契約由来（`@app/api-client` の `Task` / `AuthTokens` / `TaskCreate` 等）。`imageUrl` は `Task` のみが持つ（`TaskCreate`/`TaskUpdate` には無い＝クライアントから直接書き換え不可）。
 - リクエストの入力検証は全 backend 版で **zod スキーマ + ルート単位 `ZodValidationPipe`** に統一（`presentation/dto/` のスキーマ・`.strict()` で未知キー拒否・グローバル `ValidationPipe` は不使用）。違反は **422** `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean)）。
+- **契約に載る制約と載らない制約**: 文字数・必須・列挙は契約（`main.tsp` の `@minLength` / `@maxLength` / union）に載り、生成 OpenAPI から読める。一方 **JSON Schema で表現できない制約はサーバだけが持つ**——パスワードの UTF-8 72 バイト（契約の `@maxLength(72)` は粗い文字数上限）と、`url` の http/https スキーム判定。契約側にはその旨をコメントで明記してある。
 - `url`（任意・関連 URL）は `Task` / `TaskCreate` / `TaskUpdate` が持つ。`http`/`https` のみ許可し（zod `refine(isHttpUrl)`）、`javascript:`/`data:` 等の危険スキームや 2048 文字超は **422**。確認画面・詳細では安全なリンク（`target="_blank" rel="noopener noreferrer"`）として表示する。
 - フロントの BFF（`/api/auth/*`）は上記 backend を呼び出し、リフレッシュトークンを Cookie 化する。
 
