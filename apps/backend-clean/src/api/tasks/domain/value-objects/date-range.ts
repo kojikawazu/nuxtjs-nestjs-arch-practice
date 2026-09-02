@@ -10,7 +10,7 @@ import { InvalidDateRangeError } from '../errors/task.errors';
  *   常に「開始 ≤ 終了」を満たす。以前は `assertDateOrder` を呼ぶ側が覚えている必要があったが、
  *   VO 化により**呼び忘れる経路そのものが型で消える**。
  *
- * 単一フィールドの形式（ISO 8601 かどうか等）は presentation の zod が担当し、ここでは扱わない。
+ * 単一フィールドの形式（RFC 3339 の日付かどうか等）は presentation の zod が担当し、ここでは扱わない。
  * この VO が担うのは「zod では表現しにくいフィールド間の関係」だけ（→ .claude/rules/stack-backend.md）。
  */
 export class DateRange {

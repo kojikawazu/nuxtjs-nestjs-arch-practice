@@ -2,7 +2,7 @@ import { createTaskSchema } from './create.dto';
 
 /**
  * createTaskSchema（zod）単体。
- * 契約の入力ルール（title 必須・status 列挙・ISO 日付・url は http/https のみ・未知キー拒否）を検証する。
+ * 契約の入力ルール（title 必須・status 列挙・RFC 3339 日付・url は http/https のみ・未知キー拒否）を検証する。
  */
 describe('createTaskSchema', () => {
   const base = { title: 'タスク', startDate: '2026-06-10T00:00:00.000Z' };
@@ -11,8 +11,28 @@ describe('createTaskSchema', () => {
     expect(createTaskSchema.safeParse(base).success).toBe(true);
   });
 
-  it('正常系: 日付のみ（2026-01-01）の startDate も許可する', () => {
+  it('正常系: 日付のみ（2026-01-01）の startDate も許可する（UTC 0 時として解釈される）', () => {
     expect(createTaskSchema.safeParse({ ...base, startDate: '2026-01-01' }).success).toBe(true);
+  });
+
+  // 実在しない日は Date.parse が翌月へ繰り上げるため、通すと「指定と違う日」が保存される
+  it.each(['2026-02-30', '2026-02-29', '2026-04-31'])(
+    '準正常系: 実在しない startDate（%s）は不合格',
+    (startDate) => {
+      expect(createTaskSchema.safeParse({ ...base, startDate }).success).toBe(false);
+    },
+  );
+
+  // オフセットが無いとホストの TZ 次第で別の instant になるため、入口で弾く
+  it.each(['2026-01-01T12:30:00', '2026-01-01 12:30:00'])(
+    '準正常系: オフセットの無い startDate（%s）は不合格',
+    (startDate) => {
+      expect(createTaskSchema.safeParse({ ...base, startDate }).success).toBe(false);
+    },
+  );
+
+  it('異常系: 実在しない endDate は不合格', () => {
+    expect(createTaskSchema.safeParse({ ...base, endDate: '2026-04-31' }).success).toBe(false);
   });
 
   it('正常系: https の url は合格する', () => {

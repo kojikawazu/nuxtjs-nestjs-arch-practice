@@ -70,7 +70,11 @@ model Task {
   title: string;
   description?: string;
   status: TaskStatus;
+
+  /** 開始日時。**レスポンスは常にオフセット付きの UTC 日時**（`full-date` で作成しても 0 時の日時になる）。 */
   startDate: utcDateTime;
+
+  /** 終了日時（任意）。レスポンスは常にオフセット付きの UTC 日時。 */
   endDate?: utcDateTime;
 
   /** 関連 URL（任意）。http/https のみ。確認画面・詳細で安全なリンクとして表示する。 */
@@ -104,7 +108,19 @@ model TaskCreate {
   description?: string;
 
   status?: TaskStatus;
+
+  /**
+   * 開始日時。**RFC 3339**（`utcDateTime` = `format: date-time`）。オフセット（`Z` / `±HH:MM`）は必須。
+   *
+   * サーバはこれに加えて `full-date`（`2026-06-15`）も受け付け、**UTC 0 時**として解釈する
+   * （契約の `date-time` より緩い唯一の点。`format` では表現できないのでここに明記する）。
+   * オフセットを任意にすると `new Date()` が実行環境のローカル時刻として解釈し、同じリクエストが
+   * ホストのタイムゾーン次第で別の instant になるため、オフセットなしの日時は 422 で拒否する。
+   * 実在しない日（`2026-02-30` / 平年の `2026-02-29` / `2026-04-31`）も 422。
+   */
   startDate: utcDateTime;
+
+  /** 終了日時（任意）。受理形式は `startDate` と同じ。 */
   endDate?: utcDateTime;
 
   /**
@@ -125,7 +141,11 @@ model TaskUpdate {
   description?: string;
 
   status?: TaskStatus;
+
+  /** 開始日時。受理形式は `TaskCreate.startDate` と同じ（RFC 3339・オフセット必須／`full-date` は UTC 0 時）。 */
   startDate?: utcDateTime;
+
+  /** 終了日時。受理形式は `TaskCreate.startDate` と同じ。 */
   endDate?: utcDateTime;
 
   /** 関連 URL（任意）。`TaskCreate.url` と同じく http/https の判定はサーバが担う。 */

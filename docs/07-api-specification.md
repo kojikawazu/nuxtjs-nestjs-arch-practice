@@ -64,6 +64,7 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 
 - 型定義は契約由来（`@app/api-client` の `Task` / `AuthTokens` / `TaskCreate` 等）。`imageUrl` は `Task` のみが持つ（`TaskCreate`/`TaskUpdate` には無い＝クライアントから直接書き換え不可）。
 - リクエストの入力検証は全 backend 版で **zod スキーマ + ルート単位 `ZodValidationPipe`** に統一（`presentation/dto/` のスキーマ・`.strict()` で未知キー拒否・グローバル `ValidationPipe` は不使用）。違反は **422** `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean)）。
+- **日付の受理形式**: `startDate` / `endDate` は RFC 3339 の `full-date`（`2026-06-15`。**UTC 0 時**として解釈）か、**オフセット必須**の `date-time`（`2026-06-15T00:00:00.000Z` / `...+09:00`）のみ。オフセットなしの日時と実在しない日（`2026-02-30` 等）は **422**（理由は [docs/05](./05-data-specification.md#db-スキーマ)）。**レスポンスは常にオフセット付きの UTC 日時**で返る。
 - **契約に載る制約と載らない制約**: 文字数・必須・列挙は契約（`main.tsp` の `@minLength` / `@maxLength` / union）に載り、生成 OpenAPI から読める。一方 **JSON Schema で表現できない制約はサーバだけが持つ**——パスワードの UTF-8 72 バイト（契約の `@maxLength(72)` は粗い文字数上限）と、`url` の http/https スキーム判定。契約側にはその旨をコメントで明記してある。
 - `url`（任意・関連 URL）は `Task` / `TaskCreate` / `TaskUpdate` が持つ。`http`/`https` のみ許可し（zod `refine(isHttpUrl)`）、`javascript:`/`data:` 等の危険スキームや 2048 文字超は **422**。確認画面・詳細では安全なリンク（`target="_blank" rel="noopener noreferrer"`）として表示する。
 - フロントの BFF（`/api/auth/*`）は上記 backend を呼び出し、リフレッシュトークンを Cookie 化する。
