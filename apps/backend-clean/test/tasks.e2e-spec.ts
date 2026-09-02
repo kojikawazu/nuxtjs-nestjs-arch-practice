@@ -104,6 +104,64 @@ describe('Tasks (e2e)', () => {
 
   // グローバル ValidationPipe（テスト専用）を外したため、未知キーを弾いているのは
   // ルート単位の ZodValidationPipe（.strict()）だけ。本番と同じ経路であることをここで固定する。
+  // 受理する日付形式は RFC 3339 の full-date か、オフセット必須の date-time だけ。
+  // 以前はこの 2 つが素通りしていた:
+  //   実在しない日（Date.parse が翌月へ繰り上げ、指定と違う日が保存される）と、
+  //   オフセットなしの日時（ホストの TZ で解釈され、同じ入力が環境ごとに別の instant になる）。
+  describe('日付の受理形式（RFC 3339）', () => {
+    it('正常系: 日付のみの startDate は UTC 0 時として保存される', async () => {
+      const res = await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: '日付のみ', startDate: '2026-06-15' })
+        .expect(201);
+
+      expect(res.body.startDate).toBe('2026-06-15T00:00:00.000Z');
+    });
+
+    it.each(['2026-02-30', '2026-02-29', '2026-04-31'])(
+      '準正常系: 実在しない startDate（%s）は 422（errors に startDate）',
+      async (startDate) => {
+        const res = await http
+          .post('/tasks')
+          .set(auth(token))
+          .send({ title: '実在しない日', startDate })
+          .expect(422);
+
+        expect(errorFields(res.body)).toEqual(['startDate']);
+      },
+    );
+
+    it.each(['2026-01-01T12:30:00', '2026-01-01 12:30:00'])(
+      '準正常系: オフセットの無い startDate（%s）は 422（errors に startDate）',
+      async (startDate) => {
+        const res = await http
+          .post('/tasks')
+          .set(auth(token))
+          .send({ title: 'TZ なし', startDate })
+          .expect(422);
+
+        expect(errorFields(res.body)).toEqual(['startDate']);
+      },
+    );
+
+    it('準正常系: PATCH でも実在しない endDate は 422（更新経路も同じ入口を通る）', async () => {
+      const created = await http
+        .post('/tasks')
+        .set(auth(token))
+        .send({ title: '更新対象', startDate: START })
+        .expect(201);
+
+      const res = await http
+        .patch(`/tasks/${created.body.id}`)
+        .set(auth(token))
+        .send({ endDate: '2026-04-31' })
+        .expect(422);
+
+      expect(errorFields(res.body)).toEqual(['endDate']);
+    });
+  });
+
   it('異常系: 未知キーは .strict() で 422（errors のフィールドはそのキー名）', async () => {
     const res = await http
       .post('/tasks')

@@ -42,7 +42,7 @@ globs: apps/backend-*/**
 - **採用しない概念（3 版共通）**: 他フレームワーク由来の下記フォルダ／クラスは**意図的に置かない**。「無いこと」自体が設計判断なので、迷ったときに再導入されないよう理由ごと残す。
   - **`forms/`（Laravel の FormRequest 相当）**: リクエスト検証を 1 クラスにまとめる入れ物は作らない。FormRequest は `authorize()` と `rules()`（形式ルールと `unique:` 等の DB ルール）を同居させるが、本リポジトリではそれぞれ関心が異なるため 3 か所に分けている。**「zod と Validator の間に FormRequest 相当の段がある」のではなく、FormRequest 1 つが下記に分解されている**。
     - **認可**（`authorize()` 相当）→ `presentation/guards/` の Guard ＋ 所有権チェック（`TaskAccessService`）
-    - **形式検証**（`required|max:120` 相当。必須・型・長さ・列挙・ISO 日付・URL スキーム）= transport の関心 → `presentation/dto/` の zod スキーマ ＋ ルート単位の `ZodValidationPipe`。422 と `ApiError.errors` の組み立てもここ
+    - **形式検証**（`required|max:120` 相当。必須・型・長さ・列挙・RFC 3339 日付・URL スキーム）= transport の関心 → `presentation/dto/` の zod スキーマ ＋ ルート単位の `ZodValidationPipe`。422 と `ApiError.errors` の組み立てもここ
     - **業務ルール検証**（`unique:users` 相当。開始≤終了・メール重複）= ドメインの関心 → `application/validators/` の Validator（clean / onion）
     - 迷ったら「**HTTP でなくても成り立つ制約か**」で切り分ける。成り立つならドメイン側（Validator / entity）、HTTP の入り口でしか意味がないなら zod スキーマ側。
     - **検証の入口は各段で 1 つに保つ**（FormRequest が信頼できるのは、それを通らずハンドラへ入る経路が無いため）。保存せず検証だけ行う DryRun エンドポイント（`*/validate`）は、同じルールの入口が二重になるため**再導入しない**。
@@ -71,7 +71,7 @@ globs: apps/backend-*/**
   - `*.module.ts` / `*.controller.ts` は NestJS 慣習どおり feature 名を保つ（`tasks.module.ts` / `tasks.controller.ts`）。
   - **クラス名は変更しない**（`create.validator.ts` が `CreateTaskValidator` を export する）。クラス名は import 先で単独で読まれるため、feature 名が識別に効く。
 - **DTO / 入力検証**: **全 backend 版（layered / clean / onion）が zod を採用**する。`presentation/dto/` に zod スキーマを置き、ルート単位の `ZodValidationPipe`（layered は `common/pipes/`、clean / onion は `shared/presentation/pipes/`）で検証する。グローバル `ValidationPipe` は使わない。`.strict()` で未知キーを弾き（旧 `forbidNonWhitelisted` 相当）、`satisfies z.ZodType<契約型>` で契約とのズレを型検出する（旧 `implements 契約型` 相当）。検証失敗は `UnprocessableEntityException`（**422**）で、`AllExceptionsFilter` が `ApiError` へ翻訳する（e2e 契約は 3 版で不変）。400 は「構文が壊れている」、422 は「構文は正しいが意味的に処理できない」を表し、後者が入力検証の実態にあたる。`ApiError.errors`（`{ field, messages }[]`）にフィールド別の理由を載せ、`message`（全件を連結した一文）と併存させる。業務ルール違反も同じ 422 で返し、clean / onion は `DomainError.fields` を例外フィルタが展開、layered は例外に直接載せる。
-  - 当初は `backend-clean` のみ zod（他は class-validator）だったが、検証手法を layered / onion へ横展開し zod に統一した（class-validator / class-transformer / @nestjs/mapped-types は 3 版とも除去）。ISO 日付・http/https URL の判定は layered では `common/validation/zod-helpers.ts`、clean / onion では `shared/validation/zod-helpers.ts` の `isIso8601` / `isHttpUrl` を共有する。
+  - 当初は `backend-clean` のみ zod（他は class-validator）だったが、検証手法を layered / onion へ横展開し zod に統一した（class-validator / class-transformer / @nestjs/mapped-types は 3 版とも除去）。日付・http/https URL の判定は layered では `common/validation/zod-helpers.ts`、clean / onion では `shared/validation/zod-helpers.ts` の `isRfc3339` / `isHttpUrl` を共有する。日付は **RFC 3339 の `full-date`（UTC 0 時として解釈）か、オフセット必須の `date-time`** だけを受理する（オフセットを任意にすると `new Date()` がホストの TZ で解釈し、同じ入力が環境ごとに別の instant になる。実在しない日は `Date.parse` が翌月へ繰り上げるため往復検査で弾く）。
 - **型の共有**: レスポンス型・ドメイン型は `@app/api-client` を `import type` で参照する（実行時依存にしない）。
 - **DB**: カラム型は MySQL / SQLite 双方で動くポータブルな型のみ（enum カラム禁止、`varchar` + 型/バリデーションで担保）。`DB_TYPE` で接続先を切替。
 - **監査列**: `createdAt` / `updatedAt` / `deletedAt` は **TypeORM の機構で自動設定する**（アプリケーションコードで値を組み立てない）。

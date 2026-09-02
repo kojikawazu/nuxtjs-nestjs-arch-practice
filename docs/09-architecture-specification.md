@@ -205,7 +205,7 @@ shared/                            # feature 非依存の共通基盤
 ├ presentation/
 │  ├ filters/http-exception.filter.ts # DomainError / HttpException → ApiError
 │  └ pipes/zod-validation.pipe.ts     # DTO スキーマを実行する汎用 Pipe
-└ validation/zod-helpers.ts         #   ISO 8601・http/https の形式検証
+└ validation/zod-helpers.ts         #   RFC 3339 日付・http/https の形式検証
 ```
 
 - UseCase は `@Inject(TASK_REPOSITORY)` / `@Inject(IMAGE_STORAGE)` で **Port にのみ依存**し、TypeORM・fs を import しない。
@@ -341,7 +341,7 @@ shared/                               # feature / domain 契約に非依存の�
 ├ presentation/
 │  ├ filters/http-exception.filter.ts  # DomainError / HttpException → ApiError
 │  └ pipes/zod-validation.pipe.ts      # DTO スキーマを実行する汎用 Pipe
-└ validation/zod-helpers.ts            #   ISO 8601・http/https の形式検証
+└ validation/zod-helpers.ts            #   RFC 3339 日付・http/https の形式検証
 ```
 
 - **application は presentation を import しない**: Controller が契約型 `TaskCreate` / `TaskUpdate` を `application/inputs/` の `toCreateTaskInput` / `toUpdateTaskInput` で Command 型に直してから UseCase を呼ぶ。変換関数が引数に取るのは DTO 型（`z.infer<typeof createTaskSchema>`）ではなく**契約型**で、契約型は `@app/api-client`（層の外の共有パッケージ）にあり presentation・application のどちらからも等距離のため、これを共通語彙にすると矢印が presentation → application の一方向に揃う。ISO 文字列 → `Date` の正規化もこの境界で済ませる。
