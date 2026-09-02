@@ -1,12 +1,6 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { TaskStatus } from '@app/api-client';
+import { AuditableEntity } from '../../../common/entities/auditable.entity';
 
 /**
  * タスクのエンティティ（infrastructure 層）。
@@ -15,9 +9,11 @@ import type { TaskStatus } from '@app/api-client';
  *
  * レイヤード構成のため、UseCase（application）はこの Entity を直接扱い、
  * API 契約形（@app/api-client の Task）への変換は task.util.ts の toContractTask が担う。
+ *
+ * createdAt / updatedAt は AuditableEntity から継承する。
  */
 @Entity('tasks')
-export class TaskEntity {
+export class TaskEntity extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -47,10 +43,4 @@ export class TaskEntity {
   // 添付画像の公開パス（例: "/uploads/<file>"）。varchar でポータブル（MySQL/SQLite 双方可）。
   @Column({ type: 'varchar', length: 512, nullable: true })
   imageUrl!: string | null;
-
-  @CreateDateColumn()
-  createdAt!: Date;
-
-  @UpdateDateColumn()
-  updatedAt!: Date;
 }
