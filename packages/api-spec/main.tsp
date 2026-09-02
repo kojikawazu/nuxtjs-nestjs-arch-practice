@@ -119,7 +119,12 @@ model TaskUpdate {
 }
 
 model RegisterRequest {
+  /**
+   * メールアドレス。`maxLength` は DB カラム（`users.email` = `varchar(255)`）に合わせた値で、
+   * 超過を INSERT 前に弾くためにある（サーバ側で弾かないと MySQL のカラム長エラー = 500 になる）。
+   */
   @format("email")
+  @maxLength(255)
   email: string;
 
   /**
@@ -137,7 +142,9 @@ model RegisterRequest {
 }
 
 model LoginRequest {
+  /** メールアドレス。登録と同じ `maxLength`（DB の `varchar(255)` と整合）を課す。 */
   @format("email")
+  @maxLength(255)
   email: string;
 
   /** パスワード。登録と同じ **UTF-8 72 バイト**の上限を課す（超過は 422）。 */

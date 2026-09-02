@@ -25,6 +25,15 @@ export function isHttpUrl(value: string): boolean {
 }
 
 /**
+ * メールアドレスの最大文字数。DB カラム（`users.email` = `varchar(255)`）と同じ値にする。
+ *
+ * API 側で弾かないと超過分は INSERT まで到達し、MySQL がカラム長エラーを返して 500 になる
+ * （SQLite は varchar の長さを強制しないため、e2e だけでは気づけない）。
+ * 契約（`packages/api-spec/main.tsp` の `@maxLength(255)`）とも同じ値を保つ。
+ */
+export const MAX_EMAIL_LENGTH = 255;
+
+/**
  * bcrypt が扱えるパスワードの最大バイト数。これを超えた分は**静かに切り捨てられる**。
  * 文字数ではなくバイト数なのが要点で、マルチバイト文字では両者が大きくずれる。
  */

@@ -5,15 +5,6 @@ import { DomainError } from '../../../../shared/domain/errors/domain-error';
  * フレームワーク非依存に保つ（HTTP への変換はフィルタが kind を見て行う）。
  */
 
-/** メール重複（登録時）。HTTP では 409。 */
-export class EmailAlreadyRegisteredError extends DomainError {
-  readonly kind = 'conflict' as const;
-  constructor() {
-    super('Email already registered');
-    this.name = 'EmailAlreadyRegisteredError';
-  }
-}
-
 /** 認証情報の不一致（ログイン時）。ユーザー有無を漏らさないため未登録も同一エラーにする。HTTP では 401。 */
 export class InvalidCredentialsError extends DomainError {
   readonly kind = 'unauthorized' as const;

@@ -73,6 +73,39 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  // メールの上限は DB カラム（`users.email` = varchar(255)）と同値。API 側で弾かないと超過分が
+  // INSERT まで到達し、MySQL がカラム長エラーを返して 500 になる。SQLite は varchar の長さを
+  // 強制しないため、この e2e が見ているのは「API が INSERT 前に弾くこと」だけで、
+  // DB 側が実際にその長さで拒否することは IT（MySQL コンテナ）が担保する。
+  describe('メールの上限は 255 文字（DB カラムと同値）', () => {
+    const DOMAIN = '@example.com'; // 12 文字
+    const BOUNDARY = `${'a'.repeat(255 - DOMAIN.length)}${DOMAIN}`; // 255 文字ちょうど
+    const OVER = `${'a'.repeat(256 - DOMAIN.length)}${DOMAIN}`; // 256 文字
+
+    it('正常系: 255 文字ちょうどのメールで登録できる', async () => {
+      const res = await http
+        .post('/auth/register')
+        .send({ email: BOUNDARY, password: 'password123', displayName: 'Boundary' })
+        .expect(201);
+
+      expect(res.body.user.email).toBe(BOUNDARY);
+    });
+
+    it('異常系: 256 文字のメールは INSERT 前に 422（errors に email）', async () => {
+      const res = await http
+        .post('/auth/register')
+        .send({ email: OVER, password: 'password123', displayName: 'Over' })
+        .expect(422);
+
+      expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual(['email']);
+    });
+
+    // 登録だけ絞ってログインを開けておくと、上限の意味がある入口が片方だけになる
+    it('異常系: ログインでも 256 文字のメールは 422', async () => {
+      await http.post('/auth/login').send({ email: OVER, password: 'password123' }).expect(422);
+    });
+  });
+
   // 未知キーを弾いているのはルート単位の ZodValidationPipe（.strict()）。
   // テスト専用のグローバル ValidationPipe に頼っていないことをここで固定する。
   it('異常系: 未知キーは .strict() で 422（errors のフィールドはそのキー名）', async () => {

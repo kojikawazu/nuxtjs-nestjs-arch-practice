@@ -5,7 +5,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AllExceptionsFilter } from '../src/shared/presentation/filters/http-exception.filter';
 import { configuration } from '../src/config/configuration';
 import { configureUploadStatic } from '../src/config/static-assets';
@@ -15,6 +15,9 @@ import { TaskOrmEntity } from '../src/api/tasks/infrastructure/entities/task.orm
 import { TasksModule } from '../src/api/tasks/tasks.module';
 import { UserOrmEntity } from '../src/api/users/infrastructure/entities/user.orm-entity';
 import { UsersModule } from '../src/api/users/users.module';
+
+/** 既定のテスト DB。外部依存なしで速く回すためインメモリ SQLite を使う。 */
+const IN_MEMORY_SQLITE: TypeOrmModuleOptions = { type: 'better-sqlite3', database: ':memory:' };
 
 /** e2e で生成した一時アップロード先（テスト側で後始末する）。 */
 export let testUploadDir = '';
@@ -28,8 +31,14 @@ export let testUploadDir = '';
  * ルート単位の ZodValidationPipe だけが効く状態でないと、テスト専用のパイプが
  * 未知キーや型変換を肩代わりし、本番では通らない入力が e2e だけ通ってしまう。
  * （HTTP 境界・認可・バリデーション・エラーレスポンス・静的配信の検証が目的）
+ *
+ * @param dbConnection - 接続先 DB。既定はインメモリ SQLite。IT は同じアプリ構成のまま
+ *   MySQL 接続を渡して「本番 DB でしか出ない挙動」を HTTP 経由で確かめる
+ * @returns 初期化済みの Nest アプリケーション
  */
-export async function createTestApp(): Promise<INestApplication> {
+export async function createTestApp(
+  dbConnection: TypeOrmModuleOptions = IN_MEMORY_SQLITE,
+): Promise<INestApplication> {
   // 起動時検証（32 文字以上・サンプル値でない・access と refresh が別値）を満たす値にする
   process.env.JWT_ACCESS_SECRET = 'test-access-secret-0123456789abcdef';
   process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-0123456789abcdef';
@@ -43,8 +52,7 @@ export async function createTestApp(): Promise<INestApplication> {
     imports: [
       ConfigModule.forRoot({ isGlobal: true, load: [configuration], ignoreEnvFile: true }),
       TypeOrmModule.forRoot({
-        type: 'better-sqlite3',
-        database: ':memory:',
+        ...dbConnection,
         dropSchema: true,
         synchronize: true,
         entities: [UserOrmEntity, RefreshTokenOrmEntity, TaskOrmEntity],

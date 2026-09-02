@@ -50,6 +50,7 @@
 
 - **現状（既定）**: BE e2e / FE E2E とも **in-memory SQLite（`better-sqlite3` `:memory:`）** で動き、**Docker 不要**（clone 直後に `pnpm test` が即通る）。この「外部依存ゼロ」は速度・可搬性の利点として維持する（`pnpm test` / CI は SQLite のまま）。
 - **実装済み（BE IT・3 版）**: `backend-layered` / `backend-clean` / `backend-onion` の各 `test/it/db-fidelity.it-spec.ts` に **DB 忠実性 IT** を追加。MySQL の**照合順序（`utf8mb4_0900_ai_ci`＝大文字小文字を区別しない）**と **email の unique 制約**を検証し、SQLite（既定 BINARY 比較）では踏めない差を実演する（接続先 DB は `taskdb_it`）。実行は `make test-back-it`（= `mysql-test` を `--wait` で healthy まで待って 3 版の `test:it` を順に実行）。
+  - **登録の一意制約とメール長**も IT で担保する（`test/it/register-conflict.it-spec.ts`）。`test-app.factory.ts` に接続先 DB を渡せるようにし、**e2e と同じアプリ構成のまま MySQL に繋いで HTTP 経由**で確かめる（SQLite では varchar 長が強制されず、照合順序も BINARY なので出せない差）。
   - **同一行への並行 DELETE** も IT で担保する（リフレッシュのローテーションが依存する排他）。別 query runner から同時に `DELETE` を投げ、**影響行数 1 を得るのは片方だけ**であることを確認する。in-memory SQLite は同期ドライバのため真の並行が再現できず、e2e ではこの前提を確かめられない。
 - **実装済み（シナリオの MySQL コンテナ化・二役）**: Playwright の webServer が起動する backend を `SCENARIO_DB=mysql` で **`mysql-test` の `taskdb_e2e`** に繋ぎ、**実ブラウザ + 実 FE + 実 BE + 実 MySQL** の通しシナリオを本番相当で回す。**IT=`taskdb_it` / シナリオ=`taskdb_e2e` を同一コンテナで二役**（`docker/mysql-test-init.sql` が両 DB を作成）。実行は `make test-scenario-mysql`（代表 spa。既定 `test:e2e` は従来どおり SQLite・速い）。
 - **既定の速いテストは SQLite・Docker 不要**: `pnpm test`・BE `test:e2e`（supertest）・FE `test:e2e`（Playwright）はすべて SQLite（`.it-spec` は unit/e2e の testRegex 外）。ローカルの MySQL 経路は `make test-back-it`（IT）/ `make test-scenario-mysql`（シナリオ）。
@@ -70,6 +71,13 @@
   - **BE 単体**: 消費（`consumeById` / `delete`）が「消せなかった」を返したら、回転せず 401 にし**新トークンを保存しない**こと。実装から排他判定を外すとこのテストが落ちる＝回帰検知の実体はここ。
   - **BE IT（MySQL）**: 同一行への並行 `DELETE` で影響行数 1 を得るのが片方だけであること。単体が前提にしている DB の挙動を実物で確認する。
   - **BE e2e**: 同一トークンで同時に 2 本リフレッシュすると `[200, 401]` になること。**外部契約の固定**であって並行性の回帰検知ではない（SQLite の同期ドライバでは逐次実行になり、修正前でも同じ結果になる）。
+- 登録の重複（3 版共通・**レベルごとに問いを分ける**。リフレッシュの並行消費と同じ切り分け）:
+  - **BE 単体**: Repository / Service の `create` が**一意制約違反だけ**を 409 相当の業務エラーへ翻訳し、**他の DB エラーはそのまま再送出**すること。翻訳を外すとこのテストが落ちる＝回帰検知の実体はここ。ドライバのコード判定（`ER_DUP_ENTRY` / `SQLITE_CONSTRAINT_UNIQUE` は true、`SQLITE_CONSTRAINT` 総称・NOT NULL・外部キー・接続断は false）も単体で固定する。
+  - **BE IT（MySQL）**: 事前確認を経ない重複 INSERT が業務エラーになること（Repository / Service を直接呼び、**並行登録で負けた側と同じ経路を必ず通す**）。ケース違いのメールが 409 になること（SQLite の BINARY 比較では 201 になり e2e では出せない）。
+  - **BE e2e / IT（HTTP）**: 同一メールの同時登録が `[201, 409]` になること。**外部契約の固定**であって並行性の回帰検知ではない（先行した側が事前確認で 409 を返せば制約経路を通らずに合格しうる）。
+- メールの 255 文字上限（DB カラム長との一致）:
+  - **BE e2e**: 255 文字ちょうどは 201・256 文字は 422（`errors[].field` は `email`）。ログイン側でも 256 文字は 422（上限の入口を片方だけ開けない）。
+  - **BE IT（MySQL）**: 255 文字が実際に保存でき、256 文字は DB が拒否すること。**API の上限がカラム長と一致している**ことの証明で、緩ければ 500、厳しすぎれば過剰制限になる。SQLite は varchar 長を強制しないため e2e では確かめられない。
 - タスク: CRUD/未認証(401)/他人のタスク(403)/不存在(404)/バリデーション(422・`errors` のフィールド名まで検証)。
 - **e2e の検証構成は本番と同じにする**: テスト用アプリ生成（`test-app.factory.ts`）にグローバル `ValidationPipe` を入れない。テスト専用のパイプがあると、未知キーや型変換をそれが肩代わりし、**本番では通らない入力が e2e だけ通る**状態になりうる。ルート単位の `ZodValidationPipe` だけが効いていることを、未知キーの拒否（`.strict()` → 422・`errors[].field` はそのキー名）を tasks / auth の e2e で固定して担保する。
 - Value Object（`DateRange`・clean / onion）:
