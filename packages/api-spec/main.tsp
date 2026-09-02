@@ -132,25 +132,36 @@ model TaskCreate {
   url?: string;
 }
 
+/**
+ * タスクの部分更新。**未指定（キー無し）と `null` を区別する**。
+ *
+ * - キーが無い = そのフィールドは変更しない
+ * - `null` = **既存値を削除する**（任意項目のみ。`title` / `status` / `startDate` は必須なので null 不可）
+ *
+ * 区別が要るのは、`undefined` 一本だと「触っていない」と「空にした」が同じ形になり、
+ * 利用者が説明・期限・URL を消せないため（消したつもりでも保存後に元の値が復活する）。
+ * 作成（`TaskCreate`）側は消す対象が無いので nullable にしない＝空項目はキーごと省略する。
+ */
 model TaskUpdate {
   @minLength(1)
   @maxLength(120)
   title?: string;
 
+  /** 説明。`null` で既存の説明を削除する。 */
   @maxLength(2000)
-  description?: string;
+  description?: string | null;
 
   status?: TaskStatus;
 
   /** 開始日時。受理形式は `TaskCreate.startDate` と同じ（RFC 3339・オフセット必須／`full-date` は UTC 0 時）。 */
   startDate?: utcDateTime;
 
-  /** 終了日時。受理形式は `TaskCreate.startDate` と同じ。 */
-  endDate?: utcDateTime;
+  /** 終了日時。受理形式は `TaskCreate.startDate` と同じ。`null` で既存の期限を削除する。 */
+  endDate?: utcDateTime | null;
 
-  /** 関連 URL（任意）。`TaskCreate.url` と同じく http/https の判定はサーバが担う。 */
+  /** 関連 URL。`TaskCreate.url` と同じく http/https の判定はサーバが担う。`null` で既存の URL を削除する。 */
   @maxLength(2048)
-  url?: string;
+  url?: string | null;
 }
 
 model RegisterRequest {

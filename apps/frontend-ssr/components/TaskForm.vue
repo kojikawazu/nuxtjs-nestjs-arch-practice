@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import type { TaskStatus, ValidationError } from '@app/api-client';
 
+/**
+ * フォームが確定した内容。
+ *
+ * 任意項目は空欄のとき **`null`（= 明示的に空にした）** を持つ。`undefined` にしてしまうと
+ * 「触っていない」と区別がつかず、編集で PATCH に載らないため**保存後に元の値が復活**する。
+ * 作成時は消す対象が無いので、呼び出し側が `null` を落として（キーごと省略して）送る。
+ */
 export interface TaskFormValue {
   title: string;
-  description?: string;
+  description?: string | null;
   status: TaskStatus;
   startDate: string;
-  endDate?: string;
-  url?: string;
+  endDate?: string | null;
+  url?: string | null;
 }
 
 /** TaskForm が送出する確定内容。画像はタスク本体とは別経路でアップロードする。 */
@@ -134,11 +141,13 @@ function onRemoveImage() {
 function buildValue(): TaskFormValue {
   return {
     title: title.value.trim(),
-    description: description.value.trim() === '' ? undefined : description.value.trim(),
+    // 空欄は null（＝明示的に空にした）。undefined にすると編集時に PATCH へ載らず、
+    // 消したつもりの説明・期限・URL が保存後に復活する
+    description: description.value.trim() === '' ? null : description.value.trim(),
     status: status.value,
     startDate: new Date(startDate.value).toISOString(),
-    endDate: endDate.value === '' ? undefined : new Date(endDate.value).toISOString(),
-    url: url.value.trim() === '' ? undefined : url.value.trim(),
+    endDate: endDate.value === '' ? null : new Date(endDate.value).toISOString(),
+    url: url.value.trim() === '' ? null : url.value.trim(),
   };
 }
 

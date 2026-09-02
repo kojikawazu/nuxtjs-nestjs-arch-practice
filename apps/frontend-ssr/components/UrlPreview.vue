@@ -6,7 +6,8 @@
  * - 外部コンテンツは一切読み込まない（iframe / img / サーバ fetch なし）。
  * - target=_blank には rel="noopener noreferrer" を必須付与し、タブナビング・Referer 漏洩を防ぐ。
  */
-const props = defineProps<{ url?: string }>();
+// null は「関連 URL を空にした」状態（TaskFormValue と同じ意味づけ）。undefined と同じく何も描画しない
+const props = defineProps<{ url?: string | null }>();
 
 const safe = computed(() => isSafeHttpUrl(props.url));
 const host = computed(() => (props.url ? safeUrlHost(props.url) : ''));

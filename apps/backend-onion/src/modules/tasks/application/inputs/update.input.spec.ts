@@ -25,6 +25,26 @@ describe('toUpdateTaskInput（契約 TaskUpdate → UpdateTaskInput）', () => {
     expect(input.url).toBeUndefined();
   });
 
+  // null（削除指定）と undefined（未指定）を潰すと、利用者が任意項目を消せなくなる
+  it('正常系: null（削除指定）は null のまま通す', () => {
+    const input = toUpdateTaskInput(USER, 'task-1', {
+      description: null,
+      endDate: null,
+      url: null,
+    });
+
+    expect(input.description).toBeNull();
+    expect(input.endDate).toBeNull();
+    expect(input.url).toBeNull();
+  });
+
+  it('準正常系: 同じボディで null と undefined が混在しても取り違えない', () => {
+    const input = toUpdateTaskInput(USER, 'task-1', { description: null, title: 'タイトル' });
+
+    expect(input.description).toBeNull();
+    expect(input.url).toBeUndefined();
+    expect(input.endDate).toBeUndefined();
+  });
   it('準正常系: endDate を指定すれば Date 化され、未指定なら undefined（null 化しない）', () => {
     const withEnd = toUpdateTaskInput(USER, 'task-1', { endDate: '2026-03-10T00:00:00.000Z' });
     expect(withEnd.endDate).toEqual(new Date('2026-03-10T00:00:00.000Z'));

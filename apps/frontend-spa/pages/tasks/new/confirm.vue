@@ -60,11 +60,12 @@ async function onConfirm() {
   try {
     created = await create({
       title: draft.title,
-      description: draft.description,
+      // 作成には「消す」対象が無いため、空欄（null）はキーごと省略する（契約 TaskCreate は nullable でない）
+      description: draft.description ?? undefined,
       status: draft.status,
       startDate: draft.startDate,
-      endDate: draft.endDate,
-      url: draft.url,
+      endDate: draft.endDate ?? undefined,
+      url: draft.url ?? undefined,
     });
   } catch (e) {
     error.value = getErrorMessage(e, 'タスクの作成に失敗しました');

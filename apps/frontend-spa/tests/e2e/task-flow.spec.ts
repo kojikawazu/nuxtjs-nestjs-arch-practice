@@ -49,16 +49,22 @@ test('タスク管理の一連フロー', async ({ page }) => {
   await page.goto('/tasks');
   await expect(page.getByTestId('task-list')).toContainText('牛乳を買う');
 
-  // --- 編集（status を done に, フォーム → confirm → 確定）---
+  // --- 編集（status を done に + 任意項目を空にする, フォーム → confirm → 確定）---
+  // 説明・URL を空欄にしたら、保存後に本当に消えていること。空欄を undefined として
+  // 送っていた頃は PATCH に載らず、確認画面では空に見えても保存後に元の値が復活していた。
   await page.getByTestId('task-card').first().click();
   await page.getByTestId('edit-link').click();
   await page.getByTestId('task-status').selectOption('done');
+  await page.getByTestId('task-description').fill('');
+  await page.getByTestId('task-url').fill('');
   await page.getByTestId('task-submit').click();
   await expect(page.getByTestId('confirm-step')).toBeVisible();
   await page.getByTestId('confirm-update').click();
 
   await expect(page.getByTestId('detail-title')).toBeVisible();
   await expect(page.getByTestId('status-badge')).toHaveText('完了');
+  await expect(page.getByTestId('detail-description')).toHaveText('（説明なし）');
+  await expect(page.getByTestId('detail-url')).toHaveCount(0);
 
   // --- 削除（確認ダイアログ → 実行）---
   await page.getByTestId('delete-button').click();

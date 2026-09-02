@@ -104,6 +104,98 @@ describe('Tasks (e2e)', () => {
 
   // グローバル ValidationPipe（テスト専用）を外したため、未知キーを弾いているのは
   // ルート単位の ZodValidationPipe（.strict()）だけ。本番と同じ経路であることをここで固定する。
+  // PATCH は「キーが無い＝変更しない」と「null＝削除する」を区別する。
+  // 区別が無いと、確認画面では空に見えるのに保存後に以前の説明・期限・URL が復活する。
+  describe('PATCH での任意項目の削除（null）', () => {
+    const filled = {
+      title: '任意項目あり',
+      description: '説明',
+      startDate: START,
+      endDate: END,
+      url: 'https://example.com/doc',
+    };
+
+    const createFilled = async (): Promise<string> => {
+      const res = await http.post('/tasks').set(auth(token)).send(filled).expect(201);
+      return res.body.id as string;
+    };
+
+    it.each(['description', 'endDate', 'url'])(
+      '正常系: %s に null を送ると既存値が削除される',
+      async (field) => {
+        const id = await createFilled();
+
+        const res = await http
+          .patch(`/tasks/${id}`)
+          .set(auth(token))
+          .send({ [field]: null })
+          .expect(200);
+
+        expect(res.body[field]).toBeUndefined();
+      },
+    );
+
+    it('正常系: 3 項目を同時に削除できる', async () => {
+      const id = await createFilled();
+
+      const res = await http
+        .patch(`/tasks/${id}`)
+        .set(auth(token))
+        .send({ description: null, endDate: null, url: null })
+        .expect(200);
+
+      expect(res.body.description).toBeUndefined();
+      expect(res.body.endDate).toBeUndefined();
+      expect(res.body.url).toBeUndefined();
+    });
+
+    // 「未指定」を「削除」に巻き込まないことの担保。ここが崩れると、
+    // タイトルだけ直したつもりで説明や期限まで消える
+    it('正常系: キーを送らなければ既存値は変わらない', async () => {
+      const id = await createFilled();
+
+      const res = await http
+        .patch(`/tasks/${id}`)
+        .set(auth(token))
+        .send({ title: 'タイトルだけ更新' })
+        .expect(200);
+
+      expect(res.body.title).toBe('タイトルだけ更新');
+      expect(res.body.description).toBe('説明');
+      expect(res.body.endDate).toBe(END);
+      expect(res.body.url).toBe('https://example.com/doc');
+    });
+
+    // 必須項目は「消す」対象ではないので null を受け付けない
+    it.each(['title', 'status', 'startDate'])(
+      '準正常系: 必須項目 %s に null を送ると 422',
+      async (field) => {
+        const id = await createFilled();
+
+        const res = await http
+          .patch(`/tasks/${id}`)
+          .set(auth(token))
+          .send({ [field]: null })
+          .expect(422);
+
+        expect(errorFields(res.body)).toEqual([field]);
+      },
+    );
+
+    it('準正常系: 削除した endDate を後から再設定できる（null は状態を壊さない）', async () => {
+      const id = await createFilled();
+
+      await http.patch(`/tasks/${id}`).set(auth(token)).send({ endDate: null }).expect(200);
+      const res = await http
+        .patch(`/tasks/${id}`)
+        .set(auth(token))
+        .send({ endDate: END })
+        .expect(200);
+
+      expect(res.body.endDate).toBe(END);
+    });
+  });
+
   // 受理する日付形式は RFC 3339 の full-date か、オフセット必須の date-time だけ。
   // 以前はこの 2 つが素通りしていた:
   //   実在しない日（Date.parse が翌月へ繰り上げ、指定と違う日が保存される）と、
