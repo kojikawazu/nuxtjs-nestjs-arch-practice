@@ -200,7 +200,8 @@ api/tasks/                         # src/api/tasks（機能スライス）
 shared/                            # feature 非依存の共通基盤
 ├ domain/errors/domain-error.ts     #   DomainError の基底 + 共通 kind
 ├ infrastructure/
-│  └ entities/auditable.orm-entity.ts # 監査列（createdAt/updatedAt）の抽象ベースクラス
+│  ├ entities/auditable.orm-entity.ts # 監査列（createdAt/updatedAt）の抽象ベースクラス
+│  └ errors/unique-violation.ts       # ドライバの一意制約違反コードの判定
 ├ presentation/
 │  ├ filters/http-exception.filter.ts # DomainError / HttpException → ApiError
 │  └ pipes/zod-validation.pipe.ts     # DTO スキーマを実行する汎用 Pipe
@@ -268,18 +269,20 @@ tasks と同じ思想（domain / application / infrastructure / presentation の
 
 ```
 api/users/                          # HTTP 入口を持たない（presentation なし）。auth が利用する
-├ domain/entities/user.ts           #   フレームワーク非依存の User（passwordHash は照合用に保持）
+├ domain/
+│  ├ entities/user.ts               #   フレームワーク非依存の User（passwordHash は照合用に保持）
+│  └ errors/user.errors.ts          #   EmailAlreadyRegistered(conflict)。★Port が投げうるので users が所有
 ├ application/
 │  ├ ports/user-repository.port.ts  #   UserRepository（findByEmail/findById/create）+ トークン
 │  └ mappers/user.mapper.ts         #   domain User → 契約 User（passwordHash を構造的に落とす）
 ├ infrastructure/
 │  ├ entities/user.orm-entity.ts    #   TypeORM Entity
 │  ├ mappers/user.mapper.ts         #   ORM ⇔ domain 変換
-│  └ repositories/typeorm-user.repository.ts
+│  └ repositories/typeorm-user.repository.ts  # 一意制約違反 → EmailAlreadyRegistered へ翻訳
 └ users.module.ts                   #   USER_REPOSITORY を provide & export（層の外＝feature 直下）
 
 api/auth/
-├ domain/errors/auth.errors.ts      #   EmailAlreadyRegistered(conflict)/InvalidCredentials/InvalidRefreshToken(unauthorized)
+├ domain/errors/auth.errors.ts      #   InvalidCredentials/InvalidRefreshToken(unauthorized)
 ├ application/
 │  ├ ports/                         #   PasswordHasher / TokenIssuer / RefreshTokenRepository（暗号・DB を抽象化）
 │  ├ inputs/                        #   register/login（契約→Input）
@@ -333,7 +336,8 @@ modules/tasks/
 shared/                               # feature / domain 契約に非依存の共通基盤
 ├ domain/errors/domain-error.ts        #   DomainError の基底 + 共通 kind
 ├ infrastructure/
-│  └ entities/auditable.orm-entity.ts  #   監査列（createdAt/updatedAt）の抽象ベースクラス
+│  ├ entities/auditable.orm-entity.ts  #   監査列（createdAt/updatedAt）の抽象ベースクラス
+│  └ errors/unique-violation.ts        #   ドライバの一意制約違反コードの判定
 ├ presentation/
 │  ├ filters/http-exception.filter.ts  # DomainError / HttpException → ApiError
 │  └ pipes/zod-validation.pipe.ts      # DTO スキーマを実行する汎用 Pipe

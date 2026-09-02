@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { User } from '@app/api-client';
+import { isUniqueViolationError } from '../../common/errors/unique-violation';
 import { UserEntity } from './user.entity';
 
 export interface CreateUserInput {
@@ -29,9 +30,25 @@ export class UsersService {
     return this.users.findOne({ where: { id } });
   }
 
+  /**
+   * ユーザーを作成する。一意制約違反は 409（メール重複）へ翻訳する。
+   *
+   * AuthService.register は事前に findByEmail で重複を弾いているが、確認と INSERT の間に
+   * 他の要求が同じメールを作れてしまう（check-then-act）。原子性を持つのは DB の一意制約だけなので、
+   * ここが並行登録に対する最後の砦になる。`users` の一意制約は email の 1 本だけなので、
+   * このテーブルでの一意制約違反はメール重複を意味する（列を足すときはここも見直す）。
+   * それ以外の DB エラーは翻訳せず、そのまま throw して 500 として扱う（握りつぶさない）。
+   */
   async create(input: CreateUserInput): Promise<UserEntity> {
-    const user = this.users.create(input);
-    return this.users.save(user);
+    try {
+      const user = this.users.create(input);
+      return await this.users.save(user);
+    } catch (error) {
+      if (isUniqueViolationError(error)) {
+        throw new ConflictException('Email already registered');
+      }
+      throw error;
+    }
   }
 
   /** 契約 (api-client の User) 形へのマッパー。passwordHash は決して漏らさない。 */
