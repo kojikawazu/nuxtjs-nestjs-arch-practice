@@ -1,12 +1,6 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { TaskStatus } from '@app/api-client';
+import { AuditableOrmEntity } from '../../../../shared/infrastructure/entities/auditable.orm-entity';
 
 /**
  * タスクの永続化エンティティ（infrastructure 層の詳細）。
@@ -15,9 +9,11 @@ import type { TaskStatus } from '@app/api-client';
  *
  * ドメイン（Task）とは別物で、両者の変換は task.mapper.ts が担う。
  * これによりドメイン/アプリケーション層が TypeORM に依存しない（クリーンアーキテクチャ）。
+ *
+ * createdAt / updatedAt は AuditableOrmEntity から継承する。
  */
 @Entity('tasks')
-export class TaskOrmEntity {
+export class TaskOrmEntity extends AuditableOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -47,10 +43,4 @@ export class TaskOrmEntity {
   // 添付画像の公開パス（例: "/uploads/<file>"）。varchar でポータブル（MySQL/SQLite 双方可）。
   @Column({ type: 'varchar', length: 512, nullable: true })
   imageUrl!: string | null;
-
-  @CreateDateColumn()
-  createdAt!: Date;
-
-  @UpdateDateColumn()
-  updatedAt!: Date;
 }

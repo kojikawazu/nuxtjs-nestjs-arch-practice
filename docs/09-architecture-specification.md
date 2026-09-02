@@ -87,7 +87,7 @@ modules/tasks/
 │  ├ usecases/             # 1 ルート = 1 ユースケース（list/create/get/update/delete/image*）
 │  └ task.util.ts          # 認可(findOwnedTask)・日付検証・契約変換・画像 I/O の共有ヘルパー
 └ infrastructure/
-   └ task.entity.ts        # TypeORM Entity
+   └ task.entity.ts        # TypeORM Entity（監査列は common/entities/auditable.entity.ts を継承）
 ```
 
 - UseCase は `@InjectRepository(TaskEntity)` で Repository を直接注入し、`NotFoundException` / `ForbiddenException` / `BadRequestException` を直接投げる（グローバルの `AllExceptionsFilter` が `ApiError` 化）。
@@ -130,7 +130,7 @@ modules/tasks/
 | application → domain | ✅ | clean 13 / onion 38（onion は契約が domain にあるぶん多い） |
 | infrastructure → `application/ports/` | clean のみ ✅ | onion は 0 件（契約が domain にあるため application を一切見ない） |
 | infrastructure → domain | ✅ | 契約を実装し、ORM ⇔ domain を変換する |
-| 各層 → `shared/` の同じ層 | ✅ | `DomainError` 基底・汎用 Pipe / Filter |
+| 各層 → `shared/` の同じ層 | ✅ | `DomainError` 基底・汎用 Pipe / Filter・監査列のベースクラス |
 | 各層 → `@app/api-client` | ✅ | 層の外の契約。`import type` で参照する |
 | `*.module.ts` → 全部 | ✅ | **feature 直下＝層の外**。合成ルートだけが Port と実装を結ぶ |
 
@@ -199,6 +199,8 @@ api/tasks/                         # src/api/tasks（機能スライス）
 
 shared/                            # feature 非依存の共通基盤
 ├ domain/errors/domain-error.ts     #   DomainError の基底 + 共通 kind
+├ infrastructure/
+│  └ entities/auditable.orm-entity.ts # 監査列（createdAt/updatedAt）の抽象ベースクラス
 ├ presentation/
 │  ├ filters/http-exception.filter.ts # DomainError / HttpException → ApiError
 │  └ pipes/zod-validation.pipe.ts     # DTO スキーマを実行する汎用 Pipe
@@ -330,6 +332,8 @@ modules/tasks/
 
 shared/                               # feature / domain 契約に非依存の共通基盤
 ├ domain/errors/domain-error.ts        #   DomainError の基底 + 共通 kind
+├ infrastructure/
+│  └ entities/auditable.orm-entity.ts  #   監査列（createdAt/updatedAt）の抽象ベースクラス
 ├ presentation/
 │  ├ filters/http-exception.filter.ts  # DomainError / HttpException → ApiError
 │  └ pipes/zod-validation.pipe.ts      # DTO スキーマを実行する汎用 Pipe

@@ -20,6 +20,9 @@ export class RefreshTokenOrmEntity {
   @Column({ type: 'datetime' })
   expiresAt!: Date;
 
+  // AuditableOrmEntity を継承せず createdAt だけを持つ。この行はローテーション時に
+  // UPDATE ではなく DELETE + INSERT で置き換わるため、updatedAt は常に createdAt と同値になり
+  // 情報を持たない（継承させると意味のない列がスキーマに増えるだけになる）。
   @CreateDateColumn()
   createdAt!: Date;
 }
