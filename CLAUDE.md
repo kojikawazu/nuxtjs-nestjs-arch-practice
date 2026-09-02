@@ -14,6 +14,8 @@ Nuxt.js + NestJS のテスト practice プロジェクト
 | documentation.md | 全体 | ドキュメント更新ルール（影響マップ + opt-out 完了条件） |
 | git.md | 全体 | GitHub Flow・ブランチ命名・push 禁止物 |
 | coding-standards.md | 全体 | 言語/PM/Lint・Format・環境変数・シークレット禁止 |
+| static-analysis.md | 全体 | 静的解析の運用（警告ゼロ・抑制の作法・無効化の理由を残す） |
+| github-actions.md | .github/workflows/* | ワークフローの静的解析（actionlint）・発火設計 |
 | jsdoc.md | 全体 | JSDoc/コメント規約（型は書かず why を残す・controller/application に付与） |
 | testing.md | 全体 | テスト分類・レベル（UT/IT/e2e/シナリオ）・原則 |
 | stack-backend.md | apps/backend-* | NestJS/TypeORM 各アーキ版（layered/clean/onion）・DTO・DB・監査列・テスト方針 |

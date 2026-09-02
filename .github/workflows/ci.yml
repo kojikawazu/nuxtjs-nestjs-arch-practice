@@ -44,6 +44,74 @@ jobs:
               - '.prettierignore'
               - 'docker-compose.yml'
 
+  # 下記 3 ジョブは changes に依存させず**全 PR で常時実行**する。
+  # いずれも数秒で終わるうえ、検査対象（ワークフロー / Markdown / 追跡ファイル）は
+  # 変更種別を問わず壊れうる。必須チェックに指定したとき、ワークフローレベルの
+  # paths で止めると pending のまま詰まる（ジョブレベル if: の skip は成功扱いだが、
+  # そもそも軽いので分岐させる意味がない）。
+
+  actionlint:
+    name: Workflow lint (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # コマンドは package.json に定義してあるので pnpm 本体だけ要る（依存のインストールは不要）
+      - uses: pnpm/action-setup@v4
+
+      # actionlint は run: の中身を取り出して shellcheck へ渡す設計のため、shellcheck が
+      # PATH に無いとその層だけ**エラーにも警告にもならず静かにスキップ**され、終了コードは 0 のまま。
+      # 公式イメージは shellcheck / pyflakes を同梱しているので、Docker 経由にすると
+      # CI と手元が同じ検査になる。バージョンはイメージタグで固定する。
+      # コマンドの定義は package.json の 1 箇所に置き、ここは呼ぶだけにする（乖離防止）。
+      # actionlint は .git からリポジトリルートを判定するため checkout は必須。
+      # Node の依存を使わないので pnpm install は不要。
+      - name: ワークフローの Lint
+        run: pnpm lint:workflows
+
+  docs:
+    name: Docs lint (markdownlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # markdownlint-cli2 はルートの devDependency。各アプリの依存（Nuxt / Nest 一式）は
+      # ドキュメント検証に不要なので、ルートのワークスペースだけを入れて軽さを保つ。
+      - name: ルートの依存のみインストール
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter .
+
+      # 有効/無効にしたルールと、その理由は .markdownlint-cli2.yaml を参照。
+      # .prettierignore で *.md を除外しているため、Markdown の体裁はこの検査だけが持つ。
+      - name: Markdown の Lint
+        run: pnpm lint:md
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # .gitignore は**未追跡ファイルにしか効かない**。一度追跡されたファイルには無視が効かず、
+      # `git add -f` や新規ディレクトリでの書き漏れも止められない。さらに Git の履歴は追記型で、
+      # 一度 push した秘匿ファイルは追跡除外しても履歴に残る（対処は鍵のローテーションしかない）。
+      # そこで「混入させない」側の .gitignore に加えて「**追跡された時点で落とす**」側を持つ。
+      # git ls-files はインデックスを読むだけで履歴もワーキングツリーも走査しないため常時実行できる。
+      - name: 秘匿ファイルが追跡されていないことを確認
+        run: |
+          tracked=$(git ls-files \
+            | grep -E '(^|/)(\.env(\..+)?|[^/]+\.(key|pem|p12|pfx|jks|keystore)|id_rsa|id_ed25519|id_dsa|credentials\.json|serviceAccountKey\.json)$' \
+            | grep -vE '\.(example|sample|template|dist)$|\.env\.d\.ts$') || true
+          if [ -n "$tracked" ]; then
+            echo "::error::秘匿ファイルが Git 管理下にあります。.gitignore への追加では履歴から消えないため、鍵・トークンのローテーションが必要になります。"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "OK: 追跡対象に秘匿ファイルはありません"
+
   quality:
     name: Lint / Format / Typecheck
     needs: changes

@@ -4,7 +4,7 @@
 
 「どんなエンドポイントが・どんな型でやり取りされるか」は契約に全部書いてある。ここを最初に読むと FE/BE の型の出どころが分かる。
 
-```
+```text
 packages/api-spec/main.tsp          # エンドポイント・モデル定義（唯一の真実）
 packages/api-client/src/index.ts    # 生成型の再エクスポート（@app/api-client の入口）
 packages/api-client/src/client.ts   # openapi-fetch ベースの型安全クライアント生成

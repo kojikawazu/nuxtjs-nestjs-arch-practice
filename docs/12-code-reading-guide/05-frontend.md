@@ -4,7 +4,7 @@
 
 「副作用（HTTP・状態）は Composable に閉じ込め、コンポーネントは表示に専念」が設計の軸。
 
-```
+```text
 apps/frontend-spa/composables/useApiClient.ts   # 生成クライアントにアクセストークンを注入
 apps/frontend-spa/composables/useTasks.ts        # タスク CRUD・画像 API のユースケース
 apps/frontend-spa/pages/tasks/index.vue          # 一覧

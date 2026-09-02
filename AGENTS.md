@@ -9,6 +9,7 @@
 - `.claude/rules/documentation.md`
 - `.claude/rules/git.md`
 - `.claude/rules/coding-standards.md`
+- `.claude/rules/static-analysis.md`
 - `.claude/rules/jsdoc.md`
 - `.claude/rules/testing.md`
 - `.claude/rules/commands.md`

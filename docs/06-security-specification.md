@@ -13,7 +13,6 @@
 - [関連 URL（リンクプレビュー）](#関連-urlリンクプレビュー)
 - [機密情報の管理](#機密情報の管理)
 
-
 ## 認証
 
 - **JWT（access + refresh）** + Passport (`passport-jwt`)。

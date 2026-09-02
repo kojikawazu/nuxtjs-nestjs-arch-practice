@@ -2,16 +2,16 @@
 
 > [← コードリーディングガイド 索引](./README.md)
 
-```
+```text
 apps/backend-layered/src/common/entities/auditable.entity.ts     # 監査列（createdAt/updatedAt）の抽象ベースクラス
 apps/backend-layered/src/modules/users/user.entity.ts            # User
 apps/backend-layered/src/modules/tasks/infrastructure/task.entity.ts   # Task（User に紐づく）
 apps/backend-layered/src/modules/auth/entities/refresh-token.entity.ts  # RefreshToken
 ```
 
-**関連図**
+## 関連図
 
-```
+```text
 User
  ├── has many Task          (userId で所有)
  └── has many RefreshToken  (tokenHash を保存)

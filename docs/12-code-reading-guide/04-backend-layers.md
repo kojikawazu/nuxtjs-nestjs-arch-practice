@@ -5,7 +5,7 @@
 tasks は **レイヤード + UseCase** で実装されている。リクエストの流れ:
 **Controller(presentation) → UseCase(application) → TypeORM Repository / Entity(infrastructure)**。
 
-```
+```text
 apps/backend-layered/src/modules/tasks/
 ├ presentation/
 │  ├ tasks.controller.ts            # HTTP 入口・DTO 受け・@CurrentUser・UseCase に委譲するだけ
