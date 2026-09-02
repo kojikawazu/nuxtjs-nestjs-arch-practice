@@ -4,7 +4,7 @@
 
 Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理アプリ）
 
-> **English (TL;DR):** A learning monorepo focused on *how and why to write tests at each layer* of a Nuxt 3 + NestJS task-management app — contract-first (TypeSpec → OpenAPI), layered backend, and tests across BE unit / BE e2e / FE unit / full E2E. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at http://localhost:3000, Swagger at http://localhost:3001/docs.
+> **English (TL;DR):** A learning monorepo focused on *how and why to write tests at each layer* of a Nuxt 3 + NestJS task-management app — contract-first (TypeSpec → OpenAPI), layered backend, and tests across BE unit / BE e2e / FE unit / full E2E. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at <http://localhost:3000>, Swagger at <http://localhost:3001/docs>.
 
 > ⚠️ **開発時の注意（先に読む）**: frontend の dev サーバ（`nuxt dev`）は現状 **Vite 7 と非互換で起動しません**。画面確認は `docker compose up --build` か本番ビルド出力を使ってください（詳細は [個別に起動して開発する](#個別に起動して開発する)）。これは既知の制約で、解消は今後の課題（[docs/11-tasks.md](docs/11-tasks.md)）。
 
@@ -35,7 +35,7 @@ Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理ア�
 
 ## 構成
 
-```
+```text
 apps/backend-layered    NestJS API（レイヤード + UseCase。UseCase が TypeORM を直接利用）
 apps/backend-clean      NestJS API（クリーンアーキ。Port で依存性逆転。契約は application/ports）
 apps/backend-onion      NestJS API（オニオン。契約をドメイン中核が所有 + ドメインサービス）
@@ -85,14 +85,14 @@ echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
 docker compose up --build   # mysql + backend(:3001) + frontend(:3000)
 ```
 
-- アプリ UI: http://localhost:3000
-- Swagger UI（対話的 API ドキュメント）: http://localhost:3001/docs
+- アプリ UI: <http://localhost:3000>
+- Swagger UI（対話的 API ドキュメント）: <http://localhost:3001/docs>
 
 > `make up` でも起動できます（こちらは `-d` 付きの**バックグラウンド起動**。ログは `make logs`、停止は `make down`、データごと削除は `make reset`）。
 
 **最初のひとめぐり（ハッピーパス）:**
 
-1. http://localhost:3000 を開き「登録」から任意のメール / パスワード（8〜72文字）/ 表示名でアカウント作成
+1. <http://localhost:3000> を開き「登録」から任意のメール / パスワード（8〜72文字）/ 表示名でアカウント作成
 2. ログイン状態のまま一覧へ。「新規作成」でタイトルと開始日を入力 →「確認へ」でサーバ検証 ✓ を確認 →「作成する」で確定
 3. 一覧・詳細でタスクを確認（画像添付・関連 URL も試せる）
 
@@ -123,7 +123,7 @@ pnpm --filter @app/frontend-spa test:e2e  # 全体E2E(Playwright)
 ## 開発・貢献
 
 - 作業は必ず**ブランチを切ってから**着手する（`main` への直接コミットは禁止）。
-- 実装にはテストを必ず添え、`pnpm lint` / `pnpm format:check` / 各種テストを通す。
+- 実装にはテストを必ず添え、`pnpm lint` / `pnpm format:check` / `pnpm lint:md` / `pnpm lint:workflows`（Docker 必須）/ 各種テストを通す。
 - PR の承認・マージは人間が行う（自動マージ禁止）。詳細な開発ルールは `.claude/rules/`（workflow / testing / git / quality-gate など）を参照。
 
 ## AI エージェント向けルール

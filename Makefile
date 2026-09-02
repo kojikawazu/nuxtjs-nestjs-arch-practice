@@ -1,7 +1,7 @@
 # タスク管理アプリ用 Makefile。
 # 既存の pnpm scripts / docker compose の薄いショートカット（ロジックは二重化しない）。
 .DEFAULT_GOAL := help
-.PHONY: help install gen lint format typecheck test test-back test-back-e2e test-back-it test-scenario-mysql test-front test-e2e dev-back dev-front db-up up down reset logs ps
+.PHONY: help install gen lint lint-md lint-workflows format typecheck test test-back test-back-e2e test-back-it test-scenario-mysql test-front test-e2e dev-back dev-front db-up up down reset logs ps
 
 help: ## このヘルプを表示
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -17,6 +17,12 @@ gen: ## API 契約から型/クライアントを生成 (TypeSpec→OpenAPI)
 ## ───────── 品質 ─────────
 lint: ## ESLint
 	pnpm lint
+
+lint-md: ## Markdown の Lint (markdownlint-cli2)
+	pnpm lint:md
+
+lint-workflows: ## GitHub Actions ワークフローの Lint (actionlint / Docker 必須)
+	pnpm lint:workflows
 
 format: ## Prettier 整形
 	pnpm format

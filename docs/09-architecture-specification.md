@@ -13,7 +13,6 @@
 - [デプロイ](#デプロイ)
 - [起動・生成コマンド](#起動生成コマンド)
 
-
 ## システム構成
 
 ```mermaid
@@ -78,7 +77,7 @@ graph TD
 presentation → application → infrastructure の素直な依存。太い Service を「1 操作 = 1 UseCase」に分解し、
 フォルダで層を分離する。依存性逆転（ポート）はしない＝ UseCase が TypeORM Repository を直接利用する。
 
-```
+```text
 modules/tasks/
 ├ presentation/
 │  ├ tasks.controller.ts   # HTTP 入口・DTO 受け・UseCase へ委譲
@@ -156,7 +155,7 @@ layered と同じ tasks を、**依存性逆転**で再構成したもの。appl
 
 > `src/shared/` は feature 名・feature 固有の型・Port を知らない共通基盤のためだけに使う。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、再利用されても各 `api/{feature}/` に置く。
 
-```
+```text
 api/tasks/                         # src/api/tasks（機能スライス）
 ├ domain/                          # 最内層・フレームワーク非依存
 │  ├ entities/
@@ -260,14 +259,15 @@ FormRequest の責務がどこへ行ったか（`POST /tasks` の場合）:
 | `rules()` の DB 部分（`unique:users`） | `application/validators/` の Validator（clean / onion） | ハンドラ本体の中 |
 
 > 保存せず検証だけ行う DryRun エンドポイント（`*/validate`）は「FormRequest を単体で呼べるようにしたもの」に相当したが、同じルールの入口が二重になるため廃止した（フェーズ 24）。FormRequest が信頼できるのは「それを通らずハンドラへ入る経路が無い」ためで、各段の入口を 1 つに保つことで同じ性質を担保している。
+
 - **入力検証は zod（全 backend 版）**: `presentation/dto/` を class-validator の DTO クラスではなく **zod スキーマ**にし、clean では `shared/presentation/pipes/ZodValidationPipe` をルート単位で適用する。グローバル `ValidationPipe` は使わない。`.strict()` が旧 `forbidNonWhitelisted`（未知キー拒否）を担い、`satisfies z.ZodType<契約型>` が旧 `implements 契約型`（契約ドリフトの型検出）を担う。検証失敗は presentation の関心事として `UnprocessableEntityException`（422）を投げ、`AllExceptionsFilter` が `ApiError` に翻訳する（DomainError は使わない＝形式検証は transport 層の関心）。400 ではなく 422 なのは、構文としては正しい JSON がフィールド単位で意味的に不正、という状態を指すため。当初は clean のみ zod だったが layered / onion へ横展開し 3 版とも zod に統一した（**同じ e2e 契約が 3 版すべてで通る**＝検証手法を差し替えても外形は不変）。
-- auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--users) を参照）。onion も同様にクリーン化済み（契約は domain 所有）。layered の auth / users のみ従来レイヤードのまま。
+- auth / users も tasks と同じクリーン構成へ移行済み（[backend-clean — auth / users](#backend-clean--auth--usersクリーンアーキテクチャ) を参照）。onion も同様にクリーン化済み（契約は domain 所有）。layered の auth / users のみ従来レイヤードのまま。
 
 ### backend-clean — auth / users（クリーンアーキテクチャ）
 
 tasks と同じ思想（domain / application / infrastructure / presentation の分離＋ Port による依存性逆転）を auth / users にも適用したもの。**外部 I/O をすべて Port 化**し、ユースケースは bcrypt・JWT・TypeORM を知らない。
 
-```
+```text
 api/users/                          # HTTP 入口を持たない（presentation なし）。auth が利用する
 ├ domain/
 │  ├ entities/user.ts               #   フレームワーク非依存の User（passwordHash は照合用に保持）
@@ -307,7 +307,7 @@ clean と同じ依存性逆転だが、**契約（interface）の所在**と**�
 
 > `src/shared/` は feature 名・feature 固有の型・domain の契約を知らない共通基盤のためだけに使う。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、再利用されても各 `modules/{feature}/` に置く。
 
-```
+```text
 modules/tasks/
 ├ domain/                             # 中核（最内）
 │  ├ entities/task.ts                 #   エンティティ
@@ -404,8 +404,8 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 **CSR 版の draft フロー**:
 
 1. フォーム submit → `useTaskDraft().save()` が sessionStorage へ保存（画像は `useState` へ退避）。
-3. `/tasks/new/confirm` へ遷移。ページは `load()` で同期的に復元して描画する（サーバは関与しない）。
-4. 「作成する」→ `POST /tasks` → 画像があれば `POST /tasks/{id}/image` → `clear()` で draft 破棄 → 詳細へ。
+2. `/tasks/new/confirm` へ遷移。ページは `load()` で同期的に復元して描画する（サーバは関与しない）。
+3. 「作成する」→ `POST /tasks` → 画像があれば `POST /tasks/{id}/image` → `clear()` で draft 破棄 → 詳細へ。
 
 > `load()` は zod（`utils/taskDraftSchema.ts`）で検証する。sessionStorage は JS から書き換えられるため、
 > 壊れた JSON・契約外の `status` は draft なしとして扱い、不正な内容を確認画面へ流さない。

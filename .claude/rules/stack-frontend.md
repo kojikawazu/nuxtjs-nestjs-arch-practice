@@ -7,6 +7,7 @@ globs: apps/frontend-*/**
 
 > レンダリング方式の比較用に 2 つのフロントエンド実装を持つ。**いずれも同一機能**で、同じ E2E シナリオが通る。
 > **例外**: タスク新規作成の確認画面のみ、方式差そのものを比較対象とするため実装を分ける。両版とも独立ルート `/tasks/new/confirm` に揃えたうえで、**draft の保持先だけを変える**（spa = sessionStorage・クライアント描画 / ssr = httpOnly Cookie・サーバ描画）。`data-testid` は共通に保ち、共通の E2E シナリオ（`task-flow.spec.ts`）は両方で通す。方式差の検証は各版固有の spec（`csr-confirm.spec.ts` / `ssr-confirm.spec.ts`）に切り出す。
+>
 > - **`frontend-spa`**: `ssr: false`（SPA）。セッション復元はクライアント（`plugins/auth-init.client.ts`）。
 > - **`frontend-ssr`**: `ssr: true`。初期リクエスト時に**サーバ側**で httpOnly リフレッシュ Cookie からセッションを復元（`plugins/auth-init.ts`）し、SSR 描画＋ハイドレーションに使う。`useApiClient` は SSR 時にサーバ用 base を使う。
 

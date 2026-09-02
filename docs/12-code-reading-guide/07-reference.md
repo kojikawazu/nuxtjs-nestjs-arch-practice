@@ -39,8 +39,8 @@ node apps/frontend-spa/.output/server/index.mjs   # NUXT_PUBLIC_API_BASE_URL で
 docker compose up --build
 ```
 
-- アプリ UI: http://localhost:3000
-- Swagger UI（契約と完全一致の対話的ドキュメント）: http://localhost:3001/docs
+- アプリ UI: <http://localhost:3000>
+- Swagger UI（契約と完全一致の対話的ドキュメント）: <http://localhost:3001/docs>
 
 ### API を直接叩く（curl）
 

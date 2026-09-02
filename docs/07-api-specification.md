@@ -14,7 +14,6 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 - [Swagger UI（対話的ドキュメント）](#swagger-ui対話的ドキュメント)
 - [再生成コマンド](#再生成コマンド)
 
-
 ## エンドポイント一覧
 
 | メソッド | パス | 概要 | 認証 |
@@ -133,7 +132,7 @@ curl -s http://localhost:3001/tasks -H "Authorization: Bearer $ACCESS" | jq
 
 ## Swagger UI（対話的ドキュメント）
 
-- backend 起動中に **http://localhost:3001/docs** で参照できる（"Try it out" 可）。
+- backend 起動中に **<http://localhost:3001/docs>** で参照できる（"Try it out" 可）。
 - 生スペックは **/docs-json**。
 - UI は TypeSpec 生成物（`openapi.yaml`）をそのまま配信する＝**契約と完全一致**（コードから別 OpenAPI を作らない）。
 

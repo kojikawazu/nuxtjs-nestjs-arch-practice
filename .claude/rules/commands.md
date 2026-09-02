@@ -24,6 +24,11 @@ globs:
 ## 品質
 
 - `pnpm lint` / `pnpm format:check`
+- `pnpm lint:md` — Markdown の Lint（markdownlint-cli2。設定と無効化の理由は `.markdownlint-cli2.yaml`）
+- `pnpm lint:workflows` — GitHub Actions ワークフローの Lint（actionlint。**Docker 必須**・shellcheck 同梱の公式イメージをタグ固定で使う）
+
+> 上記 2 つは CI（`ci.yml` の `actionlint` / `docs` ジョブ）でも**同じコマンド**を呼ぶ。
+> コマンドの定義は `package.json` の 1 箇所だけに置き、手元と CI を乖離させない（[github-actions.md](./github-actions.md)）。
 
 ## Docker
 

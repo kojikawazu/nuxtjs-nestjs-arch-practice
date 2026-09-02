@@ -50,11 +50,13 @@ globs: apps/backend-*/**
   - **`resolves/`**: GraphQL 専用の概念で、REST では出番がない。
   - **`interceptors/` `middlewares/`**: 現状は `AllExceptionsFilter`（例外→`ApiError`）と `FileInterceptor`（multipart）で足りている。必要になった時点で作る。
 - **domain の構成要素と使い分け（clean / onion）**: `domain/` に置けるのは下記 3 種。判定軸は「不変かどうか」ではなく **同一性（identity）を持つか**と**置き場所があるか**。
+
   | 要素 | 判定基準 | 置き場所 | 例 |
   |---|---|---|---|
   | **Entity** | **同一性（id）を持ち**、時間とともに状態が変わる。等価性は id で決まる | `domain/entities/` | `Task` / `User` |
   | **Value Object** | 同一性を持たず、**属性だけで等価**。**不変** | `domain/value-objects/` | `DateRange`（開始・終了の対） |
   | **Domain Service** | Entity にも VO にも**自然な置き場所がない**操作（複数の集約にまたがる／契約越しの取得が要る） | onion は `domain/services/`、clean は `application/services/` | `TaskAccessService`（取得＋所有チェック） |
+
   - **「VO 以外は Domain Service」ではない**。この切り分けを字義どおり適用すると Entity まで Domain Service になり、状態を持たない**貧血ドメイン**になる。Domain Service は**置き場所が無いときの最後の手段**で、既定の受け皿ではない。単一の Entity / VO の責務で済むならそちらのメソッドにする。
   - **VO の要件**:
     - **不変**にする（`readonly`。値を変えるときは新しいインスタンスを作る）。共有しても壊れないことが VO の存在価値なので、setter を持たせない。
