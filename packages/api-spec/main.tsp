@@ -9,8 +9,17 @@ using Http;
  */
 @service(#{ title: "Task Management API" })
 @server("http://localhost:3001", "ローカル backend")
+/**
+ * 既定は Bearer 必須にし、public なエンドポイントだけが `@useAuth(NoAuth)` で opt-out する。
+ * 逆（既定 NoAuth + 必要な所だけ opt-in）にすると、付け忘れたエンドポイントが契約上 public に
+ * なってしまう＝危険側に倒れるため、既定を「保護」に置く。
+ */
 @useAuth(BearerAuth)
 namespace TaskApi;
+
+// `GET /health` は**意図的にこの契約へ含めない**。死活監視と E2E のサーバ起動待ちのための
+// 運用エンドポイントで、製品の API 契約（FE が生成クライアントで叩く面）ではないため。
+// 実装は 3 版とも `src/health.controller.ts`（常に 200 / `{ status: "ok" }`）。
 
 // ───────────────────────── 共通エラー ─────────────────────────
 
@@ -98,6 +107,11 @@ model TaskCreate {
   startDate: utcDateTime;
   endDate?: utcDateTime;
 
+  /**
+   * 関連 URL（任意）。**http/https のみ**受け付ける。
+   * スキーム制限は JSON Schema で表現できないため契約には現れず、判定はサーバが担う
+   * （`javascript:` 等は 422）。`maxLength` だけが契約に載る粗い制約。
+   */
   @maxLength(2048)
   url?: string;
 }
@@ -114,6 +128,7 @@ model TaskUpdate {
   startDate?: utcDateTime;
   endDate?: utcDateTime;
 
+  /** 関連 URL（任意）。`TaskCreate.url` と同じく http/https の判定はサーバが担う。 */
   @maxLength(2048)
   url?: string;
 }
@@ -147,11 +162,18 @@ model LoginRequest {
   @maxLength(255)
   email: string;
 
-  /** パスワード。登録と同じ **UTF-8 72 バイト**の上限を課す（超過は 422）。 */
+  /**
+   * パスワード。登録と同じ **UTF-8 72 バイト**の上限を課す（超過は 422）。
+   * `maxLength` は登録側と同じく粗い文字数上限にすぎず、実際の判定はサーバのバイト長検証。
+   */
+  @minLength(1)
+  @maxLength(72)
   password: string;
 }
 
 model RefreshRequest {
+  /** リフレッシュトークン。空文字は受け付けない（サーバは 422）。 */
+  @minLength(1)
   refreshToken: string;
 }
 
@@ -167,7 +189,8 @@ model AuthTokens {
 @route("/auth")
 @tag("Auth")
 namespace Auth {
-  /** 新規ユーザー登録 */
+  /** 新規ユーザー登録（public。まだトークンを持っていない利用者が叩く） */
+  @useAuth(NoAuth)
   @route("/register")
   @post
   op register(@body body: RegisterRequest):
@@ -177,17 +200,23 @@ namespace Auth {
       }
     | ApiError;
 
-  /** ログイン */
+  /** ログイン（public。まだトークンを持っていない利用者が叩く） */
+  @useAuth(NoAuth)
   @route("/login")
   @post
   op login(@body body: LoginRequest): AuthTokens | ApiError;
 
-  /** アクセストークンの再発行（リフレッシュトークンを使用） */
+  /**
+   * アクセストークンの再発行（public）。
+   * 資格情報は body のリフレッシュトークンで、Authorization ヘッダは使わない
+   * （期限切れのアクセストークンしか持たない状態から呼ぶため）。
+   */
+  @useAuth(NoAuth)
   @route("/refresh")
   @post
   op refresh(@body body: RefreshRequest): AuthTokens | ApiError;
 
-  /** ログアウト（リフレッシュトークンを失効させる） */
+  /** ログアウト（リフレッシュトークンを失効させる。**要アクセストークン**） */
   @route("/logout")
   @post
   op logout(): {
@@ -233,6 +262,9 @@ namespace Tasks {
    * タスクへの画像添付（1枚・任意）。multipart/form-data でフィールド名 `file` を送る。
    * MIME は png/jpeg/webp（不正なら 422）。サイズ上限はサーバ設定（MAX_UPLOAD_BYTES・既定 2MB）で、
    * 超過は受信段階で 413。更新後の Task を返す。
+   *
+   * 成功時は **200**。新しいリソースを作るのではなく既存タスクを更新して返すため
+   * （201 は `POST /tasks` / `POST /auth/register` のような実際の作成に予約する）。
    */
   @route("/{id}/image")
   @post

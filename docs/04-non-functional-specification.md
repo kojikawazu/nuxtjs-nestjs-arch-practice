@@ -24,7 +24,7 @@
 
 ## 可用性
 
-- `GET /health` で死活監視。compose では MySQL の healthcheck 通過後に backend を起動。
+- `GET /health` で死活監視。compose では MySQL の healthcheck 通過後に backend を起動。Playwright もこの URL でサーバ起動を待つ。**API 契約（`main.tsp`）には意図的に含めない**運用エンドポイント（[docs/07](./07-api-specification.md#エンドポイント一覧)）。
 - 学習用のため稼働率目標は定めない。
 
 ## 信頼性

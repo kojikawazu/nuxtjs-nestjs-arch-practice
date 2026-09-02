@@ -150,7 +150,7 @@ describe('useTasks', () => {
       server.use(
         http.post(`${BASE}/tasks/t1/image`, ({ request }) => {
           receivedAuth = request.headers.get('authorization');
-          return HttpResponse.json(withImage, { status: 201 });
+          return HttpResponse.json(withImage, { status: 200 });
         }),
       );
 

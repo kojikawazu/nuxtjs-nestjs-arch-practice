@@ -103,6 +103,12 @@ sequenceDiagram
   - bcrypt は 72 バイトで切り捨てるため、JWT のような長い高エントロピー値には不適（テストで実バグとして検出・修正済み）。
   - 各リフレッシュトークンに `jti`(ランダム UUID) を付与し、同一秒・同一 payload でも一意化。
 
+## 契約に現れる認証要件
+
+- OpenAPI の `security` は**エンドポイント単位**に対応する。namespace 既定を Bearer 必須にし、public な `POST /auth/register` / `login` / `refresh` だけが `@useAuth(NoAuth)` で外す（生成 OpenAPI では `security: [{}]`）。
+  - 既定を「保護」に置くのが要点。既定を NoAuth にして必要な所だけ opt-in すると、**付け忘れたエンドポイントが契約上 public**になり、危険側に倒れる。
+  - `POST /auth/logout` は Bearer 必須（`JwtAuthGuard`）。e2e で「public な入口はトークン無しで通り、protected な入口は 401」を外形として固定している。
+
 ## 脆弱性対策
 
 - 入力検証: **zod** スキーマ + ルート単位 `ZodValidationPipe`（`.strict()` で未知キー拒否＝旧 `forbidNonWhitelisted` 相当）。全 backend 版で統一。

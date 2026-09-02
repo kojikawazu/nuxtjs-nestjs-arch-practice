@@ -129,7 +129,7 @@ export class TasksController {
 
   /**
    * 画像添付（1枚・multipart/form-data, フィールド名 `file`）
-   * 実API: POST /tasks/{id}/image
+   * 実API: POST /tasks/{id}/image（成功時 200 OK）
    * 処理の実体: SetTaskImageUseCase.execute（application/usecases/set-image.usecase.ts）
    *   ※ サイズ上限は Multer が受信段階で弾く（超過は 413）。MIME・欠落は ImageFilePipe が 422
    *     （errors.field は file）。上限・許可 MIME は設定（MAX_UPLOAD_BYTES）由来
@@ -138,7 +138,10 @@ export class TasksController {
    * @param file - Express.Multer.File（multipart の file フィールド。ImageFile に詰め替えて委譲）
    * @returns Promise<Task>（imageUrl 入り。Task の源: @app/api-client ← packages/api-spec/main.tsp）
    */
+  // 新しいリソースを作るのではなく既存タスクを更新して返すので 200（Nest の @Post 既定 201 を上書き）。
+  // 201 は POST /tasks・POST /auth/register のような実際の作成に予約する（契約も 200）。
   @Post(':id/image')
+  @HttpCode(200)
   @UseInterceptors(FileInterceptor('file'))
   uploadImage(
     @CurrentUser() user: AuthenticatedUser,

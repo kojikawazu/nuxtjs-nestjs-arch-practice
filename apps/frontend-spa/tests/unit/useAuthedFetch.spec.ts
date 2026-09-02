@@ -138,7 +138,7 @@ describe('useAuthedFetch (401 → refresh → retry)', () => {
         const form = await request.formData();
         sentFileNames.push((form.get('file') as File).name);
         if (request.headers.get('authorization') !== FRESH) return unauthorized();
-        return HttpResponse.json(withImage, { status: 201 });
+        return HttpResponse.json(withImage, { status: 200 });
       }),
     );
 
