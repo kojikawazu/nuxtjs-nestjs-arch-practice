@@ -39,7 +39,9 @@ describe('TaskForm', () => {
     expect(payload.removeImage).toBe(false);
   });
 
-  it('正常系: 終了は省略でき、startDate のみで submit できる', async () => {
+  // 空欄は null で送出する。undefined だと編集時に PATCH へ載らず、
+  // 消したつもりの説明・期限・URL が保存後に復活する（作成側は呼び出し元が null を落とす）
+  it('正常系: 終了は省略でき、空欄の任意項目は null として submit される', async () => {
     const wrapper = await mountSuspended(TaskForm);
 
     await wrapper.find('[data-testid="task-title"]').setValue('終わり未定');
@@ -50,7 +52,56 @@ describe('TaskForm', () => {
     expect(emitted).toHaveLength(1);
     expect((emitted?.[0]?.[0] as { value: unknown }).value).toMatchObject({
       startDate: '2026-06-10T00:00:00.000Z',
-      endDate: undefined,
+      description: null,
+      endDate: null,
+      url: null,
+    });
+  });
+
+  // 編集フローの本題。初期値がある項目を空にしたら「削除する」意図が送出されなければならない
+  it('正常系: 既存値のある任意項目を空にすると null を送出する', async () => {
+    const wrapper = await mountSuspended(TaskForm, {
+      props: {
+        initial: {
+          title: '編集対象',
+          description: '消される説明',
+          status: 'todo' as const,
+          startDate: '2026-06-10T00:00:00.000Z',
+          endDate: '2026-06-15T00:00:00.000Z',
+          url: 'https://example.com/doc',
+        },
+      },
+    });
+
+    await wrapper.find('[data-testid="task-description"]').setValue('');
+    await wrapper.find('[data-testid="task-end-date"]').setValue('');
+    await wrapper.find('[data-testid="task-url"]').setValue('');
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    const emitted = wrapper.emitted('submit');
+    expect(emitted).toHaveLength(1);
+    expect((emitted?.[0]?.[0] as { value: unknown }).value).toMatchObject({
+      title: '編集対象',
+      description: null,
+      endDate: null,
+      url: null,
+    });
+  });
+
+  it('正常系: 値が入っている任意項目はその値のまま送出する（null 化しない）', async () => {
+    const wrapper = await mountSuspended(TaskForm);
+
+    await wrapper.find('[data-testid="task-title"]').setValue('全部入り');
+    await wrapper.find('[data-testid="task-description"]').setValue('説明');
+    await wrapper.find('[data-testid="task-start-date"]').setValue('2026-06-10');
+    await wrapper.find('[data-testid="task-end-date"]').setValue('2026-06-15');
+    await wrapper.find('[data-testid="task-url"]').setValue('https://example.com');
+    await wrapper.find('[data-testid="task-form"]').trigger('submit');
+
+    expect((wrapper.emitted('submit')?.[0]?.[0] as { value: unknown }).value).toMatchObject({
+      description: '説明',
+      endDate: '2026-06-15T00:00:00.000Z',
+      url: 'https://example.com',
     });
   });
 

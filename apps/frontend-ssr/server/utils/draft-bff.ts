@@ -19,11 +19,13 @@ const STATUS_VALUES = ['todo', 'in_progress', 'done'] as const satisfies readonl
  */
 export const taskDraftSchema = z.object({
   title: z.string().min(1),
-  description: z.string().optional(),
+  // 空欄は null で持ち回る（TaskFormValue と同じ意味づけ）。undefined だと JSON 化で
+  // キーごと消え、確認画面から戻ったときに「空にした」ことが失われる
+  description: z.string().nullable().optional(),
   status: z.enum(STATUS_VALUES),
   startDate: z.string().min(1),
-  endDate: z.string().optional(),
-  url: z.string().optional(),
+  endDate: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
 });
 
 export type TaskDraft = z.infer<typeof taskDraftSchema>;
