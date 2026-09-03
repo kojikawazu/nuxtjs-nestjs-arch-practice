@@ -6,7 +6,7 @@
 
 - [システム構成](#システム構成)
 - [技術スタック](#技術スタック)
-- [バックエンドのアーキ構成（layered / clean）](#バックエンドのアーキ構成layered--clean)
+- [バックエンドのアーキ構成（layered / clean / onion）](#バックエンドのアーキ構成layered--clean--onion)
 - [フロントエンドのレンダリング方式（SPA / SSR）](#フロントエンドのレンダリング方式spa--ssr)
 - [アーキテクチャ選定指針（トレードオフ）](#アーキテクチャ選定指針トレードオフ)
 - [添付画像の保存・配信](#添付画像の保存配信)
@@ -40,16 +40,16 @@ graph TD
 | 領域 | 採用 |
 |---|---|
 | モノレポ | pnpm workspaces（`apps/*` + `packages/*`） |
-| FE | Nuxt 3 (SPA, TS) / TailwindCSS / Nitro / Composable |
-| BE | NestJS (TS) / TypeORM / レイヤード / MySQL(mysql2) |
+| FE | Nuxt 3 (SPA / SSR, TS) / TailwindCSS / Nitro / Composable |
+| BE | NestJS (TS) / TypeORM / layered・clean・onion の 3 実装 / MySQL(mysql2)・SQLite(better-sqlite3) |
 | 契約 | TypeSpec → OpenAPI 3.1 → openapi-typescript + openapi-fetch |
 | 認証 | JWT(access+refresh) / Passport / bcrypt |
 | テスト | Jest / supertest / Vitest / MSW / Vue Test Utils / Playwright |
 | インフラ | Docker（各アプリに Dockerfile）+ docker-compose |
 
-## バックエンドのアーキ構成（layered / clean）
+## バックエンドのアーキ構成（layered / clean / onion）
 
-アーキテクチャ比較用に複数のバックエンド実装を持つ。**いずれも同一の API 契約（`@app/api-client`）を実装**し、同じ e2e シナリオが両方で通る（外から見た挙動は同一・内部構造のみ異なる）。
+アーキテクチャ比較用に 3 つのバックエンド実装を持つ。**いずれも同一の API 契約（`@app/api-client`）を実装**し、同じ e2e シナリオが 3 版すべてで通る（外から見た挙動は同一・内部構造のみ異なる）。
 
 | | `apps/backend-layered` | `apps/backend-clean` | `apps/backend-onion` |
 |---|---|---|---|
