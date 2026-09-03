@@ -62,7 +62,7 @@ API の単一の真実（source of truth）は **TypeSpec**（`packages/api-spec
 ## リクエスト / レスポンス形式
 
 - 型定義は契約由来（`@app/api-client` の `Task` / `AuthTokens` / `TaskCreate` 等）。`imageUrl` は `Task` のみが持つ（`TaskCreate`/`TaskUpdate` には無い＝クライアントから直接書き換え不可）。
-- リクエストの入力検証は全 backend 版で **zod スキーマ + ルート単位 `ZodValidationPipe`** に統一（`presentation/dto/` のスキーマ・`.strict()` で未知キー拒否・グローバル `ValidationPipe` は不使用）。違反は **422** `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean)）。
+- リクエストの入力検証は全 backend 版で **zod スキーマ + ルート単位 `ZodValidationPipe`** に統一（`presentation/dto/` のスキーマ・`.strict()` で未知キー拒否・グローバル `ValidationPipe` は不使用）。違反は **422** `ApiError`（詳細は [docs/09](./09-architecture-specification.md#バックエンドのアーキ構成layered--clean--onion)）。
 - **PATCH は「未指定」と「削除」を区別する**: `TaskUpdate` の任意項目（`description` / `endDate` / `url`）だけが nullable で、**キーが無い = 変更しない** / **`null` = 既存値を削除する**。必須項目（`title` / `status` / `startDate`）は消す対象ではないので `null` は 422。作成（`TaskCreate`）側は消す対象が無いため nullable にせず、空項目はキーごと省略する。
   - 区別が無いと「触っていない」と「空にした」が同じ形になり、**利用者が説明・期限・URL を消せない**（確認画面では空に見えても保存後に元の値が復活する）。
 - **日付の受理形式**: `startDate` / `endDate` は RFC 3339 の `full-date`（`2026-06-15`。**UTC 0 時**として解釈）か、**オフセット必須**の `date-time`（`2026-06-15T00:00:00.000Z` / `...+09:00`）のみ。オフセットなしの日時と実在しない日（`2026-02-30` 等）は **422**（理由は [docs/05](./05-data-specification.md#db-スキーマ)）。**レスポンスは常にオフセット付きの UTC 日時**で返る。

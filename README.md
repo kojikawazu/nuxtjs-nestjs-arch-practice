@@ -1,20 +1,31 @@
-# nuxtjs-nestjs-test-practice
+# nuxtjs-nestjs-arch-practice
 
-[![CI](https://github.com/kojikawazu/nuxtjs-nestjs-test-practice/actions/workflows/ci.yml/badge.svg)](https://github.com/kojikawazu/nuxtjs-nestjs-test-practice/actions/workflows/ci.yml)
+[![CI](https://github.com/kojikawazu/nuxtjs-nestjs-arch-practice/actions/workflows/ci.yml/badge.svg)](https://github.com/kojikawazu/nuxtjs-nestjs-arch-practice/actions/workflows/ci.yml)
 
-Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理アプリ）
+Nuxt.js + NestJS のアーキテクチャ practice プロジェクト（タスク管理アプリ）
 
-> **English (TL;DR):** A learning monorepo focused on *how and why to write tests at each layer* of a Nuxt 3 + NestJS task-management app — contract-first (TypeSpec → OpenAPI), layered backend, and tests across BE unit / BE e2e / FE unit / full E2E. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at <http://localhost:3000>, Swagger at <http://localhost:3001/docs>.
+> **English (TL;DR):** A learning monorepo that compares *architectures side by side* on one Nuxt 3 + NestJS task-management app. The same API contract (TypeSpec → OpenAPI) is implemented by three backends (layered / clean / onion) and consumed by two frontends (SPA / SSR); the shared test suite is what proves their externally observable behavior is identical. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at <http://localhost:3000>, Swagger at <http://localhost:3001/docs>.
 
 > ⚠️ **開発時の注意（先に読む）**: frontend の dev サーバ（`nuxt dev`）は現状 **Vite 7 と非互換で起動しません**。画面確認は `docker compose up --build` か本番ビルド出力を使ってください（詳細は [個別に起動して開発する](#個別に起動して開発する)）。これは既知の制約で、解消は今後の課題（[docs/11-tasks.md](docs/11-tasks.md)）。
 
 ## 概要
 
-テストコードの知見を深めることを主目的とした学習用モノレポ。題材としてタスク管理アプリを、各層で「どんなテストを・なぜ書くか」を学べる構成で実装している。
+アーキテクチャの違いを実物で比較することを主目的とした学習用モノレポ。題材として認証付きタスク管理アプリを採用し、**同一の API 契約を 3 つのバックエンド実装（layered / clean / onion）で、同一機能を 2 つのフロントエンド方式（SPA / SSR）で**実装している。同じ題材を並べることで、設計の違いがフォルダ構成・依存方向・テストの書きやすさにどう現れるかを**差分として読める**ことをねらっている。
 
-- FE: Nuxt 3 (SPA) / TailwindCSS / Composable / Nitro BFF
-- BE: NestJS / TypeORM / レイヤードアーキテクチャ / MySQL
-- 契約: TypeSpec → OpenAPI → 型/クライアント生成（`packages/`）
+### 比較軸
+
+| 軸 | 実装 | 違いが出るところ |
+| --- | --- | --- |
+| バックエンドの層構成 | `backend-layered` / `backend-clean` / `backend-onion` | 依存性逆転の有無、契約（Port）の所有者、ドメインロジックの置き場所 |
+| フロントエンドの描画方式 | `frontend-spa` / `frontend-ssr` | セッション復元の場所（クライアント / サーバ）、中間状態（draft）の保持先 |
+
+**外から見た振る舞いは全実装で同一**に保つ。この同一性を人の目ではなく機械的に担保するために、同じ e2e シナリオを 3 版ともに通す。つまりこのリポジトリでは、**テストは目的ではなく「アーキを入れ替えても仕様が変わらない」ことを証明する装置**として存在する（レベルの使い分けは [08 テスト仕様](docs/08-test-specification.md)）。
+
+### 技術スタック
+
+- FE: Nuxt 3 (SPA / SSR) / TailwindCSS / Composable / Nitro BFF
+- BE: NestJS / TypeORM / MySQL・SQLite
+- 契約: TypeSpec → OpenAPI → 型/クライアント生成（`packages/`）—— 全実装がこの単一の真実を実装する
 - テスト: Jest / supertest / Vitest / MSW / Vue Test Utils / Playwright
 
 ## 主な機能
@@ -111,12 +122,21 @@ pnpm --filter @app/backend-layered dev
 
 ## テスト
 
+テストは「アーキを入れ替えても外から見た仕様が変わらない」ことの証明として置いている。**何を実物で確かめるか**でレベルを分ける（詳細は [08 テスト仕様](docs/08-test-specification.md)）。
+
+| レベル | 実物で確かめる範囲 | DB | コマンド |
+| --- | --- | --- | --- |
+| 単体（UT） | 1 クラス / 関数のロジック。外部 I/O のみモック | 使わない | `pnpm --filter @app/backend-layered test` / `pnpm --filter @app/frontend-spa test` |
+| 結合（IT） | 本番 DB 固有の挙動（照合順序・unique 制約） | MySQL コンテナ | `make test-back-it`（3 版まとめて） |
+| e2e | HTTP 契約。**3 版が同じ契約を満たすことの担保** | in-memory SQLite | `pnpm --filter @app/backend-layered test:e2e`（BE）/ `make test-e2e`（FE Playwright・スモーク） |
+| シナリオ | FE + BE を通した業務ジャーニー（出荷ゲート） | MySQL コンテナ | `make test-scenario-mysql` |
+
 ```bash
-pnpm --filter @app/backend-layered test       # 単体(Jest)
-pnpm --filter @app/backend-layered test:e2e   # e2e(supertest / SQLite)
-pnpm --filter @app/frontend-spa test      # 単体(Vitest + MSW)
-pnpm --filter @app/frontend-spa test:e2e  # 全体E2E(Playwright)
+make test            # BE 単体 + BE e2e + FE 単体をまとめて
+make test-back-it    # IT を layered / clean / onion の 3 版で実行（Docker 必須）
 ```
+
+> backend のコマンドは `@app/backend-layered` を `@app/backend-clean` / `@app/backend-onion` に差し替えれば、そのまま他のアーキ版に対して実行できる（**同じテストが 3 版で通ること**が比較の前提）。
 
 上記は GitHub Actions（`.github/workflows/ci.yml`）で PR・`main` push 時に自動実行される（lint / format / typecheck も含む）。
 
@@ -150,6 +170,7 @@ pnpm --filter @app/frontend-spa test:e2e  # 全体E2E(Playwright)
 | 知りたいこと | 参照先 |
 |---|---|
 | **初めてコードを読む / 起動コマンド・curl 例** | [docs/12-code-reading-guide/](docs/12-code-reading-guide/README.md) |
+| **アーキの読み比べ**（layered / clean / onion の差・SPA vs SSR・選定のトレードオフ） | [docs/09 アーキテクチャ選定指針](docs/09-architecture-specification.md#アーキテクチャ選定指針トレードオフ) |
 | **アーキテクチャ・構成**（何が動く？ 静的配信・volume・技術スタック） | [docs/09-architecture-specification.md](docs/09-architecture-specification.md) |
 | **ポート番号・DB 切替・画像保存先**（3000 / 3001 / 3306 など） | [docs/10-miscellaneous-specification.md](docs/10-miscellaneous-specification.md) |
 | **DB**（ER 図・テーブルスキーマ・`imageUrl`） | [docs/05-data-specification.md](docs/05-data-specification.md) |

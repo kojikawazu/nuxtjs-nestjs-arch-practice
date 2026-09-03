@@ -1,6 +1,6 @@
 # ドキュメント索引
 
-nuxtjs-nestjs-test-practice（Nuxt 3 + NestJS のテスト practice／タスク管理アプリ）の仕様・設計ドキュメント一覧。プロジェクト概要・セットアップ・起動手順はリポジトリ直下の [`../README.md`](../README.md) を参照。
+nuxtjs-nestjs-arch-practice（Nuxt 3 + NestJS のアーキテクチャ practice／タスク管理アプリ）の仕様・設計ドキュメント一覧。プロジェクト概要・セットアップ・起動手順はリポジトリ直下の [`../README.md`](../README.md) を参照。
 
 ドキュメントは 2 層で構成している。
 

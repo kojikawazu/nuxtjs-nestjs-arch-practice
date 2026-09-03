@@ -1,8 +1,8 @@
 {
-  "name": "nuxtjs-nestjs-test-practice",
+  "name": "nuxtjs-nestjs-arch-practice",
   "version": "0.1.0",
   "private": true,
-  "description": "Nuxt.js + NestJS のテスト practice プロジェクト（タスク管理アプリ）",
+  "description": "Nuxt.js + NestJS のアーキテクチャ practice プロジェクト（タスク管理アプリ）",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"

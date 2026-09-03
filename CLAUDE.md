@@ -1,6 +1,6 @@
-# nuxtjs-nestjs-test-practice
+# nuxtjs-nestjs-arch-practice
 
-Nuxt.js + NestJS のテスト practice プロジェクト
+Nuxt.js + NestJS のアーキテクチャ practice プロジェクト（同一の API 契約を layered / clean / onion の 3 バックエンドで、同一機能を SPA / SSR の 2 フロントエンドで実装し、比較する）
 
 ## Rules
 
