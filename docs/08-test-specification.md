@@ -153,5 +153,5 @@ pnpm --filter @app/frontend-ssr test:e2e  # FE(SSR) 全体 E2E(Playwright) ※sp
 ## 既知の制約
 
 - backend e2e と Playwright は外部依存なしで動くよう SQLite を使用（本番は MySQL）。
-- Playwright は dev サーバ（Vite7 非互換）を避け、本番ビルド出力を起動して検証する。
+- Playwright は dev サーバではなく**本番ビルド出力**（`.output/server/index.mjs`）を起動して検証する。当初は dev サーバが起動しなかったための回避策だったが（フェーズ 45 で解消）、**出荷する成果物そのものを検証する**ほうが E2E の目的に合うため方針として維持する（dev サーバは HMR・非圧縮・別のバンドル経路で、本番と同じものを見ていない）。
 - compose の `mysql-test`（MySQL での e2e 用使い捨て DB）は `test` profile に隔離。無印 `docker compose up` では起動せず、必要時のみ `docker compose --profile test up mysql-test` で起動する。

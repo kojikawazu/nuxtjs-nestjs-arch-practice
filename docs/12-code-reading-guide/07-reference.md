@@ -32,7 +32,9 @@ pnpm api:gen        # 契約から型/クライアントを生成（FE/BE の前
 ```bash
 # backend だけを Docker なしで（SQLite インメモリ）
 DB_TYPE=better-sqlite3 DB_DATABASE=:memory: pnpm --filter @app/backend-layered dev
-# frontend を含めて画面を見る（dev サーバは Vite 7 非互換のため本番ビルド出力を使う）
+# frontend を含めて画面を見る（dev サーバ。HMR あり）
+pnpm --filter @app/frontend-spa dev
+# 本番ビルド出力で確認したいとき（Playwright と同じ形）
 pnpm --filter @app/frontend-spa build
 node apps/frontend-spa/.output/server/index.mjs   # NUXT_PUBLIC_API_BASE_URL で backend を指定
 # まとめて（MySQL + backend + frontend）
