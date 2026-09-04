@@ -6,8 +6,6 @@ Nuxt.js + NestJS のアーキテクチャ practice プロジェクト（タス�
 
 > **English (TL;DR):** A learning monorepo that compares *architectures side by side* on one Nuxt 3 + NestJS task-management app. The same API contract (TypeSpec → OpenAPI) is implemented by three backends (layered / clean / onion) and consumed by two frontends (SPA / SSR); the shared test suite is what proves their externally observable behavior is identical. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at <http://localhost:3000>, Swagger at <http://localhost:3001/docs>.
 
-> ⚠️ **開発時の注意（先に読む）**: frontend の dev サーバ（`nuxt dev`）は現状 **Vite 7 と非互換で起動しません**。画面確認は `docker compose up --build` か本番ビルド出力を使ってください（詳細は [個別に起動して開発する](#個別に起動して開発する)）。これは既知の制約で、解消は今後の課題（[docs/11-tasks.md](docs/11-tasks.md)）。
-
 ## 概要
 
 アーキテクチャの違いを実物で比較することを主目的とした学習用モノレポ。題材として認証付きタスク管理アプリを採用し、**同一の API 契約を 3 つのバックエンド実装（layered / clean / onion）で、同一機能を 2 つのフロントエンド方式（SPA / SSR）で**実装している。同じ題材を並べることで、設計の違いがフォルダ構成・依存方向・テストの書きやすさにどう現れるかを**差分として読める**ことをねらっている。
@@ -118,7 +116,12 @@ pnpm db:up
 pnpm --filter @app/backend-layered dev
 ```
 
-> ℹ️ frontend の dev サーバ（`nuxt dev`）は現状 Vite 7 と非互換で起動しません。ローカルで画面を確認するときは `docker compose up --build`、または本番ビルド出力（`pnpm --filter @app/frontend-spa build` → `node apps/frontend-spa/.output/server/index.mjs`）を使ってください。
+```bash
+# frontend の dev サーバ（HMR あり）。spa / ssr のどちらでも起動できる
+pnpm --filter @app/frontend-spa dev    # → http://localhost:3000
+```
+
+> ℹ️ frontend の dev サーバは Nuxt 3.21.8 以前では起動できませんでした（`ssr: false` で `No entry found in rollupOptions.input`、SSR 版は macOS のソケットパス長超過で全リクエストが 500）。**3.21.9 以降で解消済み**です。詳しい経緯は [docs/11-tasks.md](docs/11-tasks.md) を参照。
 
 ## テスト
 

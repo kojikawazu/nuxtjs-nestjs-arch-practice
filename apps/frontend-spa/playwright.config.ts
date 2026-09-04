@@ -52,7 +52,8 @@ export default defineConfig({
       },
     },
     {
-      // dev サーバ（Vite 7 と非互換）を避け、本番ビルド出力を起動する。
+      // dev サーバではなく本番ビルド出力を起動する。出荷する成果物そのものを検証したいため
+      // （dev サーバは HMR・非圧縮・別のバンドル経路で、本番と同じものを見ていない）。
       // test:e2e スクリプトで事前に `nuxt build` 済みであることを前提とする。
       command: 'node .output/server/index.mjs',
       url: 'http://localhost:3000',

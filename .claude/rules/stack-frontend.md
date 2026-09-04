@@ -19,4 +19,4 @@ globs: apps/frontend-*/**
   - backend への HTTP は **MSW** でモック。
   - Nitro エンドポイント（BFF）は `registerEndpoint` でモック。
   - コンポーネントは `@nuxt/test-utils` の `mountSuspended` + Vue Test Utils。
-- **E2E**: dev サーバ（Vite7 非互換）ではなく本番ビルド出力を起動して Playwright で検証する。
+- **E2E**: dev サーバではなく**本番ビルド出力**を起動して Playwright で検証する（出荷する成果物そのものを検証するため。dev サーバは HMR・非圧縮・別のバンドル経路で本番と同じものを見ていない）。
