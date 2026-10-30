@@ -15,25 +15,14 @@
 
 ## システム構成
 
-```mermaid
-graph TD
-  Browser["ブラウザ (Nuxt SPA)"]
-  subgraph Frontend["@app/frontend-spa (Nuxt3 + Nitro)"]
-    BFF["Nitro BFF /api/auth/*<br/>(refresh を httpOnly Cookie 化)"]
-  end
-  Backend["@app/backend-layered (NestJS)"]
-  DB[("MySQL")]
-  Spec["@app/api-spec (TypeSpec)"]
-  Client["@app/api-client (生成型/クライアント)"]
+![全体アーキテクチャ構成図](images/architecture.png)
 
-  Browser -->|"tasks: Bearer access"| Backend
-  Browser -->|"auth"| BFF
-  BFF -->|"refresh cookie"| Backend
-  Backend --> DB
-  Spec -->|"OpenAPI 生成"| Client
-  Client -.->|"型共有"| Frontend
-  Client -.->|"型共有"| Backend
-```
+- **契約が中心**: `@app/api-spec`（TypeSpec）から OpenAPI → `@app/api-client` を生成し、FE / BE の 5 実装すべてが `import type` で同じ型を参照する。backend 3 版は同一契約のため、どの frontend からも差し替えられる。
+- **通信経路は 2 本**: タスク API はブラウザから backend へ **Bearer access で直接**送る。認証系（`/api/auth/*`）だけが Nitro BFF を経由し、refresh トークンを httpOnly Cookie に閉じ込める。SSR 版はこれに加え、初回リクエスト時にサーバが backend を直接呼んでセッションを復元する。
+- **既定の起動対象**: `docker compose up` は `mysql` + `backend`（layered）+ `frontend`（spa）のみ。clean / onion / ssr は profile 指定時だけ起動し、テスト用 DB（`mysql-test`）は `test` profile に隔離している。
+
+> 図の正本は [`docs/diagrams/architecture.drawio`](diagrams/architecture.drawio)（draw.io で編集）。PNG は編集後に
+> `drawio -x -f png -s 1.5 -b 20 -o docs/images/architecture.png docs/diagrams/architecture.drawio` で書き出す。
 
 ## 技術スタック
 
