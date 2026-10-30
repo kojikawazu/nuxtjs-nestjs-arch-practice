@@ -1,0 +1,250 @@
+<mxfile host="drawio" agent="Claude Code">
+  <diagram id="overall-architecture" name="全体アーキテクチャ">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- タイトル -->
+        <mxCell id="title" value="&lt;b&gt;全体アーキテクチャ構成図 — nuxtjs-nestjs-arch-practice&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;同一の API 契約を 3 つのバックエンド（layered / clean / onion）で、同一機能を 2 つのフロントエンド（SPA / SSR）で実装し、比較する&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="40" y="16" width="1200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ============ Client ============ -->
+        <mxCell id="browser" value="&lt;b&gt;ブラウザ&lt;/b&gt;&lt;br&gt;&lt;br&gt;access: メモリ（useState）&lt;br&gt;refresh: httpOnly Cookie" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="330" width="170" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ============ Frontend ============ -->
+        <mxCell id="fe-group" value="&lt;b&gt;Frontend&lt;/b&gt;（Nuxt 3 + Nitro / 同一機能・2 方式）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3faf1;strokeColor=#82b366;verticalAlign=top;align=center;fontSize=14;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="270" y="110" width="400" height="610" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe-spa" value="&lt;b&gt;apps/frontend-spa&lt;/b&gt;　:3000（既定）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=center;fontSize=13;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="290" y="150" width="360" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-spa-pages" value="ページ / Composable&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;ssr: false・クライアント描画&lt;br&gt;セッション復元: plugins/auth-init.client.ts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="185" width="320" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-spa-bff" value="Nitro BFF　/api/auth/*&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;login / register / refresh / logout&lt;br&gt;refresh トークンを httpOnly Cookie に閉じ込める&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="262" width="320" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-spa-draft" value="確認画面の draft: &lt;b&gt;sessionStorage&lt;/b&gt;（タブ単位）" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#4d7c3a;" vertex="1" parent="1">
+          <mxGeometry x="310" y="340" width="320" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fe-ssr" value="&lt;b&gt;apps/frontend-ssr&lt;/b&gt;　:3010（profile: ssr）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=center;fontSize=13;arcSize=4;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="290" y="430" width="360" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-ssr-pages" value="SSR 描画 + ハイドレーション&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;ssr: true・初期 HTML をサーバ生成&lt;br&gt;セッション復元: plugins/auth-init.ts（サーバ実行）&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="465" width="320" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-ssr-bff" value="Nitro BFF　/api/auth/* ・ /api/tasks/draft&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;認証は SPA と同じ / draft は backend へ中継しない&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="542" width="320" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-ssr-draft" value="確認画面の draft: &lt;b&gt;httpOnly Cookie&lt;/b&gt; task_draft&lt;br&gt;（30 分で失効・3,500 バイト上限）" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#4d7c3a;" vertex="1" parent="1">
+          <mxGeometry x="310" y="620" width="320" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-common" value="共通: zod（フォーム・レスポンス検証）/ useApiClient（openapi-fetch）" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="280" y="684" width="380" height="32" as="geometry" />
+        </mxCell>
+
+        <!-- ============ Backend ============ -->
+        <mxCell id="be-group" value="&lt;b&gt;Backend&lt;/b&gt;（NestJS + TypeORM / 同一 API 契約・3 アーキ）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f2f6fc;strokeColor=#6c8ebf;verticalAlign=top;align=center;fontSize=14;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="790" y="110" width="460" height="610" as="geometry" />
+        </mxCell>
+
+        <!-- layered -->
+        <mxCell id="be-layered" value="&lt;b&gt;apps/backend-layered&lt;/b&gt;　:3001（既定）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=center;fontSize=13;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="810" y="150" width="420" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="be-l-p" value="presentation&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Controller / zod DTO&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="825" y="185" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-l-a" value="application&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;UseCase / Service&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="185" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-l-i" value="infrastructure&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;TypeORM Entity&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1095" y="185" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-l-e1" style="endArrow=block;html=1;strokeColor=#6c8ebf;endFill=1;" edge="1" parent="1" source="be-l-p" target="be-l-a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be-l-e2" style="endArrow=block;html=1;strokeColor=#6c8ebf;endFill=1;" edge="1" parent="1" source="be-l-a" target="be-l-i">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be-l-note" value="Port なし。UseCase が TypeORM Repository を&lt;b&gt;直接&lt;/b&gt;利用" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#3b5998;" vertex="1" parent="1">
+          <mxGeometry x="820" y="245" width="400" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- clean -->
+        <mxCell id="be-clean" value="&lt;b&gt;apps/backend-clean&lt;/b&gt;　:3002（profile: clean）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=center;fontSize=13;arcSize=5;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="810" y="315" width="420" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="be-c-p" value="presentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="822" y="350" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-c-a" value="application&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;&lt;b&gt;ports/&lt;/b&gt;（契約）&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="925" y="350" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-c-d" value="domain&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Entity / VO&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1028" y="350" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-c-i" value="infrastructure&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Port を実装&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1131" y="350" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-c-e1" style="endArrow=block;html=1;strokeColor=#6c8ebf;endFill=1;" edge="1" parent="1" source="be-c-p" target="be-c-a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be-c-e2" style="endArrow=block;html=1;strokeColor=#6c8ebf;endFill=1;" edge="1" parent="1" source="be-c-a" target="be-c-d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be-c-e3" value="implements" style="endArrow=block;html=1;strokeColor=#d6b656;endFill=0;dashed=1;fontSize=9;fontColor=#9c7b00;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="be-c-i" target="be-c-a">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1175" y="412" />
+              <mxPoint x="969" y="412" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="be-c-note" value="契約（Port）は &lt;b&gt;application/ports/&lt;/b&gt; が所有（依存性逆転）" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#3b5998;" vertex="1" parent="1">
+          <mxGeometry x="820" y="425" width="400" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- onion -->
+        <mxCell id="be-onion" value="&lt;b&gt;apps/backend-onion&lt;/b&gt;　:3003（profile: onion）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=center;fontSize=13;arcSize=5;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="810" y="490" width="420" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-p" value="presentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="822" y="525" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-a" value="application&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;UseCase / queries&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="925" y="525" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-d" value="domain&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;&lt;b&gt;repositories/&lt;br&gt;services/&lt;/b&gt;（契約）&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1028" y="525" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-i" value="infrastructure&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;契約を実装&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1131" y="525" width="88" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-e1" style="endArrow=block;html=1;strokeColor=#6c8ebf;endFill=1;" edge="1" parent="1" source="be-o-p" target="be-o-a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-e2" style="endArrow=block;html=1;strokeColor=#6c8ebf;endFill=1;" edge="1" parent="1" source="be-o-a" target="be-o-d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-e3" style="endArrow=block;html=1;strokeColor=#d6b656;endFill=0;dashed=1;" edge="1" parent="1" source="be-o-i" target="be-o-d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be-o-note" value="契約（Repository / Service）は &lt;b&gt;domain&lt;/b&gt; 中核が所有。依存は常に内向き" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#3b5998;" vertex="1" parent="1">
+          <mxGeometry x="820" y="595" width="400" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="be-common" value="共通: zod + ZodValidationPipe（422）/ AllExceptionsFilter → ApiError / JWT（Passport）・bcrypt / /uploads 静的配信" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="800" y="660" width="440" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ============ Data ============ -->
+        <mxCell id="data-group" value="&lt;b&gt;Data / Storage&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffaf3;strokeColor=#d79b00;verticalAlign=top;align=center;fontSize=14;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="110" width="220" height="610" as="geometry" />
+        </mxCell>
+        <mxCell id="mysql" value="&lt;b&gt;MySQL 8.4&lt;/b&gt;&lt;br&gt;taskdb&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;volume: mysql-data&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1395" y="160" width="130" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="uploads" value="&lt;b&gt;uploads volume&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;ローカル FS（版ごとに分離）&lt;br&gt;uploads-data / -clean / -onion&lt;/font&gt;" style="shape=folder;whiteSpace=wrap;html=1;tabWidth=50;tabHeight=12;tabPosition=left;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="320" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="test-label" value="テスト時のみ" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#9c6a00;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="450" width="180" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="sqlite" value="&lt;b&gt;SQLite（in-memory）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;backend e2e / Playwright&lt;br&gt;DB_TYPE=better-sqlite3&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#ffffff;strokeColor=#d79b00;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="475" width="160" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="mysql-test" value="&lt;b&gt;mysql-test&lt;/b&gt; :3307&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;profile: test / tmpfs&lt;br&gt;taskdb_it（IT）&lt;br&gt;taskdb_e2e（シナリオ）&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#ffffff;strokeColor=#d79b00;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="590" width="180" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ============ Contract ============ -->
+        <mxCell id="contract-group" value="&lt;b&gt;API 契約（単一の真実）&lt;/b&gt;　packages/ ・ pnpm api:gen で生成" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f2fa;strokeColor=#9673a6;verticalAlign=top;align=left;spacingLeft=12;fontSize=14;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="270" y="790" width="980" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="api-spec" value="&lt;b&gt;@app/api-spec&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;TypeSpec（main.tsp）&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="300" y="830" width="210" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="openapi" value="&lt;b&gt;OpenAPI 3.1&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;tsp-output/openapi.yaml&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="830" width="210" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="api-client" value="&lt;b&gt;@app/api-client&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px;&quot;&gt;openapi-typescript（型）+ openapi-fetch&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="940" y="830" width="270" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e-spec-openapi" value="tsp compile" style="endArrow=block;html=1;strokeColor=#9673a6;endFill=1;dashed=1;fontSize=10;fontColor=#7a5a8c;" edge="1" parent="1" source="api-spec" target="openapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-openapi-client" value="型生成" style="endArrow=block;html=1;strokeColor=#9673a6;endFill=1;dashed=1;fontSize=10;fontColor=#7a5a8c;" edge="1" parent="1" source="openapi" target="api-client">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-client-fe" value="型共有（import type）" style="endArrow=block;html=1;strokeColor=#9673a6;endFill=1;dashed=1;fontSize=10;fontColor=#7a5a8c;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="api-client" target="fe-group">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="760" />
+              <mxPoint x="470" y="760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-client-be" value="型共有（import type）" style="endArrow=block;html=1;strokeColor=#9673a6;endFill=1;dashed=1;fontSize=10;fontColor=#7a5a8c;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="api-client" target="be-group">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1140" y="760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ============ 実行時の通信 ============ -->
+        <mxCell id="e-browser-spa" value="画面" style="endArrow=block;html=1;strokeColor=#333333;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="browser" target="fe-spa">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="360" />
+              <mxPoint x="240" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-browser-ssr" value="画面" style="endArrow=block;html=1;strokeColor=#333333;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="browser" target="fe-ssr">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="410" />
+              <mxPoint x="240" y="565" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-browser-be" value="タスク API（Authorization: Bearer access）&lt;br&gt;ブラウザから backend へ直接" style="endArrow=block;html=1;strokeColor=#c0392b;endFill=1;strokeWidth=2;fontSize=11;fontColor=#c0392b;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="browser" target="be-group">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="125" y="85" />
+              <mxPoint x="1020" y="85" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-spa-be" value="/auth/*（refresh 回転）" style="endArrow=block;html=1;strokeColor=#333333;endFill=1;fontSize=10;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.27;" edge="1" parent="1" source="fe-spa-bff" target="be-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ssr-be" value="SSR 時のセッション復元・取得&lt;br&gt;（NUXT_API_BASE_URL）" style="endArrow=block;html=1;strokeColor=#333333;endFill=1;fontSize=10;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.63;" edge="1" parent="1" source="fe-ssr-pages" target="be-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="swap-note" value="3 版は同一契約&lt;br&gt;どの FE からも&lt;br&gt;差し替え可" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#555555;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="672" y="370" width="116" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e-be-mysql" value="TypeORM（mysql2）" style="endArrow=block;html=1;strokeColor=#d79b00;endFill=1;fontSize=10;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.17;entryX=0;entryY=0.5;" edge="1" parent="1" source="be-group" target="mysql">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-be-uploads" value="画像 multipart 保存" style="endArrow=block;html=1;strokeColor=#d79b00;endFill=1;fontSize=10;labelBackgroundColor=#ffffff;edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.42;entryX=0;entryY=0.5;" edge="1" parent="1" source="be-group" target="uploads">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ============ 凡例 ============ -->
+        <mxCell id="legend" value="&lt;b&gt;凡例&lt;/b&gt;&lt;br&gt;━━ 実行時の通信（赤 = ブラウザ → backend 直通）&lt;br&gt;┄┄ 生成 / 型共有 / 契約の実装&lt;br&gt;破線の枠 = compose の profile 指定時 / テスト時のみ起動&lt;br&gt;黄色の箱 = 契約（interface + DI トークン）の所在" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;align=left;verticalAlign=top;spacingLeft=10;spacingTop=4;fontSize=11;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="790" width="300" height="130" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
