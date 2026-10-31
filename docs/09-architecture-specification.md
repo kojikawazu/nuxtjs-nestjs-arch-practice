@@ -40,6 +40,20 @@
 
 アーキテクチャ比較用に 3 つのバックエンド実装を持つ。**いずれも同一の API 契約（`@app/api-client`）を実装**し、同じ e2e シナリオが 3 版すべてで通る（外から見た挙動は同一・内部構造のみ異なる）。
 
+> backend-clean の構成図は [`docs/diagrams/backend-clean.drawio`](diagrams/backend-clean.drawio) が正本（draw.io で編集・6 ページ）。各節に PNG を載せている。
+>
+> | ページ | 内容 | PNG |
+> |---|---|---|
+> | 1 | tasks の依存方向（Port による依存性逆転・ESLint の禁止方向・合成ルート） | `backend-clean-tasks.png` |
+> | 2 | DDD 戦術パターン（Entity / VO / Domain Service / Repository・Aggregate / Factory / Domain Event・DomainError・検証の責務分担） | `backend-clean-ddd.png` |
+> | 3 | auth / users（外部 I/O の Port 化・feature 間の依存） | `backend-clean-auth.png` |
+> | 4 | リクエストの流れ（Command / Query の層の通り方） | `backend-clean-request-flow.png` |
+> | 5 | clean vs onion（契約の所在の差） | `backend-clean-vs-onion.png` |
+> | 6 | Ports and Adapters（Primary / Secondary の Port・Adapter と layered との差） | `backend-clean-ports-adapters.png` |
+>
+> PNG は編集後にページ番号（`-p`、1 始まり）を指定して書き出す。例:
+> `drawio -x -f png -s 1.5 -b 20 -p 1 -o docs/images/backend-clean-tasks.png docs/diagrams/backend-clean.drawio`
+
 | | `apps/backend-layered` | `apps/backend-clean` | `apps/backend-onion` |
 |---|---|---|---|
 | tasks の依存方向 | UseCase → TypeORM Repository（直接） | UseCase → **Port(interface)** ← TypeORM 実装（依存性逆転） | clean と同じ（依存は内向き） |
@@ -140,6 +154,12 @@ modules/tasks/
 
 layered と同じ tasks を、**依存性逆転**で再構成したもの。application 層は Port（interface）にのみ依存し、TypeORM/fs を知らない。Port の実体は infrastructure 層が提供し、`tasks.module.ts` で束ねる。
 
+![backend-clean tasks の依存方向](images/backend-clean-tasks.png)
+
+`application/ports/` の名前は **Ports and Adapters（ヘキサゴナルアーキテクチャ）** の語彙に由来する。中心（application ＋ domain）が外を呼ぶための口が **Secondary Port**、その実装（`infrastructure/`）が **Secondary Adapter**、外から中心を呼ぶ Controller が **Primary Adapter** にあたる。Primary Port は明示の interface を置かず、UseCase クラス自身が口を兼ねる（Controller → UseCase はもともと内向きなので不要）。Port が必須なのは Secondary 側だけで、それが無い形が layered にあたる。
+
+![Ports and Adapters で見た backend-clean](images/backend-clean-ports-adapters.png)
+
 > ディレクトリ配置: clean は機能スライス（feature slice）として **`src/api/{tasks,auth,users}/`** に置く（layered / onion は `src/modules/` のまま）。下記ツリーのルート `api/tasks/` はこれを指す。
 
 > `src/shared/` は feature 名・feature 固有の型・Port を知らない共通基盤のためだけに使う。Task / Auth / User 固有のエラー・業務ルール・DTO・Port・Entity・Repository 実装は、再利用されても各 `api/{feature}/` に置く。
@@ -149,6 +169,8 @@ api/tasks/                         # src/api/tasks（機能スライス）
 ├ domain/                          # 最内層・フレームワーク非依存
 │  ├ entities/
 │  │  └ task.ts                    #   ドメインエンティティ（認可・日付不変条件・画像付け外し）
+│  ├ value-objects/
+│  │  └ date-range.ts              #   DateRange（VO: 開始 ≤ 終了を生成時に検証・不変）
 │  └ errors/
 │     └ task.errors.ts             #   DomainError（kind: not_found/forbidden/invalid）
 ├ application/
@@ -211,6 +233,8 @@ shared/                            # feature 非依存の共通基盤
 
 `domain/` に置けるのは下記 3 種。判定軸は「不変かどうか」ではなく **同一性（identity）を持つか**と**置き場所があるか**（正本は [.claude/rules/stack-backend.md](../.claude/rules/stack-backend.md)）。
 
+![DDD の戦術パターン（backend-clean）](images/backend-clean-ddd.png)
+
 | 要素 | 判定基準 | 置き場所 | 例 |
 |---|---|---|---|
 | **Entity** | **同一性（id）を持ち**、時間とともに状態が変わる。等価性は id で決まる | `domain/entities/` | `Task` / `User` |
@@ -227,6 +251,10 @@ shared/                            # feature 非依存の共通基盤
   - **layered は VO 化しない**（比較軸の baseline。`task.util.ts` の `assertDateOrder` をそのまま残す）。HTTP 契約・e2e は 3 版で不変。
   - zod は `z.string().max(120)` のような単一フィールドの制約は得意だが、「開始 ≤ 終了」は `.refine()` でオブジェクト全体を見るしかなく、しかも PATCH では**既存値とマージした後**でないと判定できない。ここが zod の手の届かない領域で、VO の担当範囲になる。
   - 逆に長さや形式まで VO に持たせると、同じルールの入口が zod と VO の 2 つになり、片方だけ変えたときに気づけない（DryRun を廃止した理由と同じ形の問題）。
+- **そのほかの戦術パターン（clean / onion）**:
+  - **Aggregate**: 専用のフォルダや基底クラスは置かず、構造と使い方で表す。`Task`（ルート）＋ `DateRange` が 1 つの集約で、出し入れはルート単位（`TaskRepository` は `Task` を返し、`DateRange` だけを扱う口は無い）、変更はルート経由（`applyUpdate`）、別の集約は id で参照する（`Task.userId`）。
+  - **Factory**: `factories/` は置かず、Entity / VO の static メソッドに内蔵する（新規 = `Task.draft`、復元 = `Task.fromState` / `User.fromState`、VO = `DateRange.of`）。constructor は `private` なので生成の入口はこれだけになる。復元も `DateRange.of` を通るため、不変条件を破った行は読み込み時に弾かれる。生成に外部の情報が要るようになった時点で `TaskFactory` に切り出す。
+  - **Domain Event**: **未採用**。「起きたことに別の処理が反応する」要件がまだ無いため（導入候補は `TaskCompleted` / `UserRegistered`）。旧画像の削除（`SetTaskImageUseCase`）は同じ処理の中で直接呼んでおり、今の規模ではこれで足りる。
 
 ### 採用しない概念
 
@@ -255,6 +283,8 @@ FormRequest の責務がどこへ行ったか（`POST /tasks` の場合）:
 ### backend-clean — auth / users（クリーンアーキテクチャ）
 
 tasks と同じ思想（domain / application / infrastructure / presentation の分離＋ Port による依存性逆転）を auth / users にも適用したもの。**外部 I/O をすべて Port 化**し、ユースケースは bcrypt・JWT・TypeORM を知らない。
+
+![backend-clean auth / users の構成](images/backend-clean-auth.png)
 
 ```text
 api/users/                          # HTTP 入口を持たない（presentation なし）。auth が利用する
@@ -294,12 +324,15 @@ api/auth/
 
 clean と同じ依存性逆転だが、**契約（interface）の所在**と**ドメインサービス**の扱いが異なる。オニオンでは依存が常に内向き（presentation → application → domain）で、ドメイン中核が自分の必要とする契約を定義する。
 
+![clean と onion の差（契約の所在）](images/backend-clean-vs-onion.png)
+
 > `src/shared/` は feature 名・feature 固有の型・domain の契約を知らない共通基盤のためだけに使う。Task / Auth / User 固有のエラー・業務ルール・DTO・domain の Port / Service・Entity・Repository 実装は、再利用されても各 `modules/{feature}/` に置く。
 
 ```text
 modules/tasks/
 ├ domain/                             # 中核（最内）
 │  ├ entities/task.ts                 #   エンティティ
+│  ├ value-objects/date-range.ts      #   DateRange（VO: 開始 ≤ 終了を生成時に検証・不変）
 │  ├ errors/task.errors.ts            #   DomainError
 │  ├ repositories/
 │  │  ├ task.repository.ts            #   TaskRepository interface + token（★契約を中核が所有・書き込み）
@@ -341,6 +374,8 @@ shared/                               # feature / domain 契約に非依存の�
 ### 読み取り分離（CQRS-lite）
 
 clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側として書き込みから分離**している（layered は分離せず baseline）。HTTP 契約・e2e シナリオは 3 版で完全に同一。
+
+![リクエストの流れ（Command / Query）](images/backend-clean-request-flow.png)
 
 | | 書き込み（Command） | 読み取り（Query） |
 |---|---|---|
