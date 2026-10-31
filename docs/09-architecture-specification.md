@@ -395,6 +395,20 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 レンダリング方式の比較用に 2 つの Nuxt 実装を持つ。**機能・画面・API 契約は同一**で、同じ E2E シナリオが両方で通る。
 ただし**タスク新規作成の確認画面のみ、方式差を比較する目的で実装を分けている**（後述「確認画面の方式差」）。
 
+> frontend の構成図は [`docs/diagrams/frontend.drawio`](diagrams/frontend.drawio) が正本（draw.io で編集・4 ページ）。各節に PNG を載せている。
+>
+> | ページ | 内容 | PNG |
+> |---|---|---|
+> | 1 | 構成と依存の向き（pages / components / composables / utils / server と保存先・backend との接点） | `frontend-structure.png` |
+> | 2 | 認証の流れ（ログイン・401 からの refresh と 1 回だけの再送） | `frontend-auth.png` |
+> | 3 | SPA と SSR の初回表示（/tasks を直接開いたときのセッション復元と描画のタイミング） | `frontend-render.png` |
+> | 4 | 確認画面の方式差（sessionStorage と httpOnly Cookie・E2E の分け方） | `frontend-confirm.png` |
+>
+> PNG は編集後にページ番号（`-p`、1 始まり）を指定して書き出す。例:
+> `drawio -x -f png -s 1.5 -b 20 -p 1 -o docs/images/frontend-structure.png docs/diagrams/frontend.drawio`
+
+![frontend の構成と依存の向き](images/frontend-structure.png)
+
 | | `apps/frontend-spa` | `apps/frontend-ssr` |
 |---|---|---|
 | レンダリング | `ssr: false`（クライアントのみ） | `ssr: true`（初期 HTML をサーバ生成） |
@@ -406,9 +420,15 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 | access 失効時（401） | `useAuthedFetch` が BFF `/api/auth/refresh` で 1 回だけリフレッシュして再試行（並行 401 は 1 本の refresh を共有） | 同左。ただし**サーバ側**では BFF を通さず backend を直接呼び、rotate 後のトークンを自分で Cookie へ書き戻す（内部 $fetch の Set-Cookie はブラウザ応答に載らないため） |
 | タスク作成の確認画面 | 独立ルート `/tasks/new/confirm` を**クライアント描画**。draft は sessionStorage | 独立ルート `/tasks/new/confirm` を**サーバ描画**。draft は httpOnly Cookie |
 
+認証の流れ（ログインと、access 失効時の refresh → 1 回だけの再送）は両版ともブラウザ上では同じ:
+
+![認証の流れ（frontend）](images/frontend-auth.png)
+
 ### 確認画面の方式差（SSR / CSR）
 
 同じ「入力 → 確認 → 確定」フローを、状態の置き場所を変えて実装し比較している。
+
+![確認画面の方式差](images/frontend-confirm.png)
 
 両版とも `/tasks/new`（入力）→ `/tasks/new/confirm`（確認）の 2 ルート構成・画像はメモリ保持、と**揃えてある**。
 差は「draft をどこに置くか」の一点に絞ってある。
@@ -450,6 +470,8 @@ clean / onion は tasks の **読み取り（list/get）を CQRS の Query 側�
 - SSR 実行中の取得には `$fetch` ではなく **`useRequestFetch()`** を使う。`$fetch` は元リクエストのヘッダを引き継がないため httpOnly Cookie が Nitro に届かず、draft を取得できない。
 
 ### SSR 版のセッション復元フロー（要点）
+
+![SPA と SSR の初回表示](images/frontend-render.png)
 
 1. ブラウザが `/tasks` を直接リクエスト（httpOnly refresh Cookie 同送）。
 2. Nuxt プラグイン（サーバ実行）が Cookie を読み、backend `/auth/refresh` でアクセストークン＋ユーザーを取得。
