@@ -145,6 +145,10 @@ modules/tasks/
 | ❌ application → presentation | 入力は `application/inputs/` の Command 型で受ける |
 | ❌ presentation → infrastructure | 実装を差すのは `*.module.ts` の仕事 |
 | ❌ infrastructure → presentation | 最外どうしを直結させない |
+| ❌ infrastructure → application（clean は `ports/` 以外） | clean は Port を implements するために `application/ports/` だけを見ればよい。usecases / validators などへの import は実装の詳細が中心のロジックに入り込む経路になる |
+| ❌ infrastructure → application（onion は全面） | onion は契約を domain が所有するので、infrastructure が application を見る理由が無い |
+
+- **infrastructure → application の扱いだけはアーキで分かれる**。以前は両版とも「application 全体を許可」で、上表の許可範囲（clean は `ports/` だけ・onion は 0 件）は**たまたま守られていた**だけだった（どちらも違反 0 件の状態から締めた）。clean の例外は gitignore 形式の否定（`!**/application/ports/**`）では書けない（親ディレクトリが除外されると配下を戻せない）ため、正規表現の否定先読み（`(^|/)application(/(?!ports(/|$))|$)`）で「`application/` の直後が `ports/` 以外」を禁止している。
 
 - **layered は対象外**。`presentation → application → infrastructure` の素直な依存（Port による逆転をしない）こと自体が比較軸のため、`application/task.util.ts` が `infrastructure/task.entity.ts` を import する状態を維持する。
 - **`*.module.ts` はどの層にも属さない**（feature 直下に置く）ため lint の対象にならず、合成ルートとして infrastructure を配線できる。層ディレクトリの中に置くとこの表が崩れる。

@@ -36,6 +36,7 @@ globs: apps/backend-*/**
 - **application は presentation を import しない（clean / onion）**: Controller が契約型（`TaskCreate` / `TaskUpdate` / `RegisterRequest` 等）を `application/inputs/` の変換関数で Command 型（`CreateTaskInput` 等）に直してから UseCase / Validator を呼ぶ。変換関数の引数は **DTO 型（`z.infer<...>`）ではなく契約型**にする（契約型は `@app/api-client` にあり presentation・application のどちらからも等距離なので、共通語彙にすると依存が内向きに揃う）。ISO 文字列 → `Date` の正規化も境界であるこの変換で済ませ、内側に文字列日付を持ち込まない。
 - **層の依存方向は ESLint で機械強制する（clean / onion）**: `eslint.config.mjs` の `@typescript-eslint/no-restricted-imports` で下記を禁止し、`pnpm lint` / CI で検出する。規約と手動レビューだけに頼らず、違反したコミットが落ちる状態に保つ。
   - domain → application / infrastructure / presentation ／ application → infrastructure / presentation ／ presentation → infrastructure ／ infrastructure → presentation
+  - **infrastructure → application はアーキで分ける**（契約の所在が違うため）。clean は契約が `application/ports/` にあるので **`ports/` だけ許可**し、それ以外（usecases / validators / services 等）は禁止する。onion は契約を domain が所有するので **全面禁止**。
   - **layered は対象外**（`presentation → application → infrastructure` の素直な依存＝ Port による逆転をしないこと自体が比較軸のため）。
   - `*.module.ts` は feature 直下＝層の外なので対象にならず、合成ルートとして infrastructure を配線できる。
   - 禁止方向に import したくなったら、それは Port を足す合図（interface + DI トークンを内側に足し、実装を infrastructure に置いて `*.module.ts` で束ねる）。
