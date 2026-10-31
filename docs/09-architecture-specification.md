@@ -258,7 +258,7 @@ shared/                            # feature 非依存の共通基盤
 - **そのほかの戦術パターン（clean / onion）**:
   - **Aggregate**: 専用のフォルダや基底クラスは置かず、構造と使い方で表す。`Task`（ルート）＋ `DateRange` が 1 つの集約で、出し入れはルート単位（`TaskRepository` は `Task` を返し、`DateRange` だけを扱う口は無い）、変更はルート経由（`applyUpdate`）、別の集約は id で参照する（`Task.userId`）。
   - **Factory**: `factories/` は置かず、Entity / VO の static メソッドに内蔵する（新規 = `Task.draft`、復元 = `Task.fromState` / `User.fromState`、VO = `DateRange.of`）。constructor は `private` なので生成の入口はこれだけになる。復元も `DateRange.of` を通るため、不変条件を破った行は読み込み時に弾かれる。生成に外部の情報が要るようになった時点で `TaskFactory` に切り出す。
-  - **Domain Event**: **未採用**。「起きたことに別の処理が反応する」要件がまだ無いため（導入候補は `TaskCompleted` / `UserRegistered`）。旧画像の削除（`SetTaskImageUseCase`）は同じ処理の中で直接呼んでおり、今の規模ではこれで足りる。
+  - **Domain Event**: **未採用**（→ 次項「採用しない概念」）。「起きたことに別の処理が反応する」要件がまだ無いため（導入候補は `TaskCompleted` / `UserRegistered`）。旧画像の削除（`SetTaskImageUseCase`）は同じ処理の中で直接呼んでおり、今の規模ではこれで足りる。
 
 ### 採用しない概念
 
@@ -270,6 +270,7 @@ shared/                            # feature 非依存の共通基盤
 | `models/` `schemas/` | 契約の真実は `packages/api-spec/main.tsp`（→ `@app/api-client`）にあり、別に型やスキーマの一覧を持つと二重管理になる |
 | `resolves/` | GraphQL 専用の概念で、REST では出番がない |
 | `interceptors/` `middlewares/` | 現状は `AllExceptionsFilter`（例外→`ApiError`）と `FileInterceptor`（multipart）で足りている。必要になった時点で作る |
+| Domain Event（`events/`） | 「起きたことに別の処理が反応する」要件がまだ無い。後続の処理は UseCase の中で直接呼ぶ（旧画像の削除など）。同じ出来事に複数の反応がぶら下がり、UseCase がそれをすべて知る形が辛くなった時点で検討する（候補: `TaskCompleted` / `UserRegistered`） |
 
 FormRequest の責務がどこへ行ったか（`POST /tasks` の場合）:
 

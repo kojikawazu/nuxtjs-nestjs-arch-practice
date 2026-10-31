@@ -50,6 +50,7 @@ globs: apps/backend-*/**
   - **`models/` `schemas/`**: 契約の真実は `packages/api-spec/main.tsp`（→ `@app/api-client`）にあるため、別に型やスキーマの一覧を持つと二重管理になる。
   - **`resolves/`**: GraphQL 専用の概念で、REST では出番がない。
   - **`interceptors/` `middlewares/`**: 現状は `AllExceptionsFilter`（例外→`ApiError`）と `FileInterceptor`（multipart）で足りている。必要になった時点で作る。
+  - **Domain Event（`events/`）**: 「起きたことに別の処理が反応する」要件がまだ無いため置かない（clean / onion とも）。後続の処理は UseCase の中で直接呼ぶ（例: `SetTaskImageUseCase` は旧画像の削除を同じ処理の中で行う）。同じ出来事に複数の反応（通知・集計・外部連携など）がぶら下がり、UseCase がそれをすべて知る形が辛くなった時点で導入を検討する（候補: `TaskCompleted` / `UserRegistered`）。
 - **domain の構成要素と使い分け（clean / onion）**: `domain/` に置けるのは下記 3 種。判定軸は「不変かどうか」ではなく **同一性（identity）を持つか**と**置き場所があるか**。
 
   | 要素 | 判定基準 | 置き場所 | 例 |
