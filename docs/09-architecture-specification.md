@@ -145,6 +145,10 @@ modules/tasks/
 | ❌ application → presentation | 入力は `application/inputs/` の Command 型で受ける |
 | ❌ presentation → infrastructure | 実装を差すのは `*.module.ts` の仕事 |
 | ❌ infrastructure → presentation | 最外どうしを直結させない |
+| ❌ infrastructure → application（clean は `ports/` 以外） | clean は Port を implements するために `application/ports/` だけを見ればよい。usecases / validators などへの import は実装の詳細が中心のロジックに入り込む経路になる |
+| ❌ infrastructure → application（onion は全面） | onion は契約を domain が所有するので、infrastructure が application を見る理由が無い |
+
+- **infrastructure → application の扱いだけはアーキで分かれる**。以前は両版とも「application 全体を許可」で、上表の許可範囲（clean は `ports/` だけ・onion は 0 件）は**たまたま守られていた**だけだった（どちらも違反 0 件の状態から締めた）。clean の例外は gitignore 形式の否定（`!**/application/ports/**`）では書けない（親ディレクトリが除外されると配下を戻せない）ため、正規表現の否定先読み（`(^|/)application(/(?!ports(/|$))|$)`）で「`application/` の直後が `ports/` 以外」を禁止している。
 
 - **layered は対象外**。`presentation → application → infrastructure` の素直な依存（Port による逆転をしない）こと自体が比較軸のため、`application/task.util.ts` が `infrastructure/task.entity.ts` を import する状態を維持する。
 - **`*.module.ts` はどの層にも属さない**（feature 直下に置く）ため lint の対象にならず、合成ルートとして infrastructure を配線できる。層ディレクトリの中に置くとこの表が崩れる。
@@ -254,7 +258,7 @@ shared/                            # feature 非依存の共通基盤
 - **そのほかの戦術パターン（clean / onion）**:
   - **Aggregate**: 専用のフォルダや基底クラスは置かず、構造と使い方で表す。`Task`（ルート）＋ `DateRange` が 1 つの集約で、出し入れはルート単位（`TaskRepository` は `Task` を返し、`DateRange` だけを扱う口は無い）、変更はルート経由（`applyUpdate`）、別の集約は id で参照する（`Task.userId`）。
   - **Factory**: `factories/` は置かず、Entity / VO の static メソッドに内蔵する（新規 = `Task.draft`、復元 = `Task.fromState` / `User.fromState`、VO = `DateRange.of`）。constructor は `private` なので生成の入口はこれだけになる。復元も `DateRange.of` を通るため、不変条件を破った行は読み込み時に弾かれる。生成に外部の情報が要るようになった時点で `TaskFactory` に切り出す。
-  - **Domain Event**: **未採用**。「起きたことに別の処理が反応する」要件がまだ無いため（導入候補は `TaskCompleted` / `UserRegistered`）。旧画像の削除（`SetTaskImageUseCase`）は同じ処理の中で直接呼んでおり、今の規模ではこれで足りる。
+  - **Domain Event**: **未採用**（→ 次項「採用しない概念」）。「起きたことに別の処理が反応する」要件がまだ無いため（導入候補は `TaskCompleted` / `UserRegistered`）。旧画像の削除（`SetTaskImageUseCase`）は同じ処理の中で直接呼んでおり、今の規模ではこれで足りる。
 
 ### 採用しない概念
 
@@ -266,6 +270,7 @@ shared/                            # feature 非依存の共通基盤
 | `models/` `schemas/` | 契約の真実は `packages/api-spec/main.tsp`（→ `@app/api-client`）にあり、別に型やスキーマの一覧を持つと二重管理になる |
 | `resolves/` | GraphQL 専用の概念で、REST では出番がない |
 | `interceptors/` `middlewares/` | 現状は `AllExceptionsFilter`（例外→`ApiError`）と `FileInterceptor`（multipart）で足りている。必要になった時点で作る |
+| Domain Event（`events/`） | 「起きたことに別の処理が反応する」要件がまだ無い。後続の処理は UseCase の中で直接呼ぶ（旧画像の削除など）。同じ出来事に複数の反応がぶら下がり、UseCase がそれをすべて知る形が辛くなった時点で検討する（候補: `TaskCompleted` / `UserRegistered`） |
 
 FormRequest の責務がどこへ行ったか（`POST /tasks` の場合）:
 
