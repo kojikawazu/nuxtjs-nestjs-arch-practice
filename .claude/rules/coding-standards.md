@@ -16,6 +16,6 @@ globs:
 ## 関連
 
 - 詳細規約: [jsdoc.md](./jsdoc.md)（JSDoc/コメント）・[testing.md](./testing.md)（テスト）・[git.md](./git.md)（Git・secrets）
-- スタック別: [stack-backend.md](./stack-backend.md)（NestJS/TypeORM・入力検証）・[stack-frontend.md](./stack-frontend.md)（Nuxt3・Composable）
+- スタック別: [stack-backend.md](./stack-backend.md)（NestJS/TypeORM・入力検証）・[stack-frontend.md](./stack-frontend.md)（Nuxt 4・Composable）
 - 付録（環境変数・ポート・DB 切替・画像保存先・用語集）: [docs/10-miscellaneous-specification.md](../../docs/10-miscellaneous-specification.md)
 - 技術スタック全体: [docs/09-architecture-specification.md](../../docs/09-architecture-specification.md#技術スタック)

@@ -6,7 +6,8 @@ const route = useRoute();
 const id = route.params.id as string;
 const { get, update, uploadImage, removeImage, imageSrc } = useTasks();
 
-const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
+// キーを詳細画面（task-detail:）と分ける理由は pages/tasks/[id]/index.vue を参照（Nuxt 4 のキー共有で古いデータが見えるため）。
+const { data: task, error } = await useAsyncData(`task-edit:${id}`, () => get(id), {
   getCachedData: () => undefined,
 });
 

@@ -23,7 +23,7 @@ globs:
 | API / エンドポイント（NestJS controller・DTO の追加/変更） | docs/07-api-specification.md |
 | データモデル（TypeORM entity・スキーマ・マイグレーション） | docs/05-data-specification.md |
 | 機能追加・仕様変更（業務ロジック・ユースケース） | docs/03-functional-specification.md（必要に応じ docs/02-requirements-specification.md） |
-| 画面・UI（Nuxt3 ページ・コンポーネント・画面遷移） | docs/03-functional-specification.md |
+| 画面・UI（Nuxt 4 ページ・コンポーネント・画面遷移） | docs/03-functional-specification.md |
 | 認証・認可・セキュリティ方針 | docs/06-security-specification.md |
 | 非機能要件（性能・可用性・運用） | docs/04-non-functional-specification.md |
 | アーキテクチャ・構成（レイヤー構成・依存・ディレクトリ） | docs/09-architecture-specification.md |

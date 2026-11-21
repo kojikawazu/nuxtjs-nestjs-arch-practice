@@ -29,7 +29,7 @@
 | 領域 | 採用 |
 |---|---|
 | モノレポ | pnpm workspaces（`apps/*` + `packages/*`） |
-| FE | Nuxt 3 (SPA / SSR, TS) / TailwindCSS / Nitro / Composable |
+| FE | Nuxt 4 (SPA / SSR, TS) / TailwindCSS / Nitro / Composable |
 | BE | NestJS (TS) / TypeORM / layered・clean・onion の 3 実装 / MySQL(mysql2)・SQLite(better-sqlite3) |
 | 契約 | TypeSpec → OpenAPI 3.1 → openapi-typescript + openapi-fetch |
 | 認証 | JWT(access+refresh) / Passport / bcrypt |

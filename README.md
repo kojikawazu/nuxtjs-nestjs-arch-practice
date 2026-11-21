@@ -4,7 +4,7 @@
 
 Nuxt.js + NestJS のアーキテクチャ practice プロジェクト（タスク管理アプリ）
 
-> **English (TL;DR):** A learning monorepo that compares *architectures side by side* on one Nuxt 3 + NestJS task-management app. The same API contract (TypeSpec → OpenAPI) is implemented by three backends (layered / clean / onion) and consumed by two frontends (SPA / SSR); the shared test suite is what proves their externally observable behavior is identical. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at <http://localhost:3000>, Swagger at <http://localhost:3001/docs>.
+> **English (TL;DR):** A learning monorepo that compares *architectures side by side* on one Nuxt 4 + NestJS task-management app. The same API contract (TypeSpec → OpenAPI) is implemented by three backends (layered / clean / onion) and consumed by two frontends (SPA / SSR); the shared test suite is what proves their externally observable behavior is identical. Quick start: `pnpm install && cp .env.example .env && pnpm api:gen`, then `docker compose up --build` → UI at <http://localhost:3000>, Swagger at <http://localhost:3001/docs>.
 
 ## 概要
 
@@ -25,7 +25,7 @@ Nuxt.js + NestJS のアーキテクチャ practice プロジェクト（タス�
 
 ### 技術スタック
 
-- FE: Nuxt 3 (SPA / SSR) / TailwindCSS / Composable / Nitro BFF
+- FE: Nuxt 4 (SPA / SSR) / TailwindCSS / Composable / Nitro BFF
 - BE: NestJS / TypeORM / MySQL・SQLite
 - 契約: TypeSpec → OpenAPI → 型/クライアント生成（`packages/`）—— 全実装がこの単一の真実を実装する
 - テスト: Jest / supertest / Vitest / MSW / Vue Test Utils / Playwright
@@ -52,8 +52,8 @@ Nuxt.js + NestJS のアーキテクチャ practice プロジェクト（タス�
 apps/backend-layered    NestJS API（レイヤード + UseCase。UseCase が TypeORM を直接利用）
 apps/backend-clean      NestJS API（クリーンアーキ。Port で依存性逆転。契約は application/ports）
 apps/backend-onion      NestJS API（オニオン。契約をドメイン中核が所有 + ドメインサービス）
-apps/frontend-spa       Nuxt 3 SPA（ssr:false。セッション復元はクライアント）+ Nitro BFF
-apps/frontend-ssr       Nuxt 3 SSR（ssr:true。サーバ側でセッション復元）+ Nitro BFF
+apps/frontend-spa       Nuxt 4 SPA（ssr:false。セッション復元はクライアント）+ Nitro BFF
+apps/frontend-ssr       Nuxt 4 SSR（ssr:true。サーバ側でセッション復元）+ Nitro BFF
 packages/api-spec       TypeSpec 契約 → OpenAPI
 packages/api-client     生成した型 + openapi-fetch クライアント
 ```
@@ -68,7 +68,7 @@ packages/api-client     生成した型 + openapi-fetch クライアント
 
 | 必要なもの | バージョン / 備考 |
 | --- | --- |
-| Node.js | 22 以上 |
+| Node.js | 22.22.3 以上の 22 系 / 24.15.0 以上の 24 系 / 26 以上（Nuxt 4.6 の要求に合わせている。ルートの `package.json` の `engines` と同じ） |
 | pnpm | 10.33（`package.json` の `packageManager` で固定） |
 | Docker / Docker Compose | フルスタックで動かす場合に必要（backend 単体なら SQLite で代替でき不要） |
 
@@ -163,8 +163,8 @@ make test-back-it    # IT を layered / clean / onion の 3 版で実行（Docke
 | `apps/backend-layered/**` | [`apps/backend-layered/AGENTS.md`](apps/backend-layered/AGENTS.md) | NestJS / TypeORM（レイヤード） |
 | `apps/backend-clean/**` | [`apps/backend-clean/AGENTS.md`](apps/backend-clean/AGENTS.md) | NestJS / TypeORM（クリーン） |
 | `apps/backend-onion/**` | [`apps/backend-onion/AGENTS.md`](apps/backend-onion/AGENTS.md) | NestJS / TypeORM（オニオン） |
-| `apps/frontend-spa/**` | [`apps/frontend-spa/AGENTS.md`](apps/frontend-spa/AGENTS.md) | Nuxt 3（SPA） |
-| `apps/frontend-ssr/**` | [`apps/frontend-ssr/AGENTS.md`](apps/frontend-ssr/AGENTS.md) | Nuxt 3（SSR） |
+| `apps/frontend-spa/**` | [`apps/frontend-spa/AGENTS.md`](apps/frontend-spa/AGENTS.md) | Nuxt 4（SPA） |
+| `apps/frontend-ssr/**` | [`apps/frontend-ssr/AGENTS.md`](apps/frontend-ssr/AGENTS.md) | Nuxt 4（SSR） |
 | `packages/api-spec/**` | [`packages/api-spec/AGENTS.md`](packages/api-spec/AGENTS.md) | TypeSpec 契約・生成 |
 | `packages/api-client/**` | [`packages/api-client/AGENTS.md`](packages/api-client/AGENTS.md) | 生成 API クライアント |
 

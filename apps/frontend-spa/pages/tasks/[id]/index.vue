@@ -3,7 +3,10 @@ const route = useRoute();
 const id = route.params.id as string;
 const { get, remove, imageSrc } = useTasks();
 
-const { data: task, error } = await useAsyncData(`task:${id}`, () => get(id), {
+// キーを編集画面（task-edit:）と分ける理由: Nuxt 4 は同じキーの useAsyncData を、マウント中のコンポーネント間で共有する。
+// 編集の保存後に詳細へ戻ると、遷移が終わるまで編集ページはマウントされたままなので、キーが同じだと
+// 詳細ページは取得し直さず、編集前のデータを受け取ってしまう（E2E の task-flow で検出）。
+const { data: task, error } = await useAsyncData(`task-detail:${id}`, () => get(id), {
   getCachedData: () => undefined,
 });
 
