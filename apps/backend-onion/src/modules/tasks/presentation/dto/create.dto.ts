@@ -20,14 +20,10 @@ export const createTaskSchema = z
     status: z.enum(['todo', 'in_progress', 'done']).optional(),
     // 受理形式は RFC 3339 の full-date か、オフセット必須の date-time だけ。
     // オフセットを任意にすると、同じ入力がホストの TZ 次第で別の instant として保存される。
-    startDate: z.string().refine(isRfc3339, { message: DATE_MESSAGE }),
-    endDate: z.string().refine(isRfc3339, { message: DATE_MESSAGE }).optional(),
+    startDate: z.string().refine(isRfc3339, { error: DATE_MESSAGE }),
+    endDate: z.string().refine(isRfc3339, { error: DATE_MESSAGE }).optional(),
     // 関連 URL（任意）。http/https のみ許可し、javascript: 等の危険スキームは 422 で拒否する。
-    url: z
-      .string()
-      .max(2048)
-      .refine(isHttpUrl, { message: 'url must be http or https' })
-      .optional(),
+    url: z.string().max(2048).refine(isHttpUrl, { error: 'url must be http or https' }).optional(),
   })
   .strict() satisfies z.ZodType<TaskCreate>;
 

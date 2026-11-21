@@ -14,12 +14,12 @@ import {
  */
 export const registerSchema = z
   .object({
-    email: z.string().email().max(MAX_EMAIL_LENGTH),
+    email: z.email().max(MAX_EMAIL_LENGTH),
     password: z
       .string()
       .min(8)
       .refine((v) => isWithinUtf8Bytes(v, BCRYPT_MAX_PASSWORD_BYTES), {
-        message: `password must be at most ${BCRYPT_MAX_PASSWORD_BYTES} bytes in UTF-8`,
+        error: `password must be at most ${BCRYPT_MAX_PASSWORD_BYTES} bytes in UTF-8`,
       }),
     displayName: z.string().min(1).max(80),
   })

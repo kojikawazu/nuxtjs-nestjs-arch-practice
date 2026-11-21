@@ -4,6 +4,16 @@ import { createTaskSchema } from './create.dto';
  * createTaskSchema（zod）単体。
  * 契約の入力ルール（title 必須・status 列挙・RFC 3339 日付・url は http/https のみ・未知キー拒否）を検証する。
  */
+/**
+ * 不合格時の issue メッセージを取り出す。合否だけでなく、自前で指定した理由が
+ * そのまま利用者（ApiError.errors）へ届くことまで確かめるために使う。
+ */
+function messagesOf(input: unknown): string[] {
+  const result = createTaskSchema.safeParse(input);
+  if (result.success) throw new Error('不合格のはずが合格した');
+  return result.error.issues.map((issue) => issue.message);
+}
+
 describe('createTaskSchema', () => {
   const base = { title: 'タスク', startDate: '2026-06-10T00:00:00.000Z' };
 
@@ -49,12 +59,16 @@ describe('createTaskSchema', () => {
     expect(createTaskSchema.safeParse({ ...base, status: 'archived' }).success).toBe(false);
   });
 
-  it('異常系: startDate が日付でない文字列は不合格', () => {
-    expect(createTaskSchema.safeParse({ ...base, startDate: 'not-a-date' }).success).toBe(false);
+  it('異常系: startDate が日付でない文字列は不合格で、理由に受理形式を示す', () => {
+    expect(messagesOf({ ...base, startDate: 'not-a-date' })).toEqual([
+      'must be an RFC 3339 date (YYYY-MM-DD) or date-time with an offset',
+    ]);
   });
 
   it('異常系: url が javascript: スキームは不合格（描画時ガード以前に入力で弾く）', () => {
-    expect(createTaskSchema.safeParse({ ...base, url: 'javascript:alert(1)' }).success).toBe(false);
+    expect(messagesOf({ ...base, url: 'javascript:alert(1)' })).toEqual([
+      'url must be http or https',
+    ]);
   });
 
   it('異常系: url が 2048 文字超は不合格', () => {

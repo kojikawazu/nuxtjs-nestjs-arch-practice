@@ -24,13 +24,13 @@ export const taskFormSchema = z
     // 開始必須 → 開始 ≤ 終了（開始が無いうちは終了の比較はしない）
     if (v.startDate === '') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['startDate'],
         message: '開始日は必須です',
       });
     } else if (v.endDate !== '' && v.endDate < v.startDate) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['endDate'],
         message: '終了日は開始日以降にしてください',
       });
@@ -41,13 +41,13 @@ export const taskFormSchema = z
     if (trimmedUrl !== '') {
       if (trimmedUrl.length > 2048) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['url'],
           message: 'URL は2048文字以内で入力してください',
         });
       } else if (!isSafeHttpUrl(trimmedUrl)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['url'],
           message: 'http:// または https:// で始まる URL を入力してください',
         });
