@@ -60,7 +60,10 @@ describe('Auth (e2e)', () => {
         .send({ email: 'over@example.com', password: OVER, displayName: 'Over' })
         .expect(422);
 
-      expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual(['password']);
+      // 文字数ではなくバイト長が理由であることを利用者に伝える（自前メッセージが届くこと）
+      expect(res.body.errors).toEqual([
+        { field: 'password', messages: ['password must be at most 72 bytes in UTF-8'] },
+      ]);
     });
 
     it('異常系: 先頭 72 バイトが同じ別パスワードではログインできない（bcrypt の切り捨てを突けない）', async () => {
@@ -125,6 +128,16 @@ describe('Auth (e2e)', () => {
 
     expect(res.body.statusCode).toBe(422);
     expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual(['password']);
+  });
+
+  // 形式検証は `z.email()`（DTO）。登録とログインの両方で、形式違反が INSERT・照合に届く前に弾かれる
+  it.each([
+    ['/auth/register', { email: 'not-an-email', password: 'password123', displayName: 'A' }],
+    ['/auth/login', { email: 'not-an-email', password: 'password123' }],
+  ])('異常系: メール形式でない email は %s で 422（errors に email）', async (path, body) => {
+    const res = await http.post(path).send(body).expect(422);
+
+    expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual(['email']);
   });
 
   it('正常系: 正しい資格情報でログインできる（200）', async () => {
