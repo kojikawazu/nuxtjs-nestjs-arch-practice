@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime';
 import type { Task } from '@app/api-client';
-import { server } from '../setup/msw';
+import { server } from '../setup/msw-server';
 
 /**
  * 401 → リフレッシュ → 再試行の単体テスト。

@@ -66,7 +66,7 @@
 | IT (Integration Test) | 本番 DB 固有の挙動を実物の MySQL で検証するテスト。SQLite との差分を検出するために分ける。 | [`db-fidelity.it-spec.ts`](../apps/backend-clean/test/it/db-fidelity.it-spec.ts) |
 | e2e | HTTP リクエストからレスポンスまでを in-memory SQLite で速く検証する backend テスト。 | [`tasks.e2e-spec.ts`](../apps/backend-clean/test/tasks.e2e-spec.ts) |
 | シナリオテスト | frontend と backend を通したユーザージャーニーを検証する出荷ゲート。通常の E2E は SQLite を使い、本番 DB に近い MySQL シナリオは `SCENARIO_DB=mysql` を指定する `make test-scenario-mysql` で実行する。 | [`task-flow.spec.ts`](../apps/frontend-spa/tests/e2e/task-flow.spec.ts)、[`Makefile`](../Makefile) |
-| MSW | frontend 単体テストで backend HTTP を模擬する Service Worker ベースのライブラリ。 | [`tests/setup/msw.ts`](../apps/frontend-spa/tests/setup/msw.ts) |
+| MSW | frontend 単体テストで backend HTTP を模擬する Service Worker ベースのライブラリ。 | [`tests/setup/msw-server.ts`](../apps/frontend-spa/tests/setup/msw-server.ts)（生成）/ [`tests/setup/msw.ts`](../apps/frontend-spa/tests/setup/msw.ts)（ライフサイクル） |
 | Playwright | ブラウザを操作して E2E・シナリオを検証するテストフレームワーク。 | [`playwright.config.ts`](../apps/frontend-ssr/playwright.config.ts) |
 | test double | Repository など外部 I/O の代替物。業務ロジックをモックせず、テストで制御可能な fake を使う。 | [`test/fakes/`](../apps/backend-onion/test/fakes/) |
 
