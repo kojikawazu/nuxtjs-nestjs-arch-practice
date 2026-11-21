@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import type { Task } from '@app/api-client';
-import { server } from '../setup/msw';
+import { server } from '../setup/msw-server';
 
 /**
  * useTasks の単体テスト。

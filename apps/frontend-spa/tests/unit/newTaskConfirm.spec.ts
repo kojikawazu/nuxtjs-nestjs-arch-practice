@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountSuspended } from '@nuxt/test-utils/runtime';
 import { flushPromises } from '@vue/test-utils';
 import { http, HttpResponse } from 'msw';
-import { server } from '../setup/msw';
+import { server } from '../setup/msw-server';
 import ConfirmPage from '~/pages/tasks/new/confirm.vue';
 
 const BASE = 'http://localhost:3001';

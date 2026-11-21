@@ -10,3 +10,10 @@ onlyBuiltDependencies:
   - '@nestjs/core'
   - esbuild
   - '@parcel/watcher'
+
+# 推移的依存のうち、親パッケージの semver 範囲では修正版へ上がれないものだけを固定する。
+# 親が修正版を許容する範囲に上がったら、その行は削除する（固定が残り続けると、今度はこちらが古くなる）。
+overrides:
+  # markdownlint → micromark-extension-math が ^0.16 を要求するが、修正は 0.18.2（GHSA-238p-pmpm-9mq7）。
+  # markdownlint は math を構文解析するだけで katex の描画経路は通らないため、メジャー差は影響しない。
+  'micromark-extension-math>katex': ^0.18.2

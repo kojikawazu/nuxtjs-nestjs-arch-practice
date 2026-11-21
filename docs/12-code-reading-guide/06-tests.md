@@ -12,7 +12,7 @@
 | FE Composable (`useTasks`) | `apps/frontend-spa/tests/unit/useTasks.spec.ts` | backend への HTTP を **MSW** |
 | FE Composable (`useAuth`) | `apps/frontend-spa/tests/unit/useAuth.spec.ts` | Nitro BFF を `registerEndpoint` |
 | FE Component | `apps/frontend-spa/tests/unit/TaskForm.spec.ts` | flatpickr を `vi.mock` |
-| MSW セットアップ | `apps/frontend-spa/tests/setup/msw.ts` | — |
+| MSW セットアップ | `apps/frontend-spa/tests/setup/msw-server.ts`（生成）/ `msw.ts`（ライフサイクル） | — |
 | 全体 E2E | `apps/frontend-spa/tests/e2e/task-flow.spec.ts` | なし（実スタック / Playwright） |
 
 読むポイント:
@@ -20,6 +20,7 @@
 - Validator のテストは「`create`/`update` が**呼ばれない**こと」と「検証済みドメイン（`NewTask` / `Task`）を返すこと」をアサートし、検証だけで書き込みが起きないことを保証する。
 - e2e は `test-app.factory.ts` の `createTestApp` が SQLite と `/uploads` 静的配信を本番と同じ経路で立てる。
 - 比率は「正常系 1 : 異常系（準正常系 + 異常系）2 以上」を目安にしている。
+- MSW は「生成（`msw-server.ts`）」と「ライフサイクル登録（setupFiles の `msw.ts`）」を分けている。@nuxt/test-utils が setupFiles の後に `vi.resetModules()` を呼ぶため、spec がフック登録まで含むモジュールを import すると再評価でサーバが 2 台になり、ハンドラが二重に走る。spec は `msw-server.ts` から `server` を import する。
 
 ---
 
