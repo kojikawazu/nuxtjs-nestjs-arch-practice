@@ -5,6 +5,6 @@ export default defineVitestConfig({
     // Nuxt ランタイム環境（auto-import / useState / $fetch / registerEndpoint が使える）
     environment: 'nuxt',
     include: ['tests/unit/**/*.spec.ts'],
-    setupFiles: ['./tests/setup/msw.ts'],
+    setupFiles: ['./tests/setup/msw.ts', './tests/setup/vue-test-utils.ts'],
   },
 });

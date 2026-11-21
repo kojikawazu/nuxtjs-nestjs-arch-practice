@@ -21,6 +21,7 @@
 - e2e は `test-app.factory.ts` の `createTestApp` が SQLite と `/uploads` 静的配信を本番と同じ経路で立てる。
 - 比率は「正常系 1 : 異常系（準正常系 + 異常系）2 以上」を目安にしている。
 - MSW は「生成（`msw-server.ts`）」と「ライフサイクル登録（setupFiles の `msw.ts`）」を分けている。@nuxt/test-utils が setupFiles の後に `vi.resetModules()` を呼ぶため、spec がフック登録まで含むモジュールを import すると再評価でサーバが 2 台になり、ハンドラが二重に走る。spec は `msw-server.ts` から `server` を import する。
+- FE の setupFiles は `vue-test-utils.ts` で各テスト後に全コンポーネントを unmount する（`enableAutoUnmount`）。Nuxt 4 は同じキーの `useAsyncData` をマウント中のコンポーネント間で共有するため、unmount しないと前のテストのデータが次のテストに漏れる。同じ理由で、本番コードでも**別の画面で独立して取得するデータには別のキーを付ける**（詳細 `task-detail:` / 編集 `task-edit:`）。
 
 ---
 

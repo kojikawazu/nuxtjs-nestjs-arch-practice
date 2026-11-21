@@ -1,5 +1,5 @@
 ---
-description: フロントエンド（Nuxt3）スタック依存ルール
+description: フロントエンド（Nuxt 4）スタック依存ルール
 globs: apps/frontend-*/**
 ---
 
